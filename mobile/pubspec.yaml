@@ -1,0 +1,56 @@
+name: adama_smart_citizen
+description: "Adama Smart Citizen Reporting System Mobile App"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State Management & Local Storage
+  provider: ^6.1.1
+  shared_preferences: ^2.2.2
+  sqflite: ^2.3.0
+  path_provider: ^2.1.2
+
+  # Networking
+  http: ^1.2.0
+  dio: ^5.4.1
+
+  # Location & Maps
+  geolocator: ^11.0.0
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+
+  # Media
+  image_picker: ^1.0.7
+  camera: ^0.10.5+9
+  audioplayers: ^5.2.1
+
+  # Localization
+  easy_localization: ^3.0.7
+
+  # UI/UX
+  cupertino_icons: ^1.0.6
+  google_fonts: ^6.1.0
+  record: ^6.2.1
+  video_player: ^2.11.1
+  permission_handler: ^13.0.1
+  pdf: ^3.12.0
+  printing: ^5.14.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/translations/
+    - assets/images/

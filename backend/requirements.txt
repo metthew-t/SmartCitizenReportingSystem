@@ -1,0 +1,8 @@
+Django>=4.2,<5.0
+djangorestframework
+psycopg2-binary
+djangorestframework-simplejwt
+django-cors-headers
+django-environ
+gdal
+fcm-django
