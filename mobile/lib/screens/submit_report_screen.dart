@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import 'home_screen.dart';
 import 'dart:async';
 
@@ -18,7 +20,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
   
   String _selectedCategory = 'Infrastructure Issue';
   String _selectedPriority = 'MEDIUM';
-  bool _isAnonymous = false;
+  String? _selectedDepartment;
   bool _isSubmitting = false;
 
   // Location
@@ -26,9 +28,11 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
   bool _isLoadingLocation = true;
   String _locationError = '';
 
-  // Media (Mock state)
-  bool _hasImage = false;
-  bool _hasVideo = false;
+  // Media
+  XFile? _selectedImage;
+  XFile? _selectedVideo;
+  final ImagePicker _picker = ImagePicker();
+  
   bool _isRecordingAudio = false;
   bool _hasAudio = false;
   int _recordDuration = 0;
@@ -41,6 +45,23 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
     {'en': 'Environment & Cleanliness', 'om': 'Naannoo fi Qulqullinaa'},
     {'en': 'Transport & Traffic', 'om': 'Geejjibaa fi Tiraafikaa'},
     {'en': 'Social Services', 'om': 'Tajaajila Hawaasummaa'},
+  ];
+
+  final List<String> _departments = [
+    "Galmeessa Siivilii", "Waajjira Invastimantii", "Bulchiinsaa fi Nageenya", 
+    "Waajjira Hojjataa fi Hawaasummaa", "Waajjira Aadaa fi Turiizimii", 
+    "Waajjira Milishaa", "Waajjira Dargaggoo fi Ispoortii", 
+    "Waajjira Karoora/Pilaanii fi Misoomaa", "Qajeelcha Poolisii", 
+    "Buusaa Gonofaa", "Abbaa Taayitaa Eegumsa Naannoo", 
+    "Abbaa Taayitaa Konistiraakshinii", "Koomishinii Turizimii", 
+    "Waajjira Lafaa", "Waajjira Fayyaa", "Waajjira Abbaa Alangaa", 
+    "Waajjira Saayinsii fi Teeknoloojii", "Waajjira Bishaan Dhugaatii fi Dhangala'aa", 
+    "Giddu-gala Tajaajilaa", "Waldaa Hojii Gamtaa", "Waajjira Albuuda", 
+    "Waajjira Dhimma Dubartootaa fi Daa'immanii", "Mana Qopheessaa", 
+    "Waajjira Galii", "Ejansii Geejjibaa", "Waajjira Kantiibaa", 
+    "Waajjira PSMQN", "Waajjira Kominikeeshinii", "Waajjira Daldala", 
+    "Waajjira Qonnaa", "Waajjira Maallaqaa", "Waajjira Carraa Hojii Uumuu fi Ogummaa", 
+    "Waajjira Barnoota"
   ];
 
   final List<Map<String, dynamic>> _priorities = [
@@ -116,7 +137,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
   void _startRecording() async {
     var status = await Permission.microphone.request();
     if (status != PermissionStatus.granted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Microphone permission required')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Microphone permission required')));
       return;
     }
 
@@ -139,28 +160,130 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
     });
   }
 
-  void _pickMedia(String type) async {
-    // Mock media picking
-    var status = await Permission.camera.request();
-    if (status != PermissionStatus.granted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Camera permission required')));
-      return;
-    }
-
-    setState(() {
-      if (type == 'image') _hasImage = true;
-      if (type == 'video') _hasVideo = true;
-    });
+  Future<void> _pickImage() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Photo Library'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+                  if (image != null) setState(() => _selectedImage = image);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Camera'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  var status = await Permission.camera.request();
+                  if (status.isGranted) {
+                    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+                    if (image != null) setState(() => _selectedImage = image);
+                  } else {
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Camera permission required')));
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
-  String _recommendedDepartment() {
-    switch (_selectedCategory) {
-      case 'Water & Sanitation': return "Waajjira Bishaan Dhugaatii fi Dhangala'aa";
-      case 'Public Safety': return 'Qajeelcha Poolisii';
-      case 'Environment & Cleanliness': return 'Abbaa Taayitaa Eegumsa Naannoo';
-      case 'Transport & Traffic': return 'Ejansii Geejjibaa';
-      case 'Infrastructure Issue': return 'Abbaa Taayitaa Konistiraakshinii';
-      default: return 'Giddu-gala Tajaajilaa';
+  Future<void> _pickVideo() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.video_library),
+                title: const Text('Video Library'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
+                  if (video != null) setState(() => _selectedVideo = video);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.videocam),
+                title: const Text('Camera'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  var status = await Permission.camera.request();
+                  if (status.isGranted) {
+                    final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
+                    if (video != null) setState(() => _selectedVideo = video);
+                  } else {
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Camera permission required')));
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _recommendDepartment() {
+    final text = (_titleController.text + " " + _descriptionController.text).toLowerCase();
+    String? recommended;
+
+    if (text.contains('water') || text.contains('bishaan') || text.contains('pipe') || text.contains('leak')) {
+      recommended = "Waajjira Bishaan Dhugaatii fi Dhangala'aa";
+    } else if (text.contains('road') || text.contains('traffic') || text.contains('geejjibaa') || text.contains('street')) {
+      recommended = "Ejansii Geejjibaa";
+    } else if (text.contains('crime') || text.contains('police') || text.contains('theft') || text.contains('poolisii')) {
+      recommended = "Qajeelcha Poolisii";
+    } else if (text.contains('trash') || text.contains('garbage') || text.contains('environment') || text.contains('qulqullinaa')) {
+      recommended = "Abbaa Taayitaa Eegumsa Naannoo";
+    } else if (text.contains('construction') || text.contains('building') || text.contains('konistiraakshinii')) {
+      recommended = "Abbaa Taayitaa Konistiraakshinii";
+    } else if (text.contains('health') || text.contains('hospital') || text.contains('fayyaa')) {
+      recommended = "Waajjira Fayyaa";
+    } else if (text.contains('school') || text.contains('education') || text.contains('barnoota')) {
+      recommended = "Waajjira Barnoota";
+    } else if (text.contains('electric') || text.contains('power') || text.contains('light')) {
+      recommended = "Waajjira Bishaan Dhugaatii fi Dhangala'aa"; // fallback for utility
+    }
+
+    if (recommended == null) {
+      switch (_selectedCategory) {
+        case 'Water & Sanitation': recommended = "Waajjira Bishaan Dhugaatii fi Dhangala'aa"; break;
+        case 'Public Safety': recommended = 'Qajeelcha Poolisii'; break;
+        case 'Environment & Cleanliness': recommended = 'Abbaa Taayitaa Eegumsa Naannoo'; break;
+        case 'Transport & Traffic': recommended = 'Ejansii Geejjibaa'; break;
+        case 'Infrastructure Issue': recommended = 'Abbaa Taayitaa Konistiraakshinii'; break;
+        case 'Social Services': recommended = 'Waajjira Hojjataa fi Hawaasummaa'; break;
+        default: recommended = 'Giddu-gala Tajaajilaa';
+      }
+    }
+
+    if (recommended != null) {
+      setState(() {
+        _selectedDepartment = recommended;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('AI Recommended: $recommended'),
+        backgroundColor: Colors.green[700],
+        duration: const Duration(seconds: 2),
+      ));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Could not auto-recommend. Please select manually.'),
+        backgroundColor: Colors.orange,
+      ));
     }
   }
 
@@ -171,6 +294,10 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
     }
 
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedDepartment == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a responsible department.'), backgroundColor: Colors.red));
+      return;
+    }
     
     setState(() => _isSubmitting = true);
 
@@ -185,7 +312,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
         description: _descriptionController.text,
         status: 'SUBMITTED',
         priority: _selectedPriority,
-        department: _recommendedDepartment(),
+        department: _selectedDepartment!,
         category: _selectedCategory,
         createdAt: DateTime.now(),
       );
@@ -289,6 +416,43 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                   ),
                   const SizedBox(height: 24),
 
+                  // Department Selection
+                  _SectionHeader(title: 'Responsible Department', icon: Icons.account_balance),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                          ),
+                          hint: const Text('Select Department'),
+                          value: _selectedDepartment,
+                          items: _departments.map((dept) => DropdownMenuItem(value: dept, child: Text(dept, overflow: TextOverflow.ellipsis))).toList(),
+                          onChanged: (val) => setState(() => _selectedDepartment = val),
+                          validator: (value) => value == null ? 'Required' : null,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Tooltip(
+                        message: 'Auto-Recommend using AI rule-based logic',
+                        child: ElevatedButton(
+                          onPressed: _recommendDepartment,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.indigo[50],
+                            foregroundColor: Colors.indigo[700],
+                            padding: const EdgeInsets.all(16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Icon(Icons.auto_awesome),
+                        ),
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
                   // Media Uploads
                   _SectionHeader(title: 'Media Evidence', icon: Icons.perm_media),
                   const SizedBox(height: 12),
@@ -296,19 +460,57 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                     children: [
                       Expanded(
                         child: _MediaButton(
-                          icon: Icons.camera_alt, label: 'Photo', active: _hasImage,
-                          onTap: () => _pickMedia('image'),
+                          icon: Icons.camera_alt, 
+                          label: _selectedImage != null ? 'Photo Added' : 'Add Photo', 
+                          active: _selectedImage != null,
+                          onTap: _pickImage,
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: _MediaButton(
-                          icon: Icons.videocam, label: 'Video', active: _hasVideo,
-                          onTap: () => _pickMedia('video'),
+                          icon: Icons.videocam, 
+                          label: _selectedVideo != null ? 'Video Added' : 'Add Video', 
+                          active: _selectedVideo != null,
+                          onTap: _pickVideo,
                         ),
                       ),
                     ],
                   ),
+                  if (_selectedImage != null || _selectedVideo != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[300]!)),
+                      child: Row(
+                        children: [
+                          if (_selectedImage != null) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(File(_selectedImage!.path), width: 50, height: 50, fit: BoxFit.cover),
+                            ),
+                            const SizedBox(width: 12),
+                          ],
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (_selectedImage != null) Text('Image: ${_selectedImage!.name}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                                if (_selectedVideo != null) Text('Video: ${_selectedVideo!.name}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => setState(() {
+                              _selectedImage = null;
+                              _selectedVideo = null;
+                            }),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   
                   // Audio Recorder

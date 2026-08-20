@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'database_helper.dart';
 
 class SyncService {
-  final String apiUrl = 'http://10.0.2.2:8000/api/v1/reports/'; // Local API
+  // TODO: Replace with your actual Render backend URL once deployed (e.g., https://adama-backend.onrender.com)
+  final String apiUrl = 'https://YOUR_RENDER_URL.onrender.com/api/v1/reports/'; // Production API
 
   Future<void> syncPendingReports() async {
     final dbHelper = DatabaseHelper();

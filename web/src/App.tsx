@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-route
 import DashboardLayout from './layouts/DashboardLayout'
 import Dashboard from './pages/Dashboard'
 import Reports from './pages/Reports'
+import Departments from './pages/Departments'
 import MapView from './pages/MapView'
 import Settings from './pages/Settings'
 import ReportDetails from './pages/ReportDetails'
@@ -40,7 +41,7 @@ function Login() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.4) 0%, rgba(15, 23, 42, 0.8) 100%), url(/adama_bg.jpg)',
+      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.3) 100%), url(/adama_bg.jpg)',
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       display: 'flex',
@@ -52,14 +53,19 @@ function Login() {
       {/* Animated background orbs */}
       <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
         <div style={{
-          position: 'absolute', width: 400, height: 400, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)',
+          position: 'absolute', width: 500, height: 500, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(236,72,153,0.2) 0%, transparent 70%)',
           top: '-10%', right: '-5%', animation: 'float 8s ease-in-out infinite',
         }} />
         <div style={{
-          position: 'absolute', width: 300, height: 300, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%)',
-          bottom: '-5%', left: '-5%', animation: 'float 10s ease-in-out infinite reverse',
+          position: 'absolute', width: 400, height: 400, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(16,185,129,0.2) 0%, transparent 70%)',
+          bottom: '-10%', left: '-5%', animation: 'float 10s ease-in-out infinite reverse',
+        }} />
+        <div style={{
+          position: 'absolute', width: 600, height: 600, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)',
+          top: '30%', left: '20%', animation: 'float 12s ease-in-out infinite',
         }} />
       </div>
 
@@ -74,21 +80,21 @@ function Login() {
           }}>
             <Building2 size={36} color="white" />
           </div>
-          <h1 style={{ color: 'white', fontSize: 28, fontWeight: 800, margin: '0 0 8px' }}>
+          <h1 style={{ color: '#0f172a', fontSize: 28, fontWeight: 800, margin: '0 0 8px', textShadow: '0 2px 10px rgba(255,255,255,0.8)' }}>
             Adama Smart Citizen Reporting
           </h1>
-          <p style={{ color: '#94a3b8', fontSize: 15, margin: 0 }}>
+          <p style={{ color: '#334155', fontSize: 15, margin: 0, fontWeight: 500, textShadow: '0 1px 4px rgba(255,255,255,0.8)' }}>
             City Administration Dashboard — Select your department to continue
           </p>
         </div>
 
         {/* Main card */}
         <div style={{
-          background: 'rgba(15, 23, 42, 0.65)',
+          background: 'rgba(255, 255, 255, 0.85)',
           backdropFilter: 'blur(24px)',
           borderRadius: 24,
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          boxShadow: '0 0 40px rgba(59, 130, 246, 0.3), inset 0 0 20px rgba(255,255,255,0.05)',
+          border: '1px solid rgba(203, 213, 225, 0.5)',
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.08), inset 0 0 20px rgba(255,255,255,0.5)',
           overflow: 'hidden',
         }}>
           {/* Two-column layout */}
@@ -97,9 +103,9 @@ function Login() {
             <div style={{
               flex: '1 1 520px',
               padding: 32,
-              borderRight: '1px solid rgba(148,163,184,0.08)',
+              borderRight: '1px solid rgba(203,213,225,0.4)',
             }}>
-              <h3 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h3 style={{ color: '#0f172a', fontSize: 16, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Shield size={18} color="#6366f1" />
                 Quick Department Login (Demo)
               </h3>
@@ -114,8 +120,8 @@ function Login() {
                   onChange={e => setDeptSearch(e.target.value)}
                   style={{
                     width: '100%', padding: '8px 12px 8px 36px', borderRadius: 10,
-                    border: '1px solid rgba(148,163,184,0.15)', background: 'rgba(15,23,42,0.5)',
-                    color: 'white', fontSize: 13, outline: 'none', boxSizing: 'border-box',
+                    border: '1px solid rgba(203,213,225,0.6)', background: 'rgba(241,245,249,0.8)',
+                    color: '#0f172a', fontSize: 13, outline: 'none', boxSizing: 'border-box',
                   }}
                 />
               </div>
@@ -133,22 +139,22 @@ function Login() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 10,
                       padding: '10px 12px', borderRadius: 10,
-                      border: '1px solid rgba(148,163,184,0.1)',
+                      border: '1px solid rgba(203,213,225,0.4)',
                       background: selectedDept?.id === dept.id
-                        ? 'rgba(99,102,241,0.2)'
-                        : 'rgba(15,23,42,0.4)',
-                      color: '#e2e8f0', cursor: 'pointer', textAlign: 'left',
+                        ? 'rgba(99,102,241,0.1)'
+                        : 'rgba(255,255,255,0.5)',
+                      color: '#334155', cursor: 'pointer', textAlign: 'left',
                       fontSize: 12, transition: 'all 0.2s',
                       width: '100%',
                     }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.background = 'rgba(99,102,241,0.15)'
-                      e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)'
+                      e.currentTarget.style.background = 'rgba(99,102,241,0.05)'
+                      e.currentTarget.style.borderColor = 'rgba(99,102,241,0.2)'
                     }}
                     onMouseLeave={e => {
                       e.currentTarget.style.background = selectedDept?.id === dept.id
-                        ? 'rgba(99,102,241,0.2)' : 'rgba(15,23,42,0.4)'
-                      e.currentTarget.style.borderColor = 'rgba(148,163,184,0.1)'
+                        ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.5)'
+                      e.currentTarget.style.borderColor = 'rgba(203,213,225,0.4)'
                     }}
                   >
                     <span style={{
@@ -163,6 +169,7 @@ function Login() {
                       <div style={{
                         fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap',
                         overflow: 'hidden', textOverflow: 'ellipsis',
+                        color: '#0f172a'
                       }}>
                         {dept.nameEn}
                       </div>
@@ -180,7 +187,7 @@ function Login() {
 
             {/* Right: Manual login form */}
             <div style={{ flex: '1 1 300px', padding: 32 }}>
-              <h3 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 600, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h3 style={{ color: '#0f172a', fontSize: 16, fontWeight: 600, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <LogIn size={18} color="#10b981" />
                 Sign In
               </h3>
@@ -188,7 +195,7 @@ function Login() {
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {/* Phone */}
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>
+                  <label style={{ display: 'block', color: '#475569', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
                     Phone Number
                   </label>
                   <input
@@ -198,15 +205,15 @@ function Login() {
                     placeholder="0911000001"
                     style={{
                       width: '100%', padding: '10px 14px', borderRadius: 10,
-                      border: '1px solid rgba(148,163,184,0.15)', background: 'rgba(15,23,42,0.5)',
-                      color: 'white', fontSize: 14, outline: 'none', boxSizing: 'border-box',
+                      border: '1px solid rgba(203,213,225,0.6)', background: 'rgba(241,245,249,0.8)',
+                      color: '#0f172a', fontSize: 14, outline: 'none', boxSizing: 'border-box',
                     }}
                   />
                 </div>
 
                 {/* Password */}
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>
+                  <label style={{ display: 'block', color: '#475569', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
                     Password
                   </label>
                   <input
@@ -216,15 +223,15 @@ function Login() {
                     placeholder="demo1234"
                     style={{
                       width: '100%', padding: '10px 14px', borderRadius: 10,
-                      border: '1px solid rgba(148,163,184,0.15)', background: 'rgba(15,23,42,0.5)',
-                      color: 'white', fontSize: 14, outline: 'none', boxSizing: 'border-box',
+                      border: '1px solid rgba(203,213,225,0.6)', background: 'rgba(241,245,249,0.8)',
+                      color: '#0f172a', fontSize: 14, outline: 'none', boxSizing: 'border-box',
                     }}
                   />
                 </div>
 
                 {/* Department selector */}
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>
+                  <label style={{ display: 'block', color: '#475569', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
                     Department
                   </label>
                   <div style={{ position: 'relative' }}>
@@ -233,8 +240,8 @@ function Login() {
                       onClick={() => setShowDeptDropdown(!showDeptDropdown)}
                       style={{
                         width: '100%', padding: '10px 14px', borderRadius: 10,
-                        border: '1px solid rgba(148,163,184,0.15)', background: 'rgba(15,23,42,0.5)',
-                        color: selectedDept ? 'white' : '#64748b', fontSize: 13,
+                        border: '1px solid rgba(203,213,225,0.6)', background: 'rgba(241,245,249,0.8)',
+                        color: selectedDept ? '#0f172a' : '#64748b', fontSize: 13,
                         cursor: 'pointer', textAlign: 'left', display: 'flex',
                         justifyContent: 'space-between', alignItems: 'center',
                       }}
@@ -245,9 +252,9 @@ function Login() {
                     {showDeptDropdown && (
                       <div style={{
                         position: 'absolute', top: '100%', left: 0, right: 0,
-                        background: '#1e293b', border: '1px solid rgba(148,163,184,0.15)',
+                        background: 'white', border: '1px solid rgba(203,213,225,0.6)',
                         borderRadius: 10, marginTop: 4, maxHeight: 200, overflowY: 'auto',
-                        zIndex: 50,
+                        zIndex: 50, boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
                       }}>
                         {DEPARTMENTS.map(d => (
                           <button
@@ -256,10 +263,10 @@ function Login() {
                             onClick={() => { setSelectedDept(d); setShowDeptDropdown(false) }}
                             style={{
                               width: '100%', padding: '8px 14px', border: 'none',
-                              background: 'transparent', color: '#e2e8f0', cursor: 'pointer',
+                              background: 'transparent', color: '#0f172a', cursor: 'pointer',
                               textAlign: 'left', fontSize: 12,
                             }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.15)'}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.1)'}
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                           >
                             {d.icon} {d.nameEn} — <span style={{ color: '#64748b' }}>{d.name}</span>
@@ -272,7 +279,7 @@ function Login() {
 
                 {/* Role */}
                 <div>
-                  <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>
+                  <label style={{ display: 'block', color: '#475569', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
                     Role
                   </label>
                   <select
@@ -280,8 +287,8 @@ function Login() {
                     onChange={e => setRole(e.target.value)}
                     style={{
                       width: '100%', padding: '10px 14px', borderRadius: 10,
-                      border: '1px solid rgba(148,163,184,0.15)', background: 'rgba(15,23,42,0.5)',
-                      color: 'white', fontSize: 13, outline: 'none',
+                      border: '1px solid rgba(203,213,225,0.6)', background: 'rgba(241,245,249,0.8)',
+                      color: '#0f172a', fontSize: 13, outline: 'none',
                     }}
                   >
                     <option value="department_manager">Department Manager</option>
@@ -293,14 +300,23 @@ function Login() {
                 <button
                   type="submit"
                   style={{
-                    width: '100%', padding: '12px', borderRadius: 12, border: 'none',
-                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                    color: 'white', fontSize: 15, fontWeight: 600, cursor: 'pointer',
-                    marginTop: 8, transition: 'all 0.2s',
-                    boxShadow: '0 4px 15px rgba(99,102,241,0.3)',
+                    width: '100%', padding: '14px', borderRadius: 12, border: 'none',
+                    background: 'linear-gradient(135deg, #ec4899, #8b5cf6, #3b82f6)',
+                    backgroundSize: '200% 200%',
+                    color: 'white', fontSize: 16, fontWeight: 700, cursor: 'pointer',
+                    marginTop: 8, transition: 'all 0.3s ease',
+                    boxShadow: '0 8px 25px rgba(236,72,153,0.4)',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                  onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                    e.currentTarget.style.boxShadow = '0 12px 30px rgba(236,72,153,0.6)'
+                    e.currentTarget.style.backgroundPosition = '100% 50%'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = '0 8px 25px rgba(236,72,153,0.4)'
+                    e.currentTarget.style.backgroundPosition = '0% 50%'
+                  }}
                 >
                   Sign In
                 </button>
@@ -309,27 +325,27 @@ function Login() {
               {/* Demo credentials */}
               <div style={{
                 marginTop: 24, padding: 16, borderRadius: 12,
-                background: 'rgba(16,185,129,0.08)',
-                border: '1px solid rgba(16,185,129,0.15)',
+                background: 'rgba(16,185,129,0.1)',
+                border: '1px solid rgba(16,185,129,0.2)',
               }}>
-                <p style={{ color: '#10b981', fontSize: 12, fontWeight: 600, margin: '0 0 8px' }}>
+                <p style={{ color: '#059669', fontSize: 12, fontWeight: 700, margin: '0 0 8px' }}>
                   🔑 Demo Credentials
                 </p>
-                <p style={{ color: '#94a3b8', fontSize: 11, margin: '0 0 4px' }}>
-                  Citizen: <code style={{ color: '#e2e8f0' }}>0911000001</code> / <code style={{ color: '#e2e8f0' }}>demo1234</code>
+                <p style={{ color: '#475569', fontSize: 11, margin: '0 0 4px' }}>
+                  Citizen: <code style={{ color: '#0f172a', fontWeight: 600 }}>0911000001</code> / <code style={{ color: '#0f172a', fontWeight: 600 }}>demo1234</code>
                 </p>
-                <p style={{ color: '#94a3b8', fontSize: 11, margin: '0 0 4px' }}>
-                  Admin: <code style={{ color: '#e2e8f0' }}>0911000002</code> / <code style={{ color: '#e2e8f0' }}>admin1234</code>
+                <p style={{ color: '#475569', fontSize: 11, margin: '0 0 4px' }}>
+                  Admin: <code style={{ color: '#0f172a', fontWeight: 600 }}>0911000002</code> / <code style={{ color: '#0f172a', fontWeight: 600 }}>admin1234</code>
                 </p>
-                <p style={{ color: '#94a3b8', fontSize: 11, margin: 0 }}>
-                  Officer: <code style={{ color: '#e2e8f0' }}>0911000100</code> / <code style={{ color: '#e2e8f0' }}>officer1234</code>
+                <p style={{ color: '#475569', fontSize: 11, margin: 0 }}>
+                  Officer: <code style={{ color: '#0f172a', fontWeight: 600 }}>0911000100</code> / <code style={{ color: '#0f172a', fontWeight: 600 }}>officer1234</code>
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        <p style={{ textAlign: 'center', color: '#475569', fontSize: 12, marginTop: 24 }}>
+        <p style={{ textAlign: 'center', color: '#64748b', fontSize: 12, marginTop: 24, fontWeight: 500 }}>
           Built for Adama City Administration, Ethiopia — All 33 Departments
         </p>
       </div>
@@ -369,6 +385,7 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/reports/:id" element={<ReportDetails />} />
+          <Route path="/departments" element={<Departments />} />
           <Route path="/map" element={<MapView />} />
           <Route path="/settings" element={<Settings />} />
         </Route>

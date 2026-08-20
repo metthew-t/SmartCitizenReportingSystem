@@ -58,13 +58,26 @@ function StatCard({ title, value, icon: Icon, color, trend }: {
 }) {
   return (
     <div style={{
-      background: 'rgba(30,41,59,0.6)',
+      background: `linear-gradient(135deg, rgba(30,41,59,0.9) 0%, ${color}10 100%)`,
       backdropFilter: 'blur(12px)',
-      border: '1px solid rgba(148,163,184,0.08)',
+      border: `1px solid ${color}30`,
+      boxShadow: `0 4px 20px ${color}15`,
       borderRadius: 16, padding: 20,
       display: 'flex', alignItems: 'center', gap: 16,
-      transition: 'all 0.3s',
-    }}>
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      cursor: 'default',
+    }}
+    onMouseEnter={e => {
+      e.currentTarget.style.transform = 'translateY(-4px)'
+      e.currentTarget.style.boxShadow = `0 10px 30px ${color}30`
+      e.currentTarget.style.borderColor = `${color}60`
+    }}
+    onMouseLeave={e => {
+      e.currentTarget.style.transform = 'translateY(0)'
+      e.currentTarget.style.boxShadow = `0 4px 20px ${color}15`
+      e.currentTarget.style.borderColor = `${color}30`
+    }}
+    >
       <div style={{
         width: 48, height: 48, borderRadius: 14,
         background: `${color}15`,
@@ -252,8 +265,9 @@ export default function Dashboard() {
       {stats && (
         <div style={{
           marginTop: 24, padding: 20, borderRadius: 16,
-          background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(99,102,241,0.08) 100%)',
-          border: '1px solid rgba(16,185,129,0.12)',
+          background: 'linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(99,102,241,0.15) 100%)',
+          border: '1px solid rgba(16,185,129,0.25)',
+          boxShadow: '0 8px 32px rgba(16,185,129,0.15)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
         }}>
           <div>

@@ -10,6 +10,7 @@ export default function Reports() {
   const { department } = useAuthStore()
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL')
+  const [deptFilter, setDeptFilter] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedReport, setSelectedReport] = useState<DemoReport | null>(null)
 
@@ -28,6 +29,7 @@ export default function Reports() {
     return allReports.filter(r => {
       if (statusFilter !== 'ALL' && r.status !== statusFilter) return false
       if (priorityFilter !== 'ALL' && r.priority !== priorityFilter) return false
+      if (deptFilter !== 'ALL' && r.departmentId !== Number(deptFilter)) return false
       if (searchQuery) {
         const q = searchQuery.toLowerCase()
         return (
@@ -38,7 +40,7 @@ export default function Reports() {
       }
       return true
     })
-  }, [allReports, statusFilter, priorityFilter, searchQuery])
+  }, [allReports, statusFilter, priorityFilter, deptFilter, searchQuery])
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -109,6 +111,25 @@ export default function Reports() {
           <option value="HIGH">High</option>
           <option value="CRITICAL">Critical</option>
         </select>
+
+        {/* Department filter */}
+        {!department && (
+          <select
+            value={deptFilter}
+            onChange={e => setDeptFilter(e.target.value)}
+            style={{
+              padding: '8px 14px', borderRadius: 10,
+              border: '1px solid rgba(148,163,184,0.12)', background: 'rgba(15,23,42,0.5)',
+              color: 'white', fontSize: 13, outline: 'none', cursor: 'pointer',
+              maxWidth: 220,
+            }}
+          >
+            <option value="ALL">All Departments</option>
+            {DEPARTMENTS.map(d => (
+              <option key={d.id} value={d.id}>{d.nameEn}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Reports table */}

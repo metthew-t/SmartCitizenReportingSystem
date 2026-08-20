@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore'
 import { DEPARTMENTS } from '../store/demoData'
 import {
   LayoutDashboard, FileText, Map, Users, Settings, LogOut,
-  ChevronDown, Bell, Menu, X
+  ChevronDown, Bell, Menu, X, Building2
 } from 'lucide-react'
 
 export default function DashboardLayout() {
@@ -22,6 +22,7 @@ export default function DashboardLayout() {
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/reports', label: 'Reports', icon: FileText },
+    { path: '/departments', label: 'Departments', icon: Building2 },
     { path: '/map', label: 'GIS Map', icon: Map },
     { path: '/settings', label: 'Settings', icon: Settings },
   ]
@@ -148,12 +149,25 @@ export default function DashboardLayout() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: sidebarCollapsed ? '10px 12px' : '10px 16px',
-                  borderRadius: 10, marginBottom: 4,
-                  background: active ? 'rgba(99,102,241,0.15)' : 'transparent',
+                  borderRadius: 12, marginBottom: 6,
+                  background: active ? 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(236,72,153,0.15))' : 'transparent',
                   color: active ? '#818cf8' : '#94a3b8',
-                  textDecoration: 'none', fontSize: 13, fontWeight: active ? 600 : 400,
-                  transition: 'all 0.2s',
+                  border: `1px solid ${active ? 'rgba(99,102,241,0.25)' : 'transparent'}`,
+                  textDecoration: 'none', fontSize: 13, fontWeight: active ? 600 : 500,
+                  transition: 'all 0.3s',
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                }}
+                onMouseEnter={e => {
+                  if (!active) {
+                    e.currentTarget.style.background = 'rgba(99,102,241,0.08)'
+                    e.currentTarget.style.color = '#e2e8f0'
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!active) {
+                    e.currentTarget.style.background = 'transparent'
+                    e.currentTarget.style.color = '#94a3b8'
+                  }
                 }}
               >
                 <Icon size={18} />
@@ -192,14 +206,23 @@ export default function DashboardLayout() {
             onClick={handleLogout}
             style={{
               display: 'flex', alignItems: 'center', gap: 10,
-              width: '100%', padding: '8px 12px', borderRadius: 8,
-              border: 'none', background: 'rgba(239,68,68,0.08)',
-              color: '#f87171', cursor: 'pointer', fontSize: 12,
+              width: '100%', padding: '10px 12px', borderRadius: 10,
+              border: 'none', background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(249,115,22,0.15))',
+              color: '#f87171', cursor: 'pointer', fontSize: 13, fontWeight: 600,
               justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-              transition: 'all 0.2s',
+              transition: 'all 0.3s',
+              border: '1px solid rgba(239,68,68,0.2)',
             }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.15)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(239,68,68,0.8), rgba(249,115,22,0.8))'
+              e.currentTarget.style.color = 'white'
+              e.currentTarget.style.boxShadow = '0 4px 15px rgba(239,68,68,0.4)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(249,115,22,0.15))'
+              e.currentTarget.style.color = '#f87171'
+              e.currentTarget.style.boxShadow = 'none'
+            }}
           >
             <LogOut size={16} />
             {!sidebarCollapsed && 'Logout'}

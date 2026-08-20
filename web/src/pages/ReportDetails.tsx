@@ -1,70 +1,291 @@
 import React from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import {
+  DEMO_REPORTS, DEPARTMENTS, CATEGORIES,
+  STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS,
+} from '../store/demoData'
+import { ArrowLeft, MapPin, Clock, User, FileText, Building2, Tag, AlertTriangle, ExternalLink, CheckCircle, XCircle } from 'lucide-react'
 
 export default function ReportDetails() {
   const { id } = useParams()
+  const navigate = useNavigate()
+  const report = DEMO_REPORTS.find(r => r.id === Number(id))
+
+  if (!report) {
+    return (
+      <div style={{ fontFamily: "'Inter', sans-serif", textAlign: 'center', padding: 60 }}>
+        <AlertTriangle size={48} color="#f59e0b" />
+        <h2 style={{ color: '#e2e8f0', fontSize: 20, fontWeight: 700, marginTop: 16 }}>
+          Report Not Found
+        </h2>
+        <p style={{ color: '#64748b', fontSize: 14, margin: '8px 0 24px' }}>
+          Report #{id} does not exist.
+        </p>
+        <button
+          onClick={() => navigate('/reports')}
+          style={{
+            padding: '10px 20px', borderRadius: 10, border: 'none',
+            background: 'rgba(99,102,241,0.15)', color: '#818cf8',
+            cursor: 'pointer', fontSize: 13, fontWeight: 600,
+          }}
+        >
+          ← Back to Reports
+        </button>
+      </div>
+    )
+  }
+
+  const dept = DEPARTMENTS.find(d => d.id === report.departmentId)
+  const cat = CATEGORIES.find(c => c.id === report.categoryId)
+  const createdDate = new Date(report.createdAt)
+  const formattedDate = createdDate.toLocaleDateString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  })
+
+  const workflowStatuses = ['SUBMITTED', 'RECEIVED', 'ASSIGNED', 'UNDER_INVESTIGATION', 'IN_PROGRESS', 'RESOLVED', 'CLOSED']
+  const currentIdx = workflowStatuses.indexOf(report.status)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-        <Link to="/reports" className="p-2 bg-white rounded-full shadow hover:bg-gray-50 transition-colors">
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
-        </Link>
-        <h2 className="text-2xl font-bold text-gray-900">Report Details #{id || '123'}</h2>
+    <div style={{ fontFamily: "'Inter', sans-serif", maxWidth: 800 }}>
+      {/* Back button */}
+      <button
+        onClick={() => navigate('/reports')}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          background: 'none', border: 'none', color: '#818cf8',
+          cursor: 'pointer', fontSize: 13, fontWeight: 500, padding: 0,
+          marginBottom: 20,
+        }}
+      >
+        <ArrowLeft size={16} /> Back to Reports
+      </button>
+
+      {/* Header card */}
+      <div style={{
+        background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16,
+        padding: 24, marginBottom: 16,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <h2 style={{ color: '#818cf8', fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>
+              {report.caseNumber}
+            </h2>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{
+                padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                background: `${STATUS_COLORS[report.status]}15`, color: STATUS_COLORS[report.status],
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: STATUS_COLORS[report.status] }} />
+                {STATUS_LABELS[report.status]}
+              </span>
+              <span style={{
+                padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+                background: `${PRIORITY_COLORS[report.priority]}12`, color: PRIORITY_COLORS[report.priority],
+              }}>
+                {report.priority}
+              </span>
+            </div>
+          </div>
+          <div style={{ color: '#64748b', fontSize: 12, textAlign: 'right' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Clock size={12} /> {formattedDate}
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="bg-white shadow sm:rounded-lg overflow-hidden">
-        <div className="px-4 py-5 sm:px-6 flex justify-between items-center border-b border-gray-200">
-          <div>
-            <h3 className="text-lg leading-6 font-medium text-gray-900">Water Pipe Burst on Main Street</h3>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">Submitted on Aug 18, 2026</p>
-          </div>
-          <span className="px-3 py-1 text-sm font-semibold rounded-full bg-yellow-100 text-yellow-800">
-            In Progress
-          </span>
-        </div>
-        <div className="px-4 py-5 sm:p-6">
-          <dl className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2">
-            <div className="sm:col-span-1">
-              <dt className="text-sm font-medium text-gray-500">Category</dt>
-              <dd className="mt-1 text-sm text-gray-900">Infrastructure</dd>
-            </div>
-            <div className="sm:col-span-1">
-              <dt className="text-sm font-medium text-gray-500">Department</dt>
-              <dd className="mt-1 text-sm text-gray-900">Waajjira Bishaan Dhugaatii fi Dhangala'aa</dd>
-            </div>
-            <div className="sm:col-span-2">
-              <dt className="text-sm font-medium text-gray-500">Description</dt>
-              <dd className="mt-1 text-sm text-gray-900">
-                Large water leak near the central roundabout. It has been flowing for 3 hours and is flooding the road.
-              </dd>
-            </div>
-            <div className="sm:col-span-2">
-              <dt className="text-sm font-medium text-gray-500">Location</dt>
-              <dd className="mt-1 text-sm text-gray-900">Lat: 8.5412, Lng: 39.2680</dd>
-              {/* Map Placeholder */}
-              <div className="mt-2 h-48 bg-gray-100 rounded-md flex items-center justify-center text-gray-400 border border-gray-200">
-                Map View Placeholder
-              </div>
-            </div>
-            <div className="sm:col-span-2">
-              <dt className="text-sm font-medium text-gray-500">Attached Media</dt>
-              <div className="mt-2 flex space-x-4">
-                 <div className="w-32 h-32 bg-gray-100 rounded-md border border-gray-200 flex items-center justify-center text-gray-400">Image 1</div>
-              </div>
-            </div>
-          </dl>
-        </div>
-        <div className="bg-gray-50 px-4 py-4 sm:px-6 border-t border-gray-200 flex justify-end space-x-3">
-          <button type="button" className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-            Reject
-          </button>
-          <button type="button" className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700">
-            Resolve Issue
-          </button>
-        </div>
+      {/* Description */}
+      <div style={{
+        background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16,
+        padding: 24, marginBottom: 16,
+      }}>
+        <h3 style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 600, margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <FileText size={16} color="#6366f1" /> Description
+        </h3>
+        <p style={{ color: '#cbd5e1', fontSize: 14, lineHeight: 1.7, margin: 0 }}>
+          {report.description}
+        </p>
       </div>
+
+      {/* Details grid */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: 16, marginBottom: 16,
+      }}>
+        <DetailCard
+          icon={<User size={16} color="#f59e0b" />}
+          label="Reporter"
+          value={report.isAnonymous ? 'Anonymous Citizen' : report.citizenName}
+          sublabel={report.isAnonymous ? 'Identity protected' : undefined}
+        />
+        <DetailCard
+          icon={<Building2 size={16} color="#6366f1" />}
+          label="Department"
+          value={dept?.nameEn || 'Unassigned'}
+          sublabel={dept?.name}
+        />
+        <DetailCard
+          icon={<Tag size={16} color="#8b5cf6" />}
+          label="Category"
+          value={cat?.nameEn || 'General'}
+          sublabel={cat?.nameOm}
+        />
+        <DetailCard
+          icon={<MapPin size={16} color="#10b981" />}
+          label="Location"
+          value={`${report.latitude.toFixed(4)}°N, ${report.longitude.toFixed(4)}°E`}
+          sublabel={
+            <a
+              href={`https://www.google.com/maps?q=${report.latitude},${report.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6,
+                padding: '4px 10px', borderRadius: 6, background: 'rgba(16,185,129,0.15)',
+                color: '#10b981', textDecoration: 'none', fontSize: 11, fontWeight: 600,
+                transition: 'all 0.2s', border: '1px solid rgba(16,185,129,0.3)',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(16,185,129,0.25)'
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(16,185,129,0.2)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'rgba(16,185,129,0.15)'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            >
+              <ExternalLink size={12} /> Open in Google Maps
+            </a>
+          }
+        />
+      </div>
+
+      {/* Status workflow */}
+      <div style={{
+        background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16,
+        padding: 24,
+      }}>
+        <h3 style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 600, margin: '0 0 16px' }}>
+          Report Workflow
+        </h3>
+
+        {/* Progress bar */}
+        <div style={{
+          height: 4, background: 'rgba(148,163,184,0.1)', borderRadius: 2,
+          marginBottom: 16, overflow: 'hidden',
+        }}>
+          <div style={{
+            height: '100%', borderRadius: 2,
+            width: `${currentIdx >= 0 ? ((currentIdx + 1) / workflowStatuses.length) * 100 : 0}%`,
+            background: 'linear-gradient(90deg, #6366f1, #10b981)',
+            transition: 'width 0.5s ease',
+          }} />
+        </div>
+
+        {/* Status steps */}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {workflowStatuses.map((status, idx) => {
+            const isActive = status === report.status
+            const isPast = idx <= currentIdx
+            return (
+              <div key={status} style={{
+                flex: '1 1 auto', padding: '8px 12px', borderRadius: 8, textAlign: 'center',
+                fontSize: 10, fontWeight: isActive ? 700 : 500,
+                background: isActive
+                  ? `${STATUS_COLORS[status]}20`
+                  : isPast ? 'rgba(148,163,184,0.08)' : 'rgba(148,163,184,0.03)',
+                color: isActive
+                  ? STATUS_COLORS[status]
+                  : isPast ? '#94a3b8' : '#475569',
+                border: `1px solid ${isActive ? STATUS_COLORS[status] + '40' : 'rgba(148,163,184,0.06)'}`,
+                transition: 'all 0.3s',
+              }}>
+                {isActive && '● '}
+                {STATUS_LABELS[status]}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Reopened / Rejected special statuses */}
+        {(report.status === 'REOPENED' || report.status === 'REJECTED') && (
+          <div style={{
+            marginTop: 12, padding: '8px 14px', borderRadius: 8,
+            background: `${STATUS_COLORS[report.status]}15`,
+            color: STATUS_COLORS[report.status],
+            fontSize: 12, fontWeight: 600, textAlign: 'center',
+          }}>
+            ⚠️ This report has been {report.status.toLowerCase()}.
+          </div>
+        )}
+      </div>
+
+      {/* Action Buttons */}
+      <div style={{ display: 'flex', gap: 16, marginTop: 24, justifyContent: 'flex-end' }}>
+        <button
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '12px 24px', borderRadius: 12, border: 'none', cursor: 'pointer',
+            background: 'linear-gradient(135deg, #f43f5e, #e11d48)',
+            color: 'white', fontSize: 14, fontWeight: 600,
+            transition: 'all 0.3s', boxShadow: '0 4px 15px rgba(225,29,72,0.3)',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateY(-2px)'
+            e.currentTarget.style.boxShadow = '0 8px 25px rgba(225,29,72,0.5)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'translateY(0)'
+            e.currentTarget.style.boxShadow = '0 4px 15px rgba(225,29,72,0.3)'
+          }}
+        >
+          <XCircle size={18} /> Reject Report
+        </button>
+        <button
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '12px 24px', borderRadius: 12, border: 'none', cursor: 'pointer',
+            background: 'linear-gradient(135deg, #10b981, #059669)',
+            color: 'white', fontSize: 14, fontWeight: 600,
+            transition: 'all 0.3s', boxShadow: '0 4px 15px rgba(16,185,129,0.3)',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateY(-2px)'
+            e.currentTarget.style.boxShadow = '0 8px 25px rgba(16,185,129,0.5)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'translateY(0)'
+            e.currentTarget.style.boxShadow = '0 4px 15px rgba(16,185,129,0.3)'
+          }}
+        >
+          <CheckCircle size={18} /> Resolve Issue
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function DetailCard({ icon, label, value, sublabel }: {
+  icon: React.ReactNode; label: string; value: string; sublabel?: React.ReactNode
+}) {
+  return (
+    <div style={{
+      background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
+      border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16,
+      padding: 20,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        {icon}
+        <span style={{ color: '#64748b', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          {label}
+        </span>
+      </div>
+      <div style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 600 }}>{value}</div>
+      {sublabel && <div style={{ color: '#475569', fontSize: 11, marginTop: 4 }}>{sublabel}</div>}
     </div>
   )
 }
