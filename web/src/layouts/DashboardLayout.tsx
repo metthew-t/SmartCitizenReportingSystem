@@ -207,11 +207,10 @@ export default function DashboardLayout() {
             style={{
               display: 'flex', alignItems: 'center', gap: 10,
               width: '100%', padding: '10px 12px', borderRadius: 10,
-              border: 'none', background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(249,115,22,0.15))',
+              border: '1px solid rgba(239,68,68,0.2)', background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(249,115,22,0.15))',
               color: '#f87171', cursor: 'pointer', fontSize: 13, fontWeight: 600,
               justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
               transition: 'all 0.3s',
-              border: '1px solid rgba(239,68,68,0.2)',
             }}
             onMouseEnter={e => {
               e.currentTarget.style.background = 'linear-gradient(135deg, rgba(239,68,68,0.8), rgba(249,115,22,0.8))'
