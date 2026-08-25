@@ -20,5 +20,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Run migrations and start the dev server
-CMD python manage.py migrate && python manage.py runserver 0.0.0.0:8000
+# Run migrations and start the production gunicorn server
+CMD python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT

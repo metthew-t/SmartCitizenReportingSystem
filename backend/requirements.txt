@@ -4,7 +4,7 @@ psycopg2-binary
 djangorestframework-simplejwt
 django-cors-headers
 django-environ
-gdal
+GDAL==3.10.3
 fcm-django
 gunicorn
 whitenoise
