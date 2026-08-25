@@ -22,3 +22,8 @@ media/
 .DS_Store
 Thumbs.db
 postgis_data/
+
+# Large binary files - never commit these
+*.exe
+DockerInstaller.exe
+DockerDesktopInstallerNew.exe
