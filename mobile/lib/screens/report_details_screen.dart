@@ -43,10 +43,12 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
       if (res.statusCode == 200) {
         final List<dynamic> data = jsonDecode(res.body);
         setState(() {
-          _messages = data.map((m) => {
-            'sender': m['sender'] == 1 ? 'citizen' : 'officer', // Mock logic for sender mapping
-            'text': m['content'],
-            'time': m['created_at'].toString().substring(11, 16),
+          _messages = data.map((m) {
+            return <String, dynamic>{
+              'sender': m['sender'] == 1 ? 'citizen' : 'officer',
+              'text': m['content'],
+              'time': m['created_at'].toString().substring(11, 16),
+            };
           }).toList();
         });
       }

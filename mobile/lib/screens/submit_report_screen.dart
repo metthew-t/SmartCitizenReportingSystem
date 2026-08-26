@@ -289,7 +289,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
     }
   }
 
-  void _handleSubmit() {
+  Future<void> _handleSubmit() async {
     if (_locationError.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_locationError), backgroundColor: Colors.red));
       return;
@@ -308,8 +308,8 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'description': _descriptionController.text,
-          'latitude': _locationData?.latitude ?? 8.5415,
-          'longitude': _locationData?.longitude ?? 39.2689,
+          'latitude': _currentPosition?.latitude ?? 8.5415,
+          'longitude': _currentPosition?.longitude ?? 39.2689,
           'category': 1, // Demo category
           // Note: In real app, send actual selected category ID and authentication token
         }),
@@ -363,6 +363,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
       setState(() => _isSubmitting = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to connect to backend: $e')));
     }
+  }
 
   @override
   Widget build(BuildContext context) {
