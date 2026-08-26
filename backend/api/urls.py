@@ -3,7 +3,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from accounts.views import CustomTokenObtainPairView, RegisterView, CurrentUserView, MockOTPRequestView, MockOTPVerifyView
 from api.analytics_views import AnalyticsSummaryView, AnalyticsByDepartmentView, AnalyticsByStatusView, ReportGeoJSONView
 from rest_framework.routers import DefaultRouter
-from api.views import ReportViewSet, DepartmentViewSet, ReportCategoryViewSet
+from api.views import ReportViewSet, DepartmentViewSet, ReportCategoryViewSet, MessageViewSet
 from api.notification_views import NotificationViewSet, DeviceTokenViewSet
 
 router = DefaultRouter()
@@ -12,6 +12,7 @@ router.register(r'departments', DepartmentViewSet, basename='department')
 router.register(r'categories', ReportCategoryViewSet, basename='category')
 router.register(r'notifications', NotificationViewSet, basename='notification')
 router.register(r'device-tokens', DeviceTokenViewSet, basename='device-token')
+router.register(r'messages', MessageViewSet, basename='message')
 
 urlpatterns = [
     # Auth Endpoints

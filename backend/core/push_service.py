@@ -98,3 +98,16 @@ def notify_officer_assigned(report):
             body=f'Lakk. {report.case_number} - {report.description[:60]}',
             data={'type': 'REPORT_ASSIGNED', 'report_id': report.id}
         )
+
+def notify_department_new_report(report):
+    if report.primary_department:
+        from core.models import OfficerProfile
+        officers = OfficerProfile.objects.filter(department=report.primary_department)
+        for officer in officers:
+            if officer.user:
+                send_push_notification(
+                    officer.user,
+                    title='New Incident Reported',
+                    body=f'Case {report.case_number} assigned to your department.',
+                    data={'type': 'REPORT_SUBMITTED', 'report_id': report.id}
+                )

@@ -14,14 +14,47 @@ export default function Reports() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedReport, setSelectedReport] = useState<DemoReport | null>(null)
 
-  // Get reports for current department
-  const allReports = useMemo(() => {
-    const reports = department
-      ? getReportsForDepartment(department.id)
-      : DEMO_REPORTS
-    return reports.sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
+  const [allReports, setAllReports] = useState<DemoReport[]>([])
+  const [loading, setLoading] = useState(true)
+
+  React.useEffect(() => {
+    const fetchReports = async () => {
+      setLoading(true)
+      try {
+        const response = await fetch('https://smartcitizenreportingsystem.onrender.com/api/reports/', {
+          headers: {
+            'Authorization': `Bearer ${useAuthStore.getState().token}`
+          }
+        });
+        if (response.ok) {
+          const data = await response.json()
+          const mapped = data.map((item: any) => ({
+            id: item.id,
+            caseNumber: item.case_number,
+            departmentId: item.primary_department,
+            categoryId: item.category,
+            citizenName: item.citizen?.full_name || 'Citizen',
+            isAnonymous: item.is_anonymous,
+            description: item.description,
+            latitude: item.latitude,
+            longitude: item.longitude,
+            status: item.status,
+            priority: item.priority,
+            createdAt: item.created_at,
+          }))
+          // Sort by newest and filter by department if set
+          const filtered = department 
+            ? mapped.filter((r: DemoReport) => r.departmentId === department.id)
+            : mapped
+          setAllReports(filtered.sort((a: DemoReport, b: DemoReport) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+        }
+      } catch (err) {
+        console.error("Failed to fetch reports", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchReports()
   }, [department])
 
   // Apply filters

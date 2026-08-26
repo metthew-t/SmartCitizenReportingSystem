@@ -46,19 +46,46 @@ class ReportViewSet(viewsets.ModelViewSet):
         # In a real app, generate the case number properly
         case_number = f"AD-{uuid.uuid4().hex[:6].upper()}"
         
+        # If primary_department is not provided, try to route it
+        department = serializer.validated_data.get('primary_department')
+        if not department:
+            from core.services import route_report
+            recommendation = route_report(
+                data.get('description', ''), 
+                data.get('category')
+            )
+            department = recommendation.get('primary')
+        
         report = serializer.save(
             citizen=request.user,
             location=point,
             case_number=case_number,
-            status='SUBMITTED'
+            status='SUBMITTED',
+            primary_department=department
         )
         
         # Fire notification to citizen
-        from core.push_service import notify_report_submitted
+        from core.push_service import notify_report_submitted, notify_department_new_report
         notify_report_submitted(report)
+        notify_department_new_report(report)
         
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+class MessageViewSet(viewsets.ModelViewSet):
+    serializer_class = MessageSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        report_id = self.request.query_params.get('report', None)
+        if report_id:
+            return Message.objects.filter(report_id=report_id).order_by('created_at')
+        return Message.objects.none()
+
+    def perform_create(self, serializer):
+        # We also need to notify the recipient depending on who sends the message.
+        msg = serializer.save(sender=self.request.user)
+        # We can add chat notification logic here later.
 
     @action(detail=True, methods=['post'])
     def change_status(self, request, pk=None):

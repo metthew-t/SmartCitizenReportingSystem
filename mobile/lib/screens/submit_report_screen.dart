@@ -3,6 +3,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'home_screen.dart';
 import 'dart:async';
 
@@ -300,11 +302,24 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
     }
     
     setState(() => _isSubmitting = true);
+    try {
+      final response = await http.post(
+        Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/reports/'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'description': _descriptionController.text,
+          'latitude': _locationData?.latitude ?? 8.5415,
+          'longitude': _locationData?.longitude ?? 39.2689,
+          'category': 1, // Demo category
+          // Note: In real app, send actual selected category ID and authentication token
+        }),
+      );
+      
+      final caseNum = response.statusCode == 201 ? jsonDecode(response.body)['case_number'] : 'AD-ERROR';
 
-    Future.delayed(const Duration(seconds: 1), () {
       if (!mounted) return;
+      setState(() => _isSubmitting = false);
 
-      final caseNum = 'AD-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
       final newReport = DemoReportItem(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         caseNumber: caseNum,
@@ -312,12 +327,10 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
         description: _descriptionController.text,
         status: 'SUBMITTED',
         priority: _selectedPriority,
-        department: _selectedDepartment!,
+        department: _selectedDepartment ?? 'Unassigned',
         category: _selectedCategory,
         createdAt: DateTime.now(),
       );
-
-      setState(() => _isSubmitting = false);
 
       showDialog(
         context: context,
@@ -345,24 +358,38 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
           ],
         ),
       );
-    });
-  }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to connect to backend: $e')));
+    }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Submit Incident')),
-      body: _isLoadingLocation 
-        ? const Center(child: CircularProgressIndicator())
-        : SingleChildScrollView(
+      body: SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Location Warning
-                  if (_locationError.isNotEmpty)
+                  // Location Status / Warning
+                  if (_isLoadingLocation)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.blue[200]!)),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+                          const SizedBox(width: 16),
+                          Expanded(child: Text('Acquiring location...', style: TextStyle(color: Colors.blue[800], fontWeight: FontWeight.w600))),
+                        ],
+                      ),
+                    )
+                  else if (_locationError.isNotEmpty)
                     Container(
                       padding: const EdgeInsets.all(16),
                       margin: const EdgeInsets.only(bottom: 16),
@@ -374,7 +401,10 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                           Text(_locationError, textAlign: TextAlign.center, style: TextStyle(color: Colors.red[800], fontSize: 13, fontWeight: FontWeight.w600)),
                           const SizedBox(height: 12),
                           ElevatedButton(
-                            onPressed: _checkLocationPermission,
+                            onPressed: () {
+                              setState(() => _isLoadingLocation = true);
+                              _checkLocationPermission();
+                            },
                             style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700], foregroundColor: Colors.white),
                             child: const Text('Enable Location'),
                           )

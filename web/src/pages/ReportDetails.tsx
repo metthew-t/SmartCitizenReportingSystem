@@ -5,11 +5,77 @@ import {
   STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS,
 } from '../store/demoData'
 import { ArrowLeft, MapPin, Clock, User, FileText, Building2, Tag, AlertTriangle, ExternalLink, CheckCircle, XCircle } from 'lucide-react'
+import { useAuthStore } from '../store/authStore'
 
 export default function ReportDetails() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const report = DEMO_REPORTS.find(r => r.id === Number(id))
+  const [report, setReport] = React.useState<any>(null)
+  const [messages, setMessages] = React.useState<any[]>([])
+  const [newMessage, setNewMessage] = React.useState('')
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true)
+      try {
+        const token = useAuthStore.getState().token
+        const headers = { 'Authorization': `Bearer ${token}` }
+        
+        const repRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/reports/${id}/`, { headers })
+        if (repRes.ok) {
+          const data = await repRes.json()
+          setReport({
+            id: data.id,
+            caseNumber: data.case_number,
+            departmentId: data.primary_department,
+            categoryId: data.category,
+            citizenName: data.citizen?.full_name || 'Citizen',
+            isAnonymous: data.is_anonymous,
+            description: data.description,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            status: data.status,
+            priority: data.priority,
+            createdAt: data.created_at,
+          })
+        }
+        
+        const msgRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/messages/?report=${id}`, { headers })
+        if (msgRes.ok) {
+          setMessages(await msgRes.json())
+        }
+      } catch (err) {
+        console.error("Failed to fetch report details", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [id])
+
+  const sendMessage = async () => {
+    if (!newMessage.trim()) return;
+    try {
+      const token = useAuthStore.getState().token
+      const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/messages/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ report: id, content: newMessage })
+      })
+      if (res.ok) {
+        setMessages([...messages, await res.json()])
+        setNewMessage('')
+      }
+    } catch (err) {
+      console.error("Failed to send message", err)
+    }
+  }
+
+  if (loading) return <div style={{ padding: 40, color: '#e2e8f0' }}>Loading...</div>
 
   if (!report) {
     return (
@@ -264,6 +330,50 @@ export default function ReportDetails() {
         >
           <CheckCircle size={18} /> Resolve Issue
         </button>
+      </div>
+
+      {/* Chat Section */}
+      <div style={{
+        marginTop: 32, background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16,
+        padding: 24,
+      }}>
+        <h3 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 600, margin: '0 0 16px' }}>Chat & Updates</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16, maxHeight: 300, overflowY: 'auto' }}>
+          {messages.length === 0 ? (
+            <div style={{ color: '#64748b', fontSize: 14, textAlign: 'center', padding: 20 }}>No messages yet.</div>
+          ) : messages.map((msg, idx) => (
+            <div key={idx} style={{
+              alignSelf: msg.sender === useAuthStore.getState().user?.id ? 'flex-end' : 'flex-start',
+              background: msg.sender === useAuthStore.getState().user?.id ? 'rgba(99,102,241,0.2)' : 'rgba(148,163,184,0.1)',
+              padding: '10px 14px', borderRadius: 12, maxWidth: '80%',
+              border: `1px solid ${msg.sender === useAuthStore.getState().user?.id ? 'rgba(99,102,241,0.4)' : 'rgba(148,163,184,0.2)'}`
+            }}>
+              <div style={{ fontSize: 14, color: '#e2e8f0' }}>{msg.content}</div>
+              <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 4, textAlign: 'right' }}>
+                {new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="text"
+            placeholder="Type a message..."
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+            style={{
+              flex: 1, padding: '12px 16px', borderRadius: 12,
+              background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)',
+              color: 'white', outline: 'none'
+            }}
+          />
+          <button onClick={sendMessage} style={{
+            padding: '12px 24px', borderRadius: 12, border: 'none', background: '#6366f1',
+            color: 'white', fontWeight: 600, cursor: 'pointer'
+          }}>Send</button>
+        </div>
       </div>
     </div>
   )

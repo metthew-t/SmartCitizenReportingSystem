@@ -3,6 +3,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'home_screen.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class ReportDetailsScreen extends StatefulWidget {
   final DemoReportItem? report;
@@ -18,9 +20,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
 
   // Chat State
   final _chatController = TextEditingController();
-  final List<Map<String, dynamic>> _messages = [
-    {'sender': 'officer', 'text': 'Hello, we have received your report and are dispatching a team.', 'time': '10:00 AM'},
-  ];
+  List<Map<String, dynamic>> _messages = [];
 
   // Feedback State
   int _rating = 0;
@@ -34,6 +34,25 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
   void initState() {
     super.initState();
     r = widget.report ?? demoReports.first;
+    _fetchMessages();
+  }
+
+  Future<void> _fetchMessages() async {
+    try {
+      final res = await http.get(Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/messages/?report=${r.id}'));
+      if (res.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(res.body);
+        setState(() {
+          _messages = data.map((m) => {
+            'sender': m['sender'] == 1 ? 'citizen' : 'officer', // Mock logic for sender mapping
+            'text': m['content'],
+            'time': m['created_at'].toString().substring(11, 16),
+          }).toList();
+        });
+      }
+    } catch (e) {
+      print('Error fetching messages: $e');
+    }
   }
 
   @override
@@ -43,16 +62,31 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
     super.dispose();
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     if (_chatController.text.trim().isEmpty) return;
+    
+    final text = _chatController.text;
     setState(() {
       _messages.add({
         'sender': 'citizen',
-        'text': _chatController.text,
-        'time': 'Just now',
+        'text': text,
+        'time': 'Sending...',
       });
       _chatController.clear();
     });
+
+    try {
+      final res = await http.post(
+        Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/messages/'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'report': r.id, 'content': text}),
+      );
+      if (res.statusCode == 201) {
+        _fetchMessages();
+      }
+    } catch (e) {
+      print('Error sending message: $e');
+    }
   }
 
   void _submitFeedback() {

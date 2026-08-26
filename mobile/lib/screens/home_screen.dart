@@ -237,29 +237,31 @@ class HomeMapContent extends StatelessWidget {
 
           // Floating Action Button for new report
           Positioned(
-            bottom: 24,
+            bottom: 32, // slightly higher
             right: 24,
             left: 24,
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.add_location_alt, size: 24),
-              label: const Text('REPORT INCIDENT', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green[700],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                elevation: 10,
-                shadowColor: Colors.green.withValues(alpha: 0.5),
+            child: SafeArea(
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.add_location_alt, size: 24),
+                label: const Text('REPORT INCIDENT', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green[700],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 10,
+                  shadowColor: Colors.green.withValues(alpha: 0.5),
+                ),
+                onPressed: () async {
+                  final result = await Navigator.push<DemoReportItem>(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SubmitReportScreen()),
+                  );
+                  if (result != null) {
+                    onReportSubmitted(result);
+                  }
+                },
               ),
-              onPressed: () async {
-                final result = await Navigator.push<DemoReportItem>(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SubmitReportScreen()),
-                );
-                if (result != null) {
-                  onReportSubmitted(result);
-                }
-              },
             ),
           ),
 
