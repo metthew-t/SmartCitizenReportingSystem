@@ -361,13 +361,15 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
         return;
       }
       
-      final caseNum = jsonDecode(response.body)['case_number'] ?? 'AD-ERROR';
+      final decoded = jsonDecode(response.body);
+      final caseNum = decoded['case_number'] ?? 'AD-ERROR';
+      final realId = decoded['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString();
 
       if (!mounted) return;
       setState(() => _isSubmitting = false);
 
       final newReport = DemoReportItem(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: realId,
         caseNumber: caseNum,
         title: _titleController.text,
         description: _descriptionController.text,

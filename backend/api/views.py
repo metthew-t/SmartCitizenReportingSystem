@@ -76,6 +76,49 @@ class ReportViewSet(viewsets.ModelViewSet):
             import traceback
             return Response({'error': str(e), 'traceback': traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    def fix_db(self, request):
+        from django.db import connection
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute('ALTER TABLE core_report ADD COLUMN aanaa VARCHAR(255) NULL;')
+                cursor.execute('ALTER TABLE core_report ADD COLUMN kuta_magaalaa VARCHAR(255) NULL;')
+                cursor.execute('ALTER TABLE core_report ADD COLUMN iddoo_addaa VARCHAR(255) NULL;')
+            return Response({"status": "fixed"})
+        except Exception as e:
+            return Response({"status": "error", "message": str(e)})
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    def init_departments(self, request):
+        import os
+        from django.conf import settings
+        from core.models import Department
+        
+        departments = [
+            "Galmeessa Siivilii", "Waajjira Invastimantii", "Bulchiinsaa fi Nageenya",
+            "Waajjira Hojjataa fi Hawaasummaa", "Waajjira Aadaa fi Turiizimii",
+            "Waajjira Milishaa", "Waajjira Dargaggoo fi Ispoortii",
+            "Waajjira Karoora/Pilaanii fi Misoomaa", "Qajeelcha Poolisii",
+            "Buusaa Gonofaa", "Abbaa Taayitaa Eegumsa Naannoo",
+            "Abbaa Taayitaa Konistiraakshinii", "Koomishinii Turizimii",
+            "Waajjira Lafaa", "Waajjira Fayyaa", "Waajjira Abbaa Alangaa",
+            "Waajjira Saayinsii fi Teeknoloojii", "Waajjira Bishaan Dhugaatii fi Dhangala'aa",
+            "Giddu-gala Tajaajilaa", "Waldaa Hojii Gamtaa", "Waajjira Albuuda",
+            "Waajjira Dhimma Dubartootaa fi Daa'immanii", "Mana Qopheessaa",
+            "Waajjira Galii", "Ejansii Geejjibaa", "Waajjira Kantiibaa",
+            "Waajjira PSMQN", "Waajjira Kominikeeshinii", "Waajjira Daldala",
+            "Waajjira Qonnaa", "Waajjira Maallaqaa", "Waajjira Carraa Hojii Uumuu fi Ogummaa",
+            "Waajjira Barnoota"
+        ]
+        
+        created_count = 0
+        for dept_name in departments:
+            obj, created = Department.objects.get_or_create(name=dept_name)
+            if created:
+                created_count += 1
+                
+        return Response({"status": "success", "departments_created": created_count})
+
 class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
     permission_classes = [permissions.IsAuthenticated]
