@@ -46,7 +46,8 @@ export default function ReportDetails() {
         
         const msgRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/messages/?report=${id}`, { headers })
         if (msgRes.ok) {
-          setMessages(await msgRes.json())
+          const msgData = await msgRes.json()
+          setMessages(Array.isArray(msgData) ? msgData : (msgData.results || []))
         }
       } catch (err) {
         console.error("Failed to fetch report details", err)
@@ -66,7 +67,8 @@ export default function ReportDetails() {
         const headers = { 'Authorization': `Bearer ${token}` }
         const msgRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/messages/?report=${id}`, { headers })
         if (msgRes.ok) {
-          const newMessages = await msgRes.json()
+          const msgData = await msgRes.json()
+          const newMessages = Array.isArray(msgData) ? msgData : (msgData.results || [])
           // Only update if messages changed to avoid re-renders
           setMessages(prev => {
             if (prev.length !== newMessages.length) return newMessages;
