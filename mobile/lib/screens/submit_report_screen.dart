@@ -136,7 +136,17 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
 
     // If permissions are granted, get the location
     try {
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      ).timeout(const Duration(seconds: 10), onTimeout: () {
+        // Fallback coordinate if timeout
+        return Position(
+          longitude: 39.2689, latitude: 8.5415,
+          timestamp: DateTime.now(),
+          accuracy: 0.0, altitude: 0.0, heading: 0.0, speed: 0.0, speedAccuracy: 0.0,
+          altitudeAccuracy: 0.0, headingAccuracy: 0.0, floor: null, isMocked: false
+        );
+      });
       setState(() {
         _currentPosition = position;
         _isLoadingLocation = false;
@@ -334,12 +344,24 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
           'aanaa': _selectedAanaa,
           'kuta_magaalaa': _selectedKutaMagaalaa,
           'iddoo_addaa': _iddooAddaaController.text,
-          'category': 1, // Demo category
-          // Note: In real app, send actual selected category ID and authentication token
+          // 'category': 1, // Removed to avoid backend PK constraint errors on fresh db
         }),
       );
       
-      final caseNum = response.statusCode == 201 ? jsonDecode(response.body)['case_number'] : 'AD-ERROR';
+      if (response.statusCode != 201) {
+        if (!mounted) return;
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error ${response.statusCode}: ${response.body}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 10),
+          )
+        );
+        return;
+      }
+      
+      final caseNum = jsonDecode(response.body)['case_number'] ?? 'AD-ERROR';
 
       if (!mounted) return;
       setState(() => _isSubmitting = false);

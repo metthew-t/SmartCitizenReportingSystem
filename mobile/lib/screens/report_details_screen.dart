@@ -107,9 +107,23 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
       );
       if (res.statusCode == 201) {
         _fetchMessages();
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Chat Error ${res.statusCode}: ${res.body}'), backgroundColor: Colors.red)
+        );
+        // Remove the "Sending..." message
+        setState(() {
+          _messages.removeLast();
+        });
       }
     } catch (e) {
       print('Error sending message: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Network error: $e'), backgroundColor: Colors.red)
+        );
+      }
     }
   }
 
