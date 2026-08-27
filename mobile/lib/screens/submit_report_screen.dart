@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'home_screen.dart';
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SubmitReportScreen extends StatefulWidget {
   const SubmitReportScreen({super.key});
@@ -24,6 +25,19 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
   String _selectedPriority = 'MEDIUM';
   String? _selectedDepartment;
   bool _isSubmitting = false;
+
+  // Address Fields
+  String? _selectedKutaMagaalaa;
+  String? _selectedAanaa;
+  final _iddooAddaaController = TextEditingController();
+
+  final List<String> _kutaMagaalaaList = [
+    'Abba Gada', 'Bokkuu Shanan', 'Boolee', 'Daabee', 'Dambalaa', 'Luugoo'
+  ];
+
+  final List<String> _aanaaList = [
+    'Dhakaa Adii', 'Diree Nagayaa', 'Goro', 'Haroreetii', 'Migiiraa', 'Solloqqee Dongorree', 'Torban Oboo', 'Other'
+  ];
 
   // Location
   Position? _currentPosition;
@@ -303,13 +317,23 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
     
     setState(() => _isSubmitting = true);
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      final headers = {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+
       final response = await http.post(
-        Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/reports/'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/reports/'),
+        headers: headers,
         body: jsonEncode({
           'description': _descriptionController.text,
           'latitude': _currentPosition?.latitude ?? 8.5415,
           'longitude': _currentPosition?.longitude ?? 39.2689,
+          'aanaa': _selectedAanaa,
+          'kuta_magaalaa': _selectedKutaMagaalaa,
+          'iddoo_addaa': _iddooAddaaController.text,
           'category': 1, // Demo category
           // Note: In real app, send actual selected category ID and authentication token
         }),
@@ -481,6 +505,43 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                         ),
                       )
                     ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Address Information
+                  _SectionHeader(title: 'Address Information', icon: Icons.location_city),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: 'Kuta Magaalaa / ክፍለ ከተማ / Sub-city',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    value: _selectedKutaMagaalaa,
+                    items: _kutaMagaalaaList.map((k) => DropdownMenuItem(value: k, child: Text(k))).toList(),
+                    onChanged: (val) => setState(() => _selectedKutaMagaalaa = val),
+                    validator: (value) => value == null ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: 'Aanaa / ወረዳ / District',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    value: _selectedAanaa,
+                    items: _aanaaList.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
+                    onChanged: (val) => setState(() => _selectedAanaa = val),
+                    validator: (value) => value == null ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _iddooAddaaController,
+                    decoration: InputDecoration(
+                      labelText: 'Iddoo Addaa / ልዩ ቦታ / Specific Location',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    validator: (value) => value!.isEmpty ? 'Required' : null,
                   ),
                   const SizedBox(height: 24),
 

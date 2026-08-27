@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -72,17 +75,49 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     });
   }
 
-  void _handleVerifyOTP() {
+  void _handleVerifyOTP() async {
     if (_otpController.text == '123456') {
       setState(() => _isLoading = true);
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          setState(() {
-            _currentStep = _isNewUser ? 2 : 3;
-            _isLoading = false;
-          });
+      
+      try {
+        final response = await http.post(
+          Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/auth/otp/verify/'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'phone_number': _phoneController.text.isEmpty ? '0911000001' : _phoneController.text,
+            'otp': '123456'
+          })
+        );
+        
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final token = data['access'];
+          
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('auth_token', token);
+          
+          if (mounted) {
+            setState(() {
+              _currentStep = _isNewUser ? 2 : 3;
+              _isLoading = false;
+            });
+          }
+        } else {
+          if (mounted) {
+            setState(() => _isLoading = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Verification failed: ${response.body}'), backgroundColor: Colors.red[700]),
+            );
+          }
         }
-      });
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Network error: $e'), backgroundColor: Colors.red[700]),
+          );
+        }
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: const Text('Invalid OTP. Use 123456 for demo.'), backgroundColor: Colors.red[700]),

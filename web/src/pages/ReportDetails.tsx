@@ -22,7 +22,7 @@ export default function ReportDetails() {
         const token = useAuthStore.getState().token
         const headers = { 'Authorization': `Bearer ${token}` }
         
-        const repRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/reports/${id}/`, { headers })
+        const repRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/`, { headers })
         if (repRes.ok) {
           const data = await repRes.json()
           setReport({
@@ -38,10 +38,13 @@ export default function ReportDetails() {
             status: data.status,
             priority: data.priority,
             createdAt: data.created_at,
+            aanaa: data.aanaa,
+            kutaMagaalaa: data.kuta_magaalaa,
+            iddooAddaa: data.iddoo_addaa,
           })
         }
         
-        const msgRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/messages/?report=${id}`, { headers })
+        const msgRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/messages/?report=${id}`, { headers })
         if (msgRes.ok) {
           setMessages(await msgRes.json())
         }
@@ -54,11 +57,34 @@ export default function ReportDetails() {
     fetchData()
   }, [id])
 
+  // Poll for new messages every 5 seconds
+  React.useEffect(() => {
+    if (!id) return;
+    const interval = setInterval(async () => {
+      try {
+        const token = useAuthStore.getState().token
+        const headers = { 'Authorization': `Bearer ${token}` }
+        const msgRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/messages/?report=${id}`, { headers })
+        if (msgRes.ok) {
+          const newMessages = await msgRes.json()
+          // Only update if messages changed to avoid re-renders
+          setMessages(prev => {
+            if (prev.length !== newMessages.length) return newMessages;
+            return prev;
+          })
+        }
+      } catch (err) {
+        console.error("Polling error", err)
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [id]);
+
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
     try {
       const token = useAuthStore.getState().token
-      const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/messages/`, {
+      const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/messages/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -202,7 +228,20 @@ export default function ReportDetails() {
         <DetailCard
           icon={<MapPin size={16} color="#10b981" />}
           label="Location"
-          value={`${report.latitude.toFixed(4)}°N, ${report.longitude.toFixed(4)}°E`}
+          value={
+            [report.kutaMagaalaa, report.aanaa, report.iddooAddaa].filter(Boolean).join(', ') || 'No address provided'
+          }
+          sublabel={
+            <div style={{ marginTop: 4 }}>
+              <span style={{ color: '#94a3b8', fontSize: 11 }}>Coordinates: </span>
+              {report.latitude.toFixed(4)}°N, {report.longitude.toFixed(4)}°E
+            </div>
+          }
+        />
+        <DetailCard
+          icon={<ExternalLink size={16} color="#3b82f6" />}
+          label="Map Link"
+          value="View on Maps"
           sublabel={
             <a
               href={`https://www.google.com/maps?q=${report.latitude},${report.longitude}`}

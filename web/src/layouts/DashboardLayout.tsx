@@ -248,16 +248,18 @@ export default function DashboardLayout() {
               {department?.name}
             </p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button style={{
-              position: 'relative', background: 'none', border: 'none',
-              color: '#94a3b8', cursor: 'pointer', padding: 8, borderRadius: 8,
-            }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
+            <button 
+              onClick={() => {
+                alert("No new notifications at this time.")
+              }}
+              style={{
+                position: 'relative', background: 'none', border: 'none',
+                color: '#94a3b8', cursor: 'pointer', padding: 8, borderRadius: 8,
+              }}
+            >
               <Bell size={18} />
-              <span style={{
-                position: 'absolute', top: 4, right: 4, width: 8, height: 8,
-                borderRadius: '50%', background: '#ef4444',
-              }} />
+              {/* Optional: red dot if there are notifications */}
             </button>
           </div>
         </header>

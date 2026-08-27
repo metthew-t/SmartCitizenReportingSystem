@@ -21,7 +21,7 @@ export default function Reports() {
     const fetchReports = async () => {
       setLoading(true)
       try {
-        const response = await fetch('https://smartcitizenreportingsystem.onrender.com/api/reports/', {
+        const response = await fetch('https://smartcitizenreportingsystem.onrender.com/api/v1/reports/', {
           headers: {
             'Authorization': `Bearer ${useAuthStore.getState().token}`
           }

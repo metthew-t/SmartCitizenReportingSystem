@@ -39,7 +39,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
 
   Future<void> _fetchMessages() async {
     try {
-      final res = await http.get(Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/messages/?report=${r.id}'));
+      final res = await http.get(Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/messages/?report=${r.id}'));
       if (res.statusCode == 200) {
         final List<dynamic> data = jsonDecode(res.body);
         setState(() {
@@ -79,7 +79,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
 
     try {
       final res = await http.post(
-        Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/messages/'),
+        Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/messages/'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'report': r.id, 'content': text}),
       );

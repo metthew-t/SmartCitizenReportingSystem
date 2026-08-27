@@ -26,14 +26,32 @@ function Login() {
     d.nameEn.toLowerCase().includes(deptSearch.toLowerCase())
   )
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [loginError, setLoginError] = useState('')
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setLoginError('')
     const dept = selectedDept || DEPARTMENTS[0]
-    login('demo-token-123', { phone: phone || '0911000001', name: 'Demo User' }, dept, role)
-    navigate('/dashboard')
+    try {
+      const res = await fetch('https://smartcitizenreportingsystem.onrender.com/api/v1/auth/login/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone_number: phone || '0911000001', password: password || 'admin123' })
+      })
+      if (res.ok) {
+        const data = await res.json()
+        login(data.access, { phone: phone || '0911000001', name: 'Department User' }, dept, role)
+        navigate('/dashboard')
+      } else {
+        setLoginError('Invalid credentials. Please try again.')
+      }
+    } catch (err) {
+      setLoginError('Network error. Backend may be starting up, please try again in a moment.')
+    }
   }
 
   const handleDemoLogin = (dept: DemoDepartment) => {
+    // For demo login, use a mock token (works with AllowAny endpoints)
     login('demo-token-123', { phone: '0911000001', name: 'Demo User' }, dept, 'department_manager')
     navigate('/dashboard')
   }
