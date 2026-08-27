@@ -5,6 +5,7 @@ import 'package:printing/printing.dart';
 import 'home_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ReportDetailsScreen extends StatefulWidget {
   final DemoReportItem? report;
@@ -39,15 +40,29 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
 
   Future<void> _fetchMessages() async {
     try {
-      final res = await http.get(Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/messages/?report=${r.id}'));
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      final userId = prefs.getInt('user_id');
+      final headers = {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+
+      final res = await http.get(
+        Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/messages/?report=${r.id}'),
+        headers: headers
+      );
       if (res.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(res.body);
+        final decoded = jsonDecode(res.body);
+        // Handle both paginated {"results": [...]} and plain list responses
+        final List<dynamic> data = decoded is List ? decoded : (decoded['results'] ?? []);
         setState(() {
           _messages = data.map((m) {
             return <String, dynamic>{
-              'sender': m['sender'] == 1 ? 'citizen' : 'officer',
-              'text': m['content'],
-              'time': m['created_at'].toString().substring(11, 16),
+              'sender': m['sender'] == userId ? 'citizen' : 'officer',
+              'text': m['content'] ?? '',
+              'time': m['created_at'] != null ? m['created_at'].toString().substring(11, 16) : '',
+              'sender_name': m['sender_name'] ?? 'Unknown',
             };
           }).toList();
         });
@@ -78,9 +93,16 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
     });
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      final headers = {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+
       final res = await http.post(
         Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/messages/'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode({'report': r.id, 'content': text}),
       );
       if (res.statusCode == 201) {

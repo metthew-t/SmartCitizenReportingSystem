@@ -17,9 +17,21 @@ class ReportMediaSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class MessageSerializer(serializers.ModelSerializer):
+    sender_name = serializers.SerializerMethodField()
+
     class Meta:
         model = Message
         fields = '__all__'
+        read_only_fields = ['sender']
+
+    def get_sender_name(self, obj):
+        if obj.sender:
+            if hasattr(obj.sender, 'citizen_profile'):
+                return obj.sender.citizen_profile.full_name
+            elif hasattr(obj.sender, 'officer_profile'):
+                return obj.sender.officer_profile.full_name
+            return obj.sender.phone_number
+        return 'Unknown'
 
 class ReportSerializer(serializers.ModelSerializer):
     media = ReportMediaSerializer(many=True, read_only=True)
