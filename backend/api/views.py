@@ -56,21 +56,25 @@ class ReportViewSet(viewsets.ModelViewSet):
             )
             department = recommendation.get('primary')
         
-        report = serializer.save(
-            citizen=request.user,
-            location=point,
-            case_number=case_number,
-            status='SUBMITTED',
-            primary_department=department
-        )
-        
-        # Fire notification to citizen
-        from core.push_service import notify_report_submitted, notify_department_new_report
-        notify_report_submitted(report)
-        notify_department_new_report(report)
-        
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        try:
+            report = serializer.save(
+                citizen=request.user,
+                location=point,
+                case_number=case_number,
+                status='SUBMITTED',
+                primary_department=department
+            )
+            
+            # Fire notification to citizen
+            from core.push_service import notify_report_submitted, notify_department_new_report
+            notify_report_submitted(report)
+            notify_department_new_report(report)
+            
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except Exception as e:
+            import traceback
+            return Response({'error': str(e), 'traceback': traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
