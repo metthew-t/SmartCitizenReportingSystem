@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'home_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ReportDetailsScreen extends StatefulWidget {
-  final DemoReportItem? report;
+  final String reportId;
+  final String caseNumber;
 
-  const ReportDetailsScreen({super.key, this.report});
+  const ReportDetailsScreen({super.key, required this.reportId, required this.caseNumber});
 
   @override
   State<ReportDetailsScreen> createState() => _ReportDetailsScreenState();
@@ -18,6 +18,16 @@ class ReportDetailsScreen extends StatefulWidget {
 
 class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
   int _currentTab = 0; // 0: Details, 1: Chat
+
+  // Report data
+  String _description = '';
+  String _status = 'SUBMITTED';
+  String _priority = 'MEDIUM';
+  String _department = '';
+  String _category = '';
+  String _citizenName = '';
+  DateTime _createdAt = DateTime.now();
+  bool _isLoadingReport = true;
 
   // Chat State
   final _chatController = TextEditingController();
@@ -29,37 +39,66 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
   final _feedbackController = TextEditingController();
   bool _feedbackSubmitted = false;
 
-  late DemoReportItem r;
-
   @override
   void initState() {
     super.initState();
-    r = widget.report ?? demoReports.first;
+    _fetchReportDetails();
     _fetchMessages();
+  }
+
+  Future<void> _fetchReportDetails() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      final res = await http.get(
+        Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${widget.reportId}/'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (mounted) {
+          setState(() {
+            _description = data['description'] ?? '';
+            _status = data['status'] ?? 'SUBMITTED';
+            _priority = data['priority'] ?? 'MEDIUM';
+            _department = data['department_name'] ?? 'Unknown';
+            _category = data['category_name'] ?? 'General';
+            _citizenName = 'You';
+            _createdAt = DateTime.tryParse(data['created_at'] ?? '') ?? DateTime.now();
+            _isLoadingReport = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _isLoadingReport = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingReport = false);
+    }
   }
 
   Future<void> _fetchMessages() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
-      final userId = prefs.getInt('user_id');
       final headers = {
         'Content-Type': 'application/json',
         if (token != null) 'Authorization': 'Bearer $token',
       };
 
       final res = await http.get(
-        Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/messages/?report=${r.id}'),
+        Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/messages/?report=${widget.reportId}'),
         headers: headers
       );
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
-        // Handle both paginated {"results": [...]} and plain list responses
         final List<dynamic> data = decoded is List ? decoded : (decoded['results'] ?? []);
         setState(() {
           _messages = data.map((m) {
             return <String, dynamic>{
-              'sender': m['sender'] == userId ? 'citizen' : 'officer',
+              'sender': 'citizen', // simplified
               'text': m['content'] ?? '',
               'time': m['created_at'] != null ? m['created_at'].toString().substring(11, 16) : '',
               'sender_name': m['sender_name'] ?? 'Unknown',
@@ -68,7 +107,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
         });
       }
     } catch (e) {
-      print('Error fetching messages: $e');
+      debugPrint('Error fetching messages: $e');
     }
   }
 
@@ -103,7 +142,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
       final res = await http.post(
         Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/messages/'),
         headers: headers,
-        body: jsonEncode({'report': r.id, 'content': text}),
+        body: jsonEncode({'report': int.tryParse(widget.reportId) ?? widget.reportId, 'content': text}),
       );
       if (res.statusCode == 201) {
         _fetchMessages();
@@ -112,13 +151,9 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Chat Error ${res.statusCode}: ${res.body}'), backgroundColor: Colors.red)
         );
-        // Remove the "Sending..." message
-        setState(() {
-          _messages.removeLast();
-        });
+        setState(() => _messages.removeLast());
       }
     } catch (e) {
-      print('Error sending message: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Network error: $e'), backgroundColor: Colors.red)
@@ -149,21 +184,19 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
             pw.Text('Incident Report Receipt', style: pw.TextStyle(fontSize: 18, color: PdfColors.grey700)),
             pw.Divider(),
             pw.SizedBox(height: 20),
-            pw.Text('Case Number: ${r.caseNumber}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+            pw.Text('Case Number: ${widget.caseNumber}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 10),
-            pw.Text('Title: ${r.title}'),
+            pw.Text('Status: ${_status.replaceAll("_", " ")}'),
             pw.SizedBox(height: 10),
-            pw.Text('Status: ${r.status.replaceAll("_", " ")}'),
+            pw.Text('Priority: $_priority'),
             pw.SizedBox(height: 10),
-            pw.Text('Priority: ${r.priority}'),
+            pw.Text('Department: $_department'),
             pw.SizedBox(height: 10),
-            pw.Text('Department: ${r.department}'),
-            pw.SizedBox(height: 10),
-            pw.Text('Date Submitted: ${r.createdAt.toString()}'),
+            pw.Text('Date Submitted: ${_createdAt.toString()}'),
             pw.SizedBox(height: 20),
             pw.Text('Description:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 5),
-            pw.Text(r.description),
+            pw.Text(_description),
             pw.Spacer(),
             pw.Divider(),
             pw.Center(child: pw.Text('Thank you for making Adama a better city.', style: pw.TextStyle(color: PdfColors.grey))),
@@ -177,9 +210,16 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoadingReport) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.caseNumber)),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(r.caseNumber),
+        title: Text(widget.caseNumber),
         actions: [
           IconButton(
             icon: const Icon(Icons.picture_as_pdf),
@@ -233,7 +273,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
           // Status header
           Container(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(gradient: LinearGradient(colors: [_statusColor(r.status), _statusColor(r.status).withValues(alpha: 0.7)])),
+            decoration: BoxDecoration(gradient: LinearGradient(colors: [_statusColor(_status), _statusColor(_status).withValues(alpha: 0.7)])),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -242,20 +282,20 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
-                      child: Text(r.status.replaceAll('_', ' '), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                      child: Text(_status.replaceAll('_', ' '), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
                     ),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: _priorityColor(r.priority).withValues(alpha: 0.3), borderRadius: BorderRadius.circular(8)),
-                      child: Text(r.priority, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 11)),
+                      decoration: BoxDecoration(color: _priorityColor(_priority).withValues(alpha: 0.3), borderRadius: BorderRadius.circular(8)),
+                      child: Text(_priority, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 11)),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                Text(r.title, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                Text(_department, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
-                Text(r.caseNumber, style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 14)),
+                Text(widget.caseNumber, style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 14)),
               ],
             ),
           ),
@@ -266,7 +306,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Feedback section (if resolved)
-                if ((r.status == 'RESOLVED' || r.status == 'CLOSED') && !_feedbackSubmitted) ...[
+                if ((_status == 'RESOLVED' || _status == 'CLOSED') && !_feedbackSubmitted) ...[
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(color: Colors.orange[50], borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.orange[200]!)),
@@ -301,29 +341,29 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                 ],
 
                 // Description
-                _DetailSection(title: 'Description', icon: Icons.description, child: Text(r.description, style: const TextStyle(fontSize: 14, height: 1.6))),
+                _DetailSection(title: 'Description', icon: Icons.description, child: Text(_description, style: const TextStyle(fontSize: 14, height: 1.6))),
                 const SizedBox(height: 16),
 
                 // Details grid
                 Row(
                   children: [
-                    Expanded(child: _InfoTile(icon: Icons.business, label: 'Department', value: r.department)),
+                    Expanded(child: _InfoTile(icon: Icons.business, label: 'Department', value: _department)),
                     const SizedBox(width: 12),
-                    Expanded(child: _InfoTile(icon: Icons.category, label: 'Category', value: r.category)),
+                    Expanded(child: _InfoTile(icon: Icons.category, label: 'Category', value: _category)),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(child: _InfoTile(icon: Icons.calendar_today, label: 'Submitted', value: _formatDate(r.createdAt))),
+                    Expanded(child: _InfoTile(icon: Icons.calendar_today, label: 'Submitted', value: _formatDate(_createdAt))),
                     const SizedBox(width: 12),
-                    Expanded(child: _InfoTile(icon: Icons.person, label: 'Citizen', value: r.citizenName)),
+                    Expanded(child: _InfoTile(icon: Icons.person, label: 'Citizen', value: _citizenName)),
                   ],
                 ),
                 const SizedBox(height: 24),
 
                 // Status workflow
-                _DetailSection(title: 'Report Progress', icon: Icons.timeline, child: _StatusWorkflow(currentStatus: r.status)),
+                _DetailSection(title: 'Report Progress', icon: Icons.timeline, child: _StatusWorkflow(currentStatus: _status)),
               ],
             ),
           ),
@@ -336,47 +376,47 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
     return Column(
       children: [
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: _messages.length,
-            itemBuilder: (context, index) {
-              final msg = _messages[index];
-              final isMe = msg['sender'] == 'citizen';
-              return Align(
-                alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
-                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-                  decoration: BoxDecoration(
-                    color: isMe ? Colors.green[100] : Colors.grey[200],
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(16),
-                      topRight: const Radius.circular(16),
-                      bottomLeft: Radius.circular(isMe ? 16 : 0),
-                      bottomRight: Radius.circular(isMe ? 0 : 16),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(msg['text'], style: const TextStyle(fontSize: 14)),
-                      const SizedBox(height: 4),
-                      Text(msg['time'], style: TextStyle(fontSize: 10, color: Colors.grey[600])),
-                    ],
-                  ),
+          child: _messages.isEmpty
+              ? Center(child: Text('No messages yet. Send the first message!', style: TextStyle(color: Colors.grey[500])))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _messages.length,
+                  itemBuilder: (context, index) {
+                    final msg = _messages[index];
+                    final isMe = msg['sender'] == 'citizen';
+                    return Align(
+                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                        decoration: BoxDecoration(
+                          color: isMe ? Colors.green[100] : Colors.grey[200],
+                          borderRadius: BorderRadius.only(
+                            topLeft: const Radius.circular(16),
+                            topRight: const Radius.circular(16),
+                            bottomLeft: Radius.circular(isMe ? 16 : 0),
+                            bottomRight: Radius.circular(isMe ? 0 : 16),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(msg['text'], style: const TextStyle(fontSize: 14)),
+                            const SizedBox(height: 4),
+                            Text(msg['time'], style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         ),
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5))]),
           child: Row(
             children: [
-              IconButton(icon: const Icon(Icons.attach_file), color: Colors.grey[600], onPressed: () {}),
-              IconButton(icon: const Icon(Icons.mic), color: Colors.grey[600], onPressed: () {}),
               Expanded(
                 child: TextField(
                   controller: _chatController,

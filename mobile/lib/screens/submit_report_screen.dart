@@ -368,7 +368,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
 
-      final newReport = DemoReportItem(
+      final newReport = ReportItem(
         id: realId,
         caseNumber: caseNum,
         title: _titleController.text,

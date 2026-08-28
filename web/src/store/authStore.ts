@@ -1,22 +1,19 @@
 import { create } from 'zustand'
-import { DemoDepartment } from './demoData'
 
 interface AuthState {
   token: string | null
   user: any | null
-  department: DemoDepartment | null
+  departmentName: string | null
   role: 'citizen' | 'officer' | 'department_manager' | 'city_admin' | null
-  login: (token: string, user: any, department: DemoDepartment, role: string) => void
-  setDepartment: (department: DemoDepartment) => void
+  login: (token: string, user: any, departmentName: string | null, role: string) => void
   logout: () => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   user: null,
-  department: null,
+  departmentName: null,
   role: null,
-  login: (token, user, department, role) => set({ token, user, department, role: role as any }),
-  setDepartment: (department) => set({ department }),
-  logout: () => set({ token: null, user: null, department: null, role: null }),
+  login: (token, user, departmentName, role) => set({ token, user, departmentName, role: role as any }),
+  logout: () => set({ token: null, user: null, departmentName: null, role: null }),
 }))

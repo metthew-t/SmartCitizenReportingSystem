@@ -1,17 +1,15 @@
 import React, { useState } from 'react'
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import { DEPARTMENTS } from '../store/demoData'
 import {
   LayoutDashboard, FileText, Map, Users, Settings, LogOut,
-  ChevronDown, Bell, Menu, X, Building2
+  Bell, Menu, X, Building2, ShieldCheck
 } from 'lucide-react'
 
 export default function DashboardLayout() {
-  const { logout, department, setDepartment, user, role } = useAuthStore()
+  const { logout, departmentName, user, role } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
-  const [showDeptSwitcher, setShowDeptSwitcher] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const handleLogout = () => {
@@ -19,13 +17,21 @@ export default function DashboardLayout() {
     navigate('/')
   }
 
-  const navItems = [
+  const baseNavItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/reports', label: 'Reports', icon: FileText },
-    { path: '/departments', label: 'Departments', icon: Building2 },
     { path: '/map', label: 'GIS Map', icon: Map },
-    { path: '/settings', label: 'Settings', icon: Settings },
   ]
+
+  // Add role-specific navigation
+  const navItems = [...baseNavItems]
+  if (role === 'city_admin' || role === 'department_manager') {
+    navItems.push({ path: '/departments', label: 'Departments', icon: Building2 })
+  }
+  if (role === 'city_admin') {
+    navItems.push({ path: '/users', label: 'User Management', icon: Users })
+  }
+  navItems.push({ path: '/settings', label: 'Settings', icon: Settings })
 
   const isActive = (path: string) => location.pathname === path
 
@@ -53,11 +59,11 @@ export default function DashboardLayout() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
               <div style={{
                 width: 36, height: 36, borderRadius: 10,
-                background: department ? `${department.color}22` : 'rgba(99,102,241,0.15)',
+                background: 'rgba(99,102,241,0.15)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, flexShrink: 0,
+                flexShrink: 0,
               }}>
-                {department?.icon || '🏛️'}
+                <Building2 size={20} color="#818cf8" />
               </div>
               {!sidebarCollapsed && (
                 <div style={{ minWidth: 0 }}>
@@ -80,59 +86,25 @@ export default function DashboardLayout() {
           </div>
 
           {/* Current department badge */}
-          {!sidebarCollapsed && department && (
-            <button
-              onClick={() => setShowDeptSwitcher(!showDeptSwitcher)}
+          {!sidebarCollapsed && (
+            <div
               style={{
                 width: '100%', padding: '8px 12px', borderRadius: 10,
                 border: '1px solid rgba(148,163,184,0.1)',
-                background: `${department.color}11`,
-                color: '#e2e8f0', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                fontSize: 12, transition: 'all 0.2s',
+                background: 'rgba(255,255,255,0.03)',
+                color: '#e2e8f0',
+                display: 'flex', alignItems: 'center', gap: 8,
+                fontSize: 12,
               }}
             >
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {department.nameEn}
+              {role === 'city_admin' ? (
+                <ShieldCheck size={14} color="#10b981" />
+              ) : (
+                <Building2 size={14} color="#94a3b8" />
+              )}
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
+                {role === 'city_admin' ? 'City Admin' : departmentName || 'Loading...'}
               </span>
-              <ChevronDown size={14} color="#64748b" style={{
-                transform: showDeptSwitcher ? 'rotate(180deg)' : 'rotate(0)',
-                transition: 'transform 0.2s',
-              }} />
-            </button>
-          )}
-
-          {/* Department switcher dropdown */}
-          {showDeptSwitcher && !sidebarCollapsed && (
-            <div style={{
-              marginTop: 4, maxHeight: 200, overflowY: 'auto',
-              borderRadius: 10, border: '1px solid rgba(148,163,184,0.1)',
-              background: '#1e293b',
-            }}>
-              {DEPARTMENTS.map(d => (
-                <button
-                  key={d.id}
-                  onClick={() => {
-                    setDepartment(d)
-                    setShowDeptSwitcher(false)
-                  }}
-                  style={{
-                    width: '100%', padding: '7px 12px', border: 'none',
-                    background: d.id === department?.id ? 'rgba(99,102,241,0.15)' : 'transparent',
-                    color: '#e2e8f0', cursor: 'pointer', textAlign: 'left',
-                    fontSize: 11, display: 'flex', alignItems: 'center', gap: 8,
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.1)'}
-                  onMouseLeave={e => {
-                    if (d.id !== department?.id) e.currentTarget.style.background = 'transparent'
-                  }}
-                >
-                  <span style={{ fontSize: 14 }}>{d.icon}</span>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {d.nameEn}
-                  </span>
-                </button>
-              ))}
             </div>
           )}
         </div>
@@ -148,134 +120,117 @@ export default function DashboardLayout() {
                 to={item.path}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12,
-                  padding: sidebarCollapsed ? '10px 12px' : '10px 16px',
-                  borderRadius: 12, marginBottom: 6,
-                  background: active ? 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(236,72,153,0.15))' : 'transparent',
+                  padding: sidebarCollapsed ? '10px' : '10px 14px',
+                  margin: '4px 0', borderRadius: 10,
+                  background: active ? 'linear-gradient(90deg, rgba(99,102,241,0.15) 0%, transparent 100%)' : 'transparent',
                   color: active ? '#818cf8' : '#94a3b8',
-                  border: `1px solid ${active ? 'rgba(99,102,241,0.25)' : 'transparent'}`,
-                  textDecoration: 'none', fontSize: 13, fontWeight: active ? 600 : 500,
-                  transition: 'all 0.3s',
+                  textDecoration: 'none', transition: 'all 0.2s',
+                  borderLeft: active ? '3px solid #818cf8' : '3px solid transparent',
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                 }}
                 onMouseEnter={e => {
                   if (!active) {
-                    e.currentTarget.style.background = 'rgba(99,102,241,0.08)'
                     e.currentTarget.style.color = '#e2e8f0'
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
                   }
                 }}
                 onMouseLeave={e => {
                   if (!active) {
-                    e.currentTarget.style.background = 'transparent'
                     e.currentTarget.style.color = '#94a3b8'
+                    e.currentTarget.style.background = 'transparent'
                   }
                 }}
               >
                 <Icon size={18} />
-                {!sidebarCollapsed && item.label}
+                {!sidebarCollapsed && <span style={{ fontSize: 13, fontWeight: 500 }}>{item.label}</span>}
               </Link>
             )
           })}
         </nav>
 
-        {/* User info + logout */}
+        {/* User Profile & Logout */}
         <div style={{
-          padding: sidebarCollapsed ? '12px' : '16px 20px',
+          padding: sidebarCollapsed ? '16px 12px' : '20px 20px',
           borderTop: '1px solid rgba(148,163,184,0.08)',
         }}>
           {!sidebarCollapsed && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
               <div style={{
-                width: 32, height: 32, borderRadius: 8,
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                width: 36, height: 36, borderRadius: '50%',
+                background: 'linear-gradient(135deg, #10b981 0%, #3b82f6 100%)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'white', fontSize: 13, fontWeight: 700, flexShrink: 0,
+                color: 'white', fontWeight: 700, fontSize: 14,
               }}>
-                {user?.name?.[0] || 'U'}
+                {user?.name?.charAt(0)?.toUpperCase() || 'A'}
               </div>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ color: '#e2e8f0', fontSize: 12, fontWeight: 600 }}>
-                  {user?.name || 'Demo User'}
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user?.name || 'Loading...'}
                 </div>
-                <div style={{ color: '#64748b', fontSize: 10, textTransform: 'capitalize' }}>
+                <div style={{ color: '#64748b', fontSize: 11, textTransform: 'capitalize' }}>
                   {role?.replace('_', ' ') || 'Officer'}
                 </div>
               </div>
             </div>
           )}
+
           <button
             onClick={handleLogout}
             style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              width: '100%', padding: '10px 12px', borderRadius: 10,
-              border: '1px solid rgba(239,68,68,0.2)', background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(249,115,22,0.15))',
-              color: '#f87171', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+              width: '100%', padding: '10px', borderRadius: 10,
+              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
+              color: '#ef4444', display: 'flex', alignItems: 'center',
               justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-              transition: 'all 0.3s',
+              gap: 8, cursor: 'pointer', transition: 'all 0.2s',
             }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(239,68,68,0.8), rgba(249,115,22,0.8))'
-              e.currentTarget.style.color = 'white'
-              e.currentTarget.style.boxShadow = '0 4px 15px rgba(239,68,68,0.4)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(249,115,22,0.15))'
-              e.currentTarget.style.color = '#f87171'
-              e.currentTarget.style.boxShadow = 'none'
-            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.15)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
           >
             <LogOut size={16} />
-            {!sidebarCollapsed && 'Logout'}
+            {!sidebarCollapsed && <span style={{ fontSize: 13, fontWeight: 600 }}>Sign Out</span>}
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Top bar */}
+      <main style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        minWidth: 0, // important for flex children to not overflow
+      }}>
+        {/* Top Header */}
         <header style={{
-          height: 56, padding: '0 24px',
-          background: 'rgba(30,41,59,0.6)',
+          height: 64, background: 'rgba(15,23,42,0.8)',
           backdropFilter: 'blur(12px)',
           borderBottom: '1px solid rgba(148,163,184,0.08)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          flexShrink: 0,
+          padding: '0 24px', flexShrink: 0,
         }}>
           <div>
-            <h2 style={{ color: '#e2e8f0', fontSize: 15, fontWeight: 600, margin: 0 }}>
-              {department?.icon} {department?.nameEn || 'Dashboard'}
-            </h2>
-            <p style={{ color: '#64748b', fontSize: 11, margin: 0 }}>
-              {department?.name}
-            </p>
+            {/* Can put page title or breadcrumbs here in future */}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
-            <button 
-              onClick={() => {
-                alert("No new notifications at this time.")
-              }}
-              style={{
-                position: 'relative', background: 'none', border: 'none',
-                color: '#94a3b8', cursor: 'pointer', padding: 8, borderRadius: 8,
-              }}
-            >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <button style={{
+              background: 'rgba(255,255,255,0.05)', border: 'none',
+              width: 36, height: 36, borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#94a3b8', cursor: 'pointer', position: 'relative',
+            }}>
               <Bell size={18} />
-              {/* Optional: red dot if there are notifications */}
+              <span style={{
+                position: 'absolute', top: 8, right: 8, width: 8, height: 8,
+                background: '#ef4444', borderRadius: '50%', border: '2px solid #0f172a'
+              }} />
             </button>
           </div>
         </header>
 
-        {/* Page content */}
-        <div style={{ flex: 1, overflow: 'auto', padding: 24, background: '#0f172a' }}>
-          <Outlet />
+        {/* Page Content */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <Outlet />
+          </div>
         </div>
       </main>
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.2); border-radius: 3px; }
-      `}</style>
     </div>
   )
 }
