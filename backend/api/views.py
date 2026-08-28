@@ -46,8 +46,18 @@ class ReportViewSet(viewsets.ModelViewSet):
         # In a real app, generate the case number properly
         case_number = f"AD-{uuid.uuid4().hex[:6].upper()}"
         
-        # If primary_department is not provided, try to route it
-        department = serializer.validated_data.get('primary_department')
+        # Check if the frontend provided a department name string
+        department_name = data.get('department_name')
+        department = None
+        
+        if department_name:
+            department = Department.objects.filter(name__iexact=department_name).first()
+            
+        # If no department was provided by name, check the serializer data (if it was an ID)
+        if not department:
+            department = serializer.validated_data.get('primary_department')
+            
+        # If still no department, try to route it via AI
         if not department:
             from core.services import route_report
             recommendation = route_report(

@@ -344,7 +344,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
           'aanaa': _selectedAanaa,
           'kuta_magaalaa': _selectedKutaMagaalaa,
           'iddoo_addaa': _iddooAddaaController.text,
-          // 'category': 1, // Removed to avoid backend PK constraint errors on fresh db
+          'department_name': _selectedDepartment,
         }),
       );
       
