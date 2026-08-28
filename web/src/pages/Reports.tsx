@@ -28,20 +28,24 @@ export default function Reports() {
         });
         if (response.ok) {
           const data = await response.json()
-          const mapped = data.map((item: any) => ({
-            id: item.id,
-            caseNumber: item.case_number,
-            departmentId: item.primary_department,
-            categoryId: item.category,
-            citizenName: item.citizen?.full_name || 'Citizen',
-            isAnonymous: item.is_anonymous,
-            description: item.description,
-            latitude: item.latitude,
-            longitude: item.longitude,
-            status: item.status,
-            priority: item.priority,
-            createdAt: item.created_at,
-          }))
+          const mapped = data.map((item: any) => {
+            const matchingDept = DEPARTMENTS.find(d => d.name === item.department_name)
+            return {
+              id: item.id,
+              caseNumber: item.case_number,
+              departmentId: matchingDept ? matchingDept.id : item.primary_department,
+              departmentName: item.department_name, // Map the actual department name from backend
+              categoryId: item.category,
+              citizenName: item.citizen?.full_name || 'Citizen',
+              isAnonymous: item.is_anonymous,
+              description: item.description,
+              latitude: item.latitude,
+              longitude: item.longitude,
+              status: item.status,
+              priority: item.priority,
+              createdAt: item.created_at,
+            }
+          })
           // Sort by newest and filter by department if set
           const filtered = department 
             ? mapped.filter((r: DemoReport) => r.departmentId === department.id)
