@@ -1,11 +1,21 @@
 import React from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import {
-  DEMO_REPORTS, DEPARTMENTS, CATEGORIES,
-  STATUS_COLORS, STATUS_LABELS, PRIORITY_COLORS,
-} from '../store/demoData'
 import { ArrowLeft, MapPin, Clock, User, FileText, Building2, Tag, AlertTriangle, ExternalLink, CheckCircle, XCircle } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
+
+const STATUS_COLORS: Record<string, string> = {
+  SUBMITTED: '#6366F1', RECEIVED: '#8B5CF6', ASSIGNED: '#3B82F6',
+  UNDER_INVESTIGATION: '#F59E0B', IN_PROGRESS: '#F97316',
+  RESOLVED: '#10B981', CLOSED: '#6B7280', REOPENED: '#EF4444', REJECTED: '#DC2626',
+}
+const STATUS_LABELS: Record<string, string> = {
+  SUBMITTED: 'Submitted', RECEIVED: 'Received', ASSIGNED: 'Assigned',
+  UNDER_INVESTIGATION: 'Under Investigation', IN_PROGRESS: 'In Progress',
+  RESOLVED: 'Resolved', CLOSED: 'Closed', REOPENED: 'Reopened', REJECTED: 'Rejected',
+}
+const PRIORITY_COLORS: Record<string, string> = {
+  LOW: '#6B7280', MEDIUM: '#3B82F6', HIGH: '#F59E0B', CRITICAL: '#EF4444',
+}
 
 export default function ReportDetails() {
   const { id } = useParams()
@@ -28,8 +38,8 @@ export default function ReportDetails() {
           setReport({
             id: data.id,
             caseNumber: data.case_number,
-            departmentId: data.primary_department,
-            categoryId: data.category,
+            departmentName: data.department_name || 'Unassigned',
+            categoryName: data.category_name || 'General',
             citizenName: data.citizen?.full_name || 'Citizen',
             isAnonymous: data.is_anonymous,
             description: data.description,
@@ -57,6 +67,7 @@ export default function ReportDetails() {
     }
     fetchData()
   }, [id])
+
 
   // Poll for new messages every 5 seconds
   React.useEffect(() => {
@@ -129,8 +140,8 @@ export default function ReportDetails() {
     )
   }
 
-  const dept = DEPARTMENTS.find(d => d.id === report.departmentId)
-  const cat = CATEGORIES.find(c => c.id === report.categoryId)
+  const deptName = report.departmentName
+  const catName = report.categoryName
   const createdDate = new Date(report.createdAt)
   const formattedDate = createdDate.toLocaleDateString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -218,14 +229,12 @@ export default function ReportDetails() {
         <DetailCard
           icon={<Building2 size={16} color="#6366f1" />}
           label="Department"
-          value={dept?.nameEn || 'Unassigned'}
-          sublabel={dept?.name}
+          value={deptName}
         />
         <DetailCard
           icon={<Tag size={16} color="#8b5cf6" />}
           label="Category"
-          value={cat?.nameEn || 'General'}
-          sublabel={cat?.nameOm}
+          value={catName}
         />
         <DetailCard
           icon={<MapPin size={16} color="#10b981" />}

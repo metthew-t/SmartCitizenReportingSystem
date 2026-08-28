@@ -1,56 +1,69 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useAuthStore } from '../store/authStore'
-import {
-  getReportsForDepartment, DEMO_REPORTS, STATUS_COLORS, STATUS_LABELS,
-  PRIORITY_COLORS, CATEGORIES, DEPARTMENTS, DemoReport,
-} from '../store/demoData'
 import { Search, Filter, ChevronDown, Eye, MapPin, Clock } from 'lucide-react'
 
+const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
+
+const STATUS_COLORS: Record<string, string> = {
+  SUBMITTED: '#6366F1', RECEIVED: '#8B5CF6', ASSIGNED: '#3B82F6',
+  UNDER_INVESTIGATION: '#F59E0B', IN_PROGRESS: '#F97316',
+  RESOLVED: '#10B981', CLOSED: '#6B7280', REOPENED: '#EF4444', REJECTED: '#DC2626',
+}
+const PRIORITY_COLORS: Record<string, string> = {
+  LOW: '#6B7280', MEDIUM: '#3B82F6', HIGH: '#F59E0B', CRITICAL: '#EF4444',
+}
+
+interface Report {
+  id: number
+  case_number: string
+  description: string
+  status: string
+  priority: string
+  department_name: string
+  category_name: string
+  citizen_name: string
+  is_anonymous: boolean
+  latitude: number
+  longitude: number
+  created_at: string
+}
+
 export default function Reports() {
-  const { department } = useAuthStore()
+  const { token, departmentName, role } = useAuthStore()
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL')
   const [deptFilter, setDeptFilter] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedReport, setSelectedReport] = useState<DemoReport | null>(null)
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null)
 
-  const [allReports, setAllReports] = useState<DemoReport[]>([])
+  const [allReports, setAllReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchReports = async () => {
       setLoading(true)
       try {
-        const response = await fetch('https://smartcitizenreportingsystem.onrender.com/api/v1/reports/', {
-          headers: {
-            'Authorization': `Bearer ${useAuthStore.getState().token}`
-          }
+        const response = await fetch(`${API}/reports/`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
           const data = await response.json()
-          const mapped = data.map((item: any) => {
-            const matchingDept = DEPARTMENTS.find(d => d.name === item.department_name)
-            return {
-              id: item.id,
-              caseNumber: item.case_number,
-              departmentId: matchingDept ? matchingDept.id : item.primary_department,
-              departmentName: item.department_name, // Map the actual department name from backend
-              categoryId: item.category,
-              citizenName: item.citizen?.full_name || 'Citizen',
-              isAnonymous: item.is_anonymous,
-              description: item.description,
-              latitude: item.latitude,
-              longitude: item.longitude,
-              status: item.status,
-              priority: item.priority,
-              createdAt: item.created_at,
-            }
-          })
-          // Sort by newest and filter by department if set
-          const filtered = department 
-            ? mapped.filter((r: DemoReport) => r.departmentId === department.id)
-            : mapped
-          setAllReports(filtered.sort((a: DemoReport, b: DemoReport) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+          const mapped = data.map((item: any) => ({
+            id: item.id,
+            case_number: item.case_number,
+            department_name: item.department_name || 'Unassigned',
+            category_name: item.category_name || 'General',
+            citizen_name: item.is_anonymous ? 'Anonymous' : (item.citizen?.full_name || 'Citizen'),
+            is_anonymous: item.is_anonymous,
+            description: item.description,
+            latitude: item.latitude,
+            longitude: item.longitude,
+            status: item.status,
+            priority: item.priority,
+            created_at: item.created_at,
+          }))
+          
+          setAllReports(mapped.sort((a: Report, b: Report) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()))
         }
       } catch (err) {
         console.error("Failed to fetch reports", err)
@@ -59,351 +72,239 @@ export default function Reports() {
       }
     }
     fetchReports()
-  }, [department])
+  }, [token])
 
-  // Apply filters
   const filteredReports = useMemo(() => {
     return allReports.filter(r => {
       if (statusFilter !== 'ALL' && r.status !== statusFilter) return false
       if (priorityFilter !== 'ALL' && r.priority !== priorityFilter) return false
-      if (deptFilter !== 'ALL' && r.departmentId !== Number(deptFilter)) return false
+      
+      // If we are city admin, we can filter by department. If we are an officer, we only see our own (already filtered by backend).
+      if (role === 'city_admin' && deptFilter !== 'ALL' && r.department_name !== deptFilter) return false
+      
       if (searchQuery) {
         const q = searchQuery.toLowerCase()
         return (
-          r.caseNumber.toLowerCase().includes(q) ||
+          r.case_number.toLowerCase().includes(q) ||
           r.description.toLowerCase().includes(q) ||
-          r.citizenName.toLowerCase().includes(q)
+          r.department_name.toLowerCase().includes(q)
         )
       }
       return true
     })
-  }, [allReports, statusFilter, priorityFilter, deptFilter, searchQuery])
+  }, [allReports, statusFilter, priorityFilter, deptFilter, searchQuery, role])
+
+  // Get unique departments for the filter dropdown
+  const uniqueDepartments = useMemo(() => {
+    const depts = new Set<string>()
+    allReports.forEach(r => { if (r.department_name) depts.add(r.department_name) })
+    return Array.from(depts).sort()
+  }, [allReports])
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h2 style={{ color: '#e2e8f0', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>
-            Reports
+            {role === 'city_admin' ? 'All System Reports' : `${departmentName} Reports`}
           </h2>
           <p style={{ color: '#64748b', fontSize: 13, margin: 0 }}>
-            {department ? `${department.icon} ${department.nameEn}` : 'All Departments'} — {filteredReports.length} reports
+            Manage and track citizen incidents
           </p>
         </div>
       </div>
 
-      {/* Filters bar */}
+      {/* Filters */}
       <div style={{
-        display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap',
-        padding: 16, borderRadius: 14,
         background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(148,163,184,0.08)',
+        border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16,
+        padding: 16, marginBottom: 24,
+        display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center',
       }}>
-        {/* Search */}
-        <div style={{ position: 'relative', flex: '1 1 200px' }}>
-          <Search size={16} style={{ position: 'absolute', left: 12, top: 10, color: '#64748b' }} />
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: 'rgba(15,23,42,0.4)', borderRadius: 10,
+          padding: '8px 12px', border: '1px solid rgba(148,163,184,0.08)',
+          flex: '1 1 250px',
+        }}>
+          <Search size={16} color="#64748b" />
           <input
             type="text"
-            placeholder="Search case number, description, citizen..."
+            placeholder="Search cases, descriptions..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             style={{
-              width: '100%', padding: '8px 12px 8px 36px', borderRadius: 10,
-              border: '1px solid rgba(148,163,184,0.12)', background: 'rgba(15,23,42,0.5)',
-              color: 'white', fontSize: 13, outline: 'none', boxSizing: 'border-box',
+              background: 'transparent', border: 'none', color: '#e2e8f0',
+              fontSize: 13, outline: 'none', width: '100%',
             }}
           />
         </div>
 
-        {/* Status filter */}
-        <select
+        <FilterSelect
           value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-          style={{
-            padding: '8px 14px', borderRadius: 10,
-            border: '1px solid rgba(148,163,184,0.12)', background: 'rgba(15,23,42,0.5)',
-            color: 'white', fontSize: 13, outline: 'none', cursor: 'pointer',
-          }}
-        >
-          <option value="ALL">All Statuses</option>
-          {Object.entries(STATUS_LABELS).map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
-          ))}
-        </select>
-
-        {/* Priority filter */}
-        <select
+          onChange={setStatusFilter}
+          options={[
+            { value: 'ALL', label: 'All Statuses' },
+            { value: 'SUBMITTED', label: 'Submitted' },
+            { value: 'RECEIVED', label: 'Received' },
+            { value: 'IN_PROGRESS', label: 'In Progress' },
+            { value: 'RESOLVED', label: 'Resolved' },
+          ]}
+        />
+        <FilterSelect
           value={priorityFilter}
-          onChange={e => setPriorityFilter(e.target.value)}
-          style={{
-            padding: '8px 14px', borderRadius: 10,
-            border: '1px solid rgba(148,163,184,0.12)', background: 'rgba(15,23,42,0.5)',
-            color: 'white', fontSize: 13, outline: 'none', cursor: 'pointer',
-          }}
-        >
-          <option value="ALL">All Priorities</option>
-          <option value="LOW">Low</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="HIGH">High</option>
-          <option value="CRITICAL">Critical</option>
-        </select>
+          onChange={setPriorityFilter}
+          options={[
+            { value: 'ALL', label: 'All Priorities' },
+            { value: 'CRITICAL', label: 'Critical' },
+            { value: 'HIGH', label: 'High' },
+            { value: 'MEDIUM', label: 'Medium' },
+            { value: 'LOW', label: 'Low' },
+          ]}
+        />
 
-        {/* Department filter */}
-        {!department && (
-          <select
+        {role === 'city_admin' && (
+          <FilterSelect
             value={deptFilter}
-            onChange={e => setDeptFilter(e.target.value)}
-            style={{
-              padding: '8px 14px', borderRadius: 10,
-              border: '1px solid rgba(148,163,184,0.12)', background: 'rgba(15,23,42,0.5)',
-              color: 'white', fontSize: 13, outline: 'none', cursor: 'pointer',
-              maxWidth: 220,
-            }}
-          >
-            <option value="ALL">All Departments</option>
-            {DEPARTMENTS.map(d => (
-              <option key={d.id} value={d.id}>{d.nameEn}</option>
-            ))}
-          </select>
+            onChange={setDeptFilter}
+            options={[
+              { value: 'ALL', label: 'All Departments' },
+              ...uniqueDepartments.map(d => ({ value: d, label: d }))
+            ]}
+          />
         )}
       </div>
 
-      {/* Reports table */}
+      {/* Table */}
       <div style={{
         background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
         border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16,
-        overflow: 'hidden',
+        overflow: 'hidden'
       }}>
-        {/* Table header */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '110px 1fr 130px 100px 80px 120px',
-          padding: '12px 20px',
-          borderBottom: '1px solid rgba(148,163,184,0.08)',
-          background: 'rgba(15,23,42,0.3)',
-        }}>
-          {['Case #', 'Description', 'Citizen', 'Status', 'Priority', 'Date'].map(h => (
-            <div key={h} style={{ color: '#64748b', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {h}
-            </div>
-          ))}
-        </div>
-
-        {/* Table rows */}
-        <div style={{ maxHeight: 'calc(100vh - 340px)', overflowY: 'auto' }}>
-          {filteredReports.length === 0 ? (
-            <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
-              No reports match your filters.
-            </div>
-          ) : (
-            filteredReports.map(report => (
-              <div
-                key={report.id}
-                onClick={() => setSelectedReport(report)}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '110px 1fr 130px 100px 80px 120px',
-                  padding: '14px 20px',
-                  borderBottom: '1px solid rgba(148,163,184,0.04)',
-                  cursor: 'pointer',
-                  transition: 'background 0.2s',
-                  alignItems: 'center',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.05)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                {/* Case number */}
-                <div style={{ color: '#818cf8', fontSize: 12, fontWeight: 600 }}>
-                  {report.caseNumber}
-                </div>
-
-                {/* Description */}
-                <div style={{
-                  color: '#e2e8f0', fontSize: 12,
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                  paddingRight: 16,
-                }}>
-                  {report.description}
-                </div>
-
-                {/* Citizen */}
-                <div style={{ color: '#94a3b8', fontSize: 12 }}>
-                  {report.isAnonymous ? (
-                    <span style={{ fontStyle: 'italic', color: '#64748b' }}>Anonymous</span>
-                  ) : report.citizenName}
-                </div>
-
-                {/* Status badge */}
-                <div>
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 4,
-                    padding: '3px 10px', borderRadius: 20,
-                    fontSize: 10, fontWeight: 600,
-                    background: `${STATUS_COLORS[report.status]}15`,
-                    color: STATUS_COLORS[report.status],
-                  }}>
-                    <span style={{
-                      width: 6, height: 6, borderRadius: '50%',
-                      background: STATUS_COLORS[report.status],
-                    }} />
-                    {STATUS_LABELS[report.status]?.split(' ')[0]}
-                  </span>
-                </div>
-
-                {/* Priority */}
-                <div>
-                  <span style={{
-                    padding: '3px 8px', borderRadius: 6,
-                    fontSize: 10, fontWeight: 600,
-                    background: `${PRIORITY_COLORS[report.priority]}12`,
-                    color: PRIORITY_COLORS[report.priority],
-                  }}>
-                    {report.priority}
-                  </span>
-                </div>
-
-                {/* Date */}
-                <div style={{ color: '#64748b', fontSize: 11 }}>
-                  {formatDate(report.createdAt)}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+        {loading ? (
+          <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>Loading reports...</div>
+        ) : filteredReports.length === 0 ? (
+          <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>No reports found matching your criteria.</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(148,163,184,0.08)', background: 'rgba(15,23,42,0.2)' }}>
+                  <th style={thStyle}>Case</th>
+                  <th style={thStyle}>Description</th>
+                  <th style={thStyle}>Department</th>
+                  <th style={thStyle}>Status</th>
+                  <th style={thStyle}>Priority</th>
+                  <th style={thStyle}>Submitted</th>
+                  <th style={{ ...thStyle, textAlign: 'right' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredReports.map(report => (
+                  <tr
+                    key={report.id}
+                    style={{ borderBottom: '1px solid rgba(148,163,184,0.04)', transition: 'background 0.2s', cursor: 'pointer' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(15,23,42,0.4)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    onClick={() => setSelectedReport(report)}
+                  >
+                    <td style={{ ...tdStyle, color: '#818cf8', fontWeight: 600 }}>{report.case_number}</td>
+                    <td style={{ ...tdStyle, maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {report.description}
+                    </td>
+                    <td style={{ ...tdStyle, color: '#94a3b8' }}>{report.department_name}</td>
+                    <td style={tdStyle}>
+                      <span style={{
+                        padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600,
+                        background: `${STATUS_COLORS[report.status] || '#6366f1'}15`,
+                        color: STATUS_COLORS[report.status] || '#6366f1',
+                      }}>
+                        {report.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td style={tdStyle}>
+                      <span style={{
+                        padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600,
+                        background: `${PRIORITY_COLORS[report.priority] || '#6b7280'}15`,
+                        color: PRIORITY_COLORS[report.priority] || '#6b7280',
+                      }}>
+                        {report.priority}
+                      </span>
+                    </td>
+                    <td style={{ ...tdStyle, color: '#94a3b8' }}>
+                      {new Date(report.created_at).toLocaleDateString()}
+                    </td>
+                    <td style={{ ...tdStyle, textAlign: 'right' }}>
+                      <button style={{
+                        background: 'rgba(99,102,241,0.1)', border: 'none',
+                        color: '#818cf8', padding: '6px 12px', borderRadius: 6,
+                        cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                      }}>
+                        <Eye size={14} /> View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-
-      {/* Report detail modal */}
+      
+      {/* Detail Modal placeholder */}
       {selectedReport && (
-        <ReportDetailModal
-          report={selectedReport}
-          onClose={() => setSelectedReport(null)}
-        />
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.8)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 24,
+        }}>
+          <div style={{
+            background: '#1e293b', border: '1px solid rgba(148,163,184,0.1)',
+            borderRadius: 20, width: '100%', maxWidth: 600, maxHeight: '90vh', overflowY: 'auto',
+          }}>
+            <div style={{ padding: 20, borderBottom: '1px solid rgba(148,163,184,0.1)', display: 'flex', justifyContent: 'space-between' }}>
+              <h3 style={{ color: 'white', margin: 0 }}>{selectedReport.case_number}</h3>
+              <button onClick={() => setSelectedReport(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>Close</button>
+            </div>
+            <div style={{ padding: 20, color: '#e2e8f0' }}>
+              <p><strong>Status:</strong> {selectedReport.status}</p>
+              <p><strong>Priority:</strong> {selectedReport.priority}</p>
+              <p><strong>Department:</strong> {selectedReport.department_name}</p>
+              <p><strong>Description:</strong> {selectedReport.description}</p>
+              <p><strong>Citizen:</strong> {selectedReport.citizen_name}</p>
+              <p><strong>Submitted:</strong> {new Date(selectedReport.created_at).toLocaleString()}</p>
+              <div style={{ marginTop: 20, padding: 16, background: 'rgba(15,23,42,0.5)', borderRadius: 10 }}>
+                Map Location: [{selectedReport.latitude}, {selectedReport.longitude}]
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
 }
 
-// Report detail modal
-function ReportDetailModal({ report, onClose }: { report: DemoReport; onClose: () => void }) {
-  const dept = DEPARTMENTS.find(d => d.id === report.departmentId)
-  const cat = CATEGORIES.find(c => c.id === report.categoryId)
+const thStyle = { padding: '16px', color: '#94a3b8', fontSize: 12, fontWeight: 600 }
+const tdStyle = { padding: '16px', color: '#e2e8f0', fontSize: 13, fontWeight: 500 }
 
+function FilterSelect({ value, onChange, options }: { value: string, onChange: (v: string) => void, options: { value: string, label: string }[] }) {
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-        backdropFilter: 'blur(4px)', display: 'flex',
-        alignItems: 'center', justifyContent: 'center',
-        zIndex: 1000, padding: 20,
-      }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
+    <div style={{ position: 'relative' }}>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
         style={{
-          background: '#1e293b', borderRadius: 20,
-          border: '1px solid rgba(148,163,184,0.1)',
-          maxWidth: 560, width: '100%', padding: 28,
-          maxHeight: '90vh', overflowY: 'auto',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+          appearance: 'none',
+          background: 'rgba(15,23,42,0.4)', borderRadius: 10,
+          border: '1px solid rgba(148,163,184,0.08)',
+          color: '#e2e8f0', fontSize: 13, fontWeight: 500,
+          padding: '8px 32px 8px 12px', outline: 'none', cursor: 'pointer',
         }}
       >
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-          <div>
-            <h3 style={{ color: '#818cf8', fontSize: 18, fontWeight: 700, margin: '0 0 4px' }}>
-              {report.caseNumber}
-            </h3>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <span style={{
-                padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                background: `${STATUS_COLORS[report.status]}15`, color: STATUS_COLORS[report.status],
-              }}>
-                {STATUS_LABELS[report.status]}
-              </span>
-              <span style={{
-                padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600,
-                background: `${PRIORITY_COLORS[report.priority]}12`, color: PRIORITY_COLORS[report.priority],
-              }}>
-                {report.priority}
-              </span>
-            </div>
-          </div>
-          <button onClick={onClose} style={{
-            background: 'rgba(148,163,184,0.1)', border: 'none', borderRadius: 8,
-            color: '#94a3b8', cursor: 'pointer', padding: '6px 10px', fontSize: 14,
-          }}>✕</button>
-        </div>
-
-        {/* Description */}
-        <div style={{
-          padding: 16, borderRadius: 12,
-          background: 'rgba(15,23,42,0.5)', marginBottom: 20,
-        }}>
-          <p style={{ color: '#e2e8f0', fontSize: 13, lineHeight: 1.6, margin: 0 }}>
-            {report.description}
-          </p>
-        </div>
-
-        {/* Details grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <DetailItem icon={<Clock size={14} />} label="Submitted" value={formatDate(report.createdAt)} />
-          <DetailItem icon="👤" label="Citizen" value={report.isAnonymous ? 'Anonymous' : report.citizenName} />
-          <DetailItem icon={<MapPin size={14} />} label="Location" value={`${report.latitude.toFixed(4)}, ${report.longitude.toFixed(4)}`} />
-          <DetailItem icon={dept?.icon || '🏛️'} label="Department" value={dept?.nameEn || 'Unassigned'} />
-          <DetailItem icon="📂" label="Category" value={cat?.nameEn || 'General'} />
-          <DetailItem icon="🆔" label="Case #" value={report.caseNumber} />
-        </div>
-
-        {/* Status workflow */}
-        <div style={{ marginTop: 20 }}>
-          <h4 style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600, marginBottom: 12 }}>
-            Report Workflow
-          </h4>
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-            {['SUBMITTED', 'RECEIVED', 'ASSIGNED', 'UNDER_INVESTIGATION', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].map(status => {
-              const isActive = status === report.status
-              const isPast = ['SUBMITTED', 'RECEIVED', 'ASSIGNED', 'UNDER_INVESTIGATION', 'IN_PROGRESS', 'RESOLVED', 'CLOSED']
-                .indexOf(status) <= ['SUBMITTED', 'RECEIVED', 'ASSIGNED', 'UNDER_INVESTIGATION', 'IN_PROGRESS', 'RESOLVED', 'CLOSED']
-                .indexOf(report.status)
-              return (
-                <div key={status} style={{
-                  padding: '4px 10px', borderRadius: 6, fontSize: 10,
-                  fontWeight: isActive ? 700 : 400,
-                  background: isActive ? `${STATUS_COLORS[status]}20` : isPast ? 'rgba(148,163,184,0.08)' : 'transparent',
-                  color: isActive ? STATUS_COLORS[status] : isPast ? '#94a3b8' : '#475569',
-                  border: `1px solid ${isActive ? STATUS_COLORS[status] + '40' : 'rgba(148,163,184,0.06)'}`,
-                }}>
-                  {STATUS_LABELS[status]?.split(' ')[0]}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </div>
+        {options.map(o => <option key={o.value} value={o.value} style={{ background: '#1e293b' }}>{o.label}</option>)}
+      </select>
+      <ChevronDown size={14} color="#64748b" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
     </div>
   )
-}
-
-function DetailItem({ icon, label, value }: { icon: any; label: string; value: string }) {
-  return (
-    <div style={{
-      padding: 12, borderRadius: 10,
-      background: 'rgba(15,23,42,0.3)',
-      border: '1px solid rgba(148,163,184,0.06)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-        <span style={{ fontSize: 12, color: '#64748b' }}>{typeof icon === 'string' ? icon : icon}</span>
-        <span style={{ color: '#64748b', fontSize: 10, textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>{label}</span>
-      </div>
-      <div style={{ color: '#e2e8f0', fontSize: 12, fontWeight: 500 }}>{value}</div>
-    </div>
-  )
-}
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`
 }
