@@ -39,39 +39,46 @@ export default function Reports() {
   const [allReports, setAllReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchReports = async () => {
-      setLoading(true)
-      try {
-        const response = await fetch(`${API}/reports/`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) {
-          const data = await response.json()
-          const mapped = data.map((item: any) => ({
-            id: item.id,
-            case_number: item.case_number,
-            department_name: item.department_name || 'Unassigned',
-            category_name: item.category_name || 'General',
-            citizen_name: item.is_anonymous ? 'Anonymous' : (item.citizen?.full_name || 'Citizen'),
-            is_anonymous: item.is_anonymous,
-            description: item.description,
-            latitude: item.latitude,
-            longitude: item.longitude,
-            status: item.status,
-            priority: item.priority,
-            created_at: item.created_at,
-          }))
-          
-          setAllReports(mapped.sort((a: Report, b: Report) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()))
-        }
-      } catch (err) {
-        console.error("Failed to fetch reports", err)
-      } finally {
-        setLoading(false)
+  const fetchReports = async (showLoading = false) => {
+    if (showLoading) setLoading(true)
+    try {
+      const response = await fetch(`${API}/reports/`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json()
+        const list = Array.isArray(data) ? data : (data.results || [])
+        const mapped = list.map((item: any) => ({
+          id: item.id,
+          case_number: item.case_number,
+          department_name: item.department_name || 'Unassigned',
+          category_name: item.category_name || 'General',
+          citizen_name: item.is_anonymous ? 'Anonymous' : (item.citizen_name || item.citizen?.full_name || 'Citizen'),
+          is_anonymous: item.is_anonymous,
+          description: item.description,
+          latitude: item.latitude,
+          longitude: item.longitude,
+          status: item.status,
+          priority: item.priority,
+          created_at: item.created_at,
+        }))
+        
+        setAllReports(mapped.sort((a: Report, b: Report) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()))
       }
+    } catch (err) {
+      console.error("Failed to fetch reports", err)
+    } finally {
+      setLoading(false)
     }
-    fetchReports()
+  }
+
+  useEffect(() => {
+    fetchReports(true)
+    // Auto-poll every 10 seconds for new incoming mobile reports
+    const interval = setInterval(() => {
+      fetchReports(false)
+    }, 10000)
+    return () => clearInterval(interval)
   }, [token])
 
   const filteredReports = useMemo(() => {

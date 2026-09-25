@@ -108,6 +108,8 @@ export default function Dashboard() {
       }
     }
     fetchStats()
+    const interval = setInterval(fetchStats, 15000)
+    return () => clearInterval(interval)
   }, [token])
 
   if (loading) {

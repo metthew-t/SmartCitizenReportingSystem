@@ -40,7 +40,8 @@ export default function ReportDetails() {
             caseNumber: data.case_number,
             departmentName: data.department_name || 'Unassigned',
             categoryName: data.category_name || 'General',
-            citizenName: data.citizen?.full_name || 'Citizen',
+            citizenName: data.is_anonymous ? 'Anonymous' : (data.citizen_name || data.citizen?.full_name || 'Citizen'),
+            citizenPhone: data.citizen_phone || '',
             isAnonymous: data.is_anonymous,
             description: data.description,
             latitude: data.latitude,
@@ -51,6 +52,7 @@ export default function ReportDetails() {
             aanaa: data.aanaa,
             kutaMagaalaa: data.kuta_magaalaa,
             iddooAddaa: data.iddoo_addaa,
+            media: data.media || [],
           })
         }
         
@@ -224,7 +226,7 @@ export default function ReportDetails() {
           icon={<User size={16} color="#f59e0b" />}
           label="Reporter"
           value={report.isAnonymous ? 'Anonymous Citizen' : report.citizenName}
-          sublabel={report.isAnonymous ? 'Identity protected' : undefined}
+          sublabel={report.isAnonymous ? 'Identity protected' : (report.citizenPhone ? `Phone: ${report.citizenPhone}` : undefined)}
         />
         <DetailCard
           icon={<Building2 size={16} color="#6366f1" />}

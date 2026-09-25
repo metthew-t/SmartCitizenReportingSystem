@@ -66,7 +66,8 @@ class _HomeScreenState extends State<HomeScreen> {
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
-        final List data = jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
+        final List data = decoded is List ? decoded : (decoded['results'] as List? ?? []);
         if (mounted) {
           setState(() {
             _reports = data.map((item) => ReportItem(

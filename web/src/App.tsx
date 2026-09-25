@@ -38,6 +38,7 @@ function Login() {
   const [fullName, setFullName] = useState('')
   const [department, setDepartment] = useState('')
   const [isManager, setIsManager] = useState(true)
+  const [isCityAdmin, setIsCityAdmin] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const login = useAuthStore(state => state.login)
@@ -66,7 +67,7 @@ function Login() {
           name: me?.full_name || phone,
           department_name: me?.department_name || null,
           is_city_admin: me?.is_city_admin || false,
-        }, me?.department_name || null, me?.is_department_manager ? 'department_manager' : me?.is_city_admin ? 'city_admin' : 'officer')
+        }, me?.department_name || (me?.is_city_admin ? 'City Administration' : null), me?.is_city_admin ? 'city_admin' : (me?.is_department_manager ? 'department_manager' : 'officer'))
         navigate('/dashboard')
       } else {
         setError('Invalid phone number or password.')
@@ -79,7 +80,7 @@ function Login() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    if (!phone || !password || !fullName || !department) { setError('All fields are required'); return }
+    if (!phone || !password || !fullName || (!department && !isCityAdmin)) { setError('All fields are required'); return }
     setLoading(true)
     try {
       const res = await fetch(`${API}/auth/officer-register/`, {
@@ -89,18 +90,20 @@ function Login() {
           phone_number: phone,
           password,
           full_name: fullName,
-          department_name: department,
-          is_manager: isManager
+          department_name: isCityAdmin ? 'City Administration' : department,
+          is_manager: isManager || isCityAdmin,
+          is_city_admin: isCityAdmin,
         })
       })
       if (res.ok) {
         const data = await res.json()
+        const isCity = data.user?.is_city_admin || isCityAdmin
         login(data.access, {
           phone: phone,
           name: fullName,
-          department_name: department,
-          is_city_admin: false,
-        }, department, isManager ? 'department_manager' : 'officer')
+          department_name: isCity ? 'City Administration' : department,
+          is_city_admin: isCity,
+        }, isCity ? 'City Administration' : department, isCity ? 'city_admin' : (isManager ? 'department_manager' : 'officer'))
         navigate('/dashboard')
       } else {
         const body = await res.json()
@@ -191,17 +194,42 @@ function Login() {
             {mode === 'register' && (
               <>
                 <Input label="Full Name" value={fullName} onChange={setFullName} placeholder="Enter your full name" />
-                <div>
-                  <label style={labelStyle}>Department</label>
-                  <select value={department} onChange={e => setDepartment(e.target.value)} style={inputStyle as any}>
-                    <option value="">Select department...</option>
-                    {DEPT_NAMES.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
+                <div style={{
+                  background: isCityAdmin ? 'rgba(99,102,241,0.08)' : '#f8fafc',
+                  border: isCityAdmin ? '1px solid #818cf8' : '1px solid #e2e8f0',
+                  borderRadius: 10, padding: '10px 12px',
+                  display: 'flex', gap: 10, alignItems: 'center'
+                }}>
+                  <input
+                    type="checkbox"
+                    id="isCityAdmin"
+                    checked={isCityAdmin}
+                    onChange={e => {
+                      setIsCityAdmin(e.target.checked)
+                      if (e.target.checked) setDepartment('')
+                    }}
+                  />
+                  <label htmlFor="isCityAdmin" style={{ color: '#1e293b', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    Register as City Administrator (All 33 Departments)
+                  </label>
                 </div>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <input type="checkbox" id="isManager" checked={isManager} onChange={e => setIsManager(e.target.checked)} />
-                  <label htmlFor="isManager" style={{ color: '#475569', fontSize: 13, cursor: 'pointer' }}>Register as Department Manager</label>
-                </div>
+
+                {!isCityAdmin && (
+                  <div>
+                    <label style={labelStyle}>Department</label>
+                    <select value={department} onChange={e => setDepartment(e.target.value)} style={inputStyle as any}>
+                      <option value="">Select department...</option>
+                      {DEPT_NAMES.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                )}
+                
+                {!isCityAdmin && (
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <input type="checkbox" id="isManager" checked={isManager} onChange={e => setIsManager(e.target.checked)} />
+                    <label htmlFor="isManager" style={{ color: '#475569', fontSize: 13, cursor: 'pointer' }}>Register as Department Manager</label>
+                  </div>
+                )}
               </>
             )}
             <Input label="Phone Number" value={phone} onChange={setPhone} placeholder="09xxxxxxxx" />

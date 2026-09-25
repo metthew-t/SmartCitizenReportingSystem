@@ -39,14 +39,33 @@ class ReportSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name_en', read_only=True)
     latitude = serializers.FloatField(source='location.y', read_only=True)
     longitude = serializers.FloatField(source='location.x', read_only=True)
+    citizen_name = serializers.SerializerMethodField()
+    citizen_phone = serializers.SerializerMethodField()
 
     class Meta:
         model = Report
         fields = [
-            'id', 'case_number', 'citizen', 'is_anonymous', 'category', 'category_name', 
+            'id', 'case_number', 'citizen', 'citizen_name', 'citizen_phone',
+            'is_anonymous', 'category', 'category_name', 
             'description', 'latitude', 'longitude', 'status', 'priority', 
             'primary_department', 'department_name', 'assigned_officer', 
             'created_at', 'updated_at', 'resolved_at', 'closed_at', 'media',
             'aanaa', 'kuta_magaalaa', 'iddoo_addaa'
         ]
-        read_only_fields = ['case_number', 'status', 'priority', 'citizen']
+        read_only_fields = ['case_number', 'status', 'citizen']
+
+    def get_citizen_name(self, obj):
+        if obj.is_anonymous:
+            return "Anonymous"
+        if obj.citizen:
+            if hasattr(obj.citizen, 'citizen_profile') and obj.citizen.citizen_profile.full_name:
+                return obj.citizen.citizen_profile.full_name
+            return obj.citizen.phone_number
+        return "Unknown"
+
+    def get_citizen_phone(self, obj):
+        if obj.is_anonymous:
+            return ""
+        if obj.citizen:
+            return obj.citizen.phone_number
+        return ""

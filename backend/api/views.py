@@ -4,6 +4,7 @@ from rest_framework.decorators import action
 from core.models import Report, Department, ReportCategory, Message
 from .serializers import ReportSerializer, DepartmentSerializer, ReportCategorySerializer, MessageSerializer
 from django.contrib.gis.geos import Point
+from django.db.models import Q
 import uuid
 
 class DepartmentViewSet(viewsets.ReadOnlyModelViewSet):
@@ -23,13 +24,16 @@ class ReportViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.is_city_admin or user.is_superuser:
-            return Report.objects.all()
-        elif user.is_department_manager:
-            return Report.objects.filter(primary_department=user.officer_profile.department)
-        elif user.is_officer:
-            return Report.objects.filter(assigned_officer=user.officer_profile)
+            return Report.objects.all().order_by('-created_at')
+        elif (user.is_department_manager or user.is_officer) and hasattr(user, 'officer_profile'):
+            if user.officer_profile.department:
+                return Report.objects.filter(
+                    Q(primary_department=user.officer_profile.department) |
+                    Q(assigned_officer=user.officer_profile)
+                ).order_by('-created_at')
+            return Report.objects.all().order_by('-created_at')
         else:
-            return Report.objects.filter(citizen=user)
+            return Report.objects.filter(citizen=user).order_by('-created_at')
 
     def create(self, request, *args, **kwargs):
         data = request.data
@@ -43,7 +47,7 @@ class ReportViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         
-        # In a real app, generate the case number properly
+        # Generate the case number properly
         case_number = f"AD-{uuid.uuid4().hex[:6].upper()}"
         
         # Check if the frontend provided a department name string
@@ -65,6 +69,23 @@ class ReportViewSet(viewsets.ModelViewSet):
                 data.get('category')
             )
             department = recommendation.get('primary')
+
+        # Resolve Category if provided by name or id
+        category = serializer.validated_data.get('category')
+        if not category:
+            cat_name = data.get('category_name') or data.get('category')
+            if cat_name and isinstance(cat_name, str):
+                category = ReportCategory.objects.filter(
+                    Q(name_en__iexact=cat_name) | Q(name_om__iexact=cat_name) | Q(name_am__iexact=cat_name)
+                ).first()
+                if not category:
+                    category = ReportCategory.objects.create(
+                        name_en=cat_name, name_om=cat_name, name_am=cat_name
+                    )
+
+        priority = data.get('priority', 'MEDIUM')
+        if priority not in ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']:
+            priority = 'MEDIUM'
         
         try:
             report = serializer.save(
@@ -72,13 +93,18 @@ class ReportViewSet(viewsets.ModelViewSet):
                 location=point,
                 case_number=case_number,
                 status='SUBMITTED',
-                primary_department=department
+                primary_department=department,
+                category=category,
+                priority=priority,
             )
             
             # Fire notification to citizen
             from core.push_service import notify_report_submitted, notify_department_new_report
-            notify_report_submitted(report)
-            notify_department_new_report(report)
+            try:
+                notify_report_submitted(report)
+                notify_department_new_report(report)
+            except Exception as ne:
+                print(f"[Notification] Warning: {ne}")
             
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)

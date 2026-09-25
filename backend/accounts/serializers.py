@@ -70,8 +70,9 @@ class OfficerRegisterSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=20)
     password = serializers.CharField(write_only=True, min_length=4)
     full_name = serializers.CharField(max_length=255)
-    department_name = serializers.CharField(max_length=255)
+    department_name = serializers.CharField(max_length=255, required=False, allow_blank=True, default='')
     is_manager = serializers.BooleanField(default=False)
+    is_city_admin = serializers.BooleanField(default=False)
 
     def validate_phone_number(self, value):
         if User.objects.filter(phone_number=value).exists():
@@ -80,26 +81,31 @@ class OfficerRegisterSerializer(serializers.Serializer):
 
     def validate_department_name(self, value):
         from core.models import Department
+        if not value or value in ['City Administration', 'All Departments', 'Bulchiinsa Magaalaa']:
+            return value
         if not Department.objects.filter(name__iexact=value).exists():
             raise serializers.ValidationError(f'Department "{value}" does not exist.')
         return value
 
     def create(self, validated_data):
         from core.models import Department, OfficerProfile
-        dept = Department.objects.filter(name__iexact=validated_data['department_name']).first()
+        dept_name = validated_data.get('department_name', '')
+        is_city_admin = validated_data.get('is_city_admin', False) or dept_name in ['City Administration', 'All Departments', 'Bulchiinsa Magaalaa']
+        dept = Department.objects.filter(name__iexact=dept_name).first() if dept_name else None
         is_manager = validated_data.get('is_manager', False)
 
         user = User.objects.create_user(
             phone_number=validated_data['phone_number'],
             password=validated_data['password'],
             is_officer=True,
-            is_department_manager=is_manager,
+            is_department_manager=is_manager or is_city_admin,
+            is_city_admin=is_city_admin,
         )
         OfficerProfile.objects.create(
             user=user,
             full_name=validated_data['full_name'],
             department=dept,
-            is_manager=is_manager,
+            is_manager=is_manager or is_city_admin,
         )
         return user
 

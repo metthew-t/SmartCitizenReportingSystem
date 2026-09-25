@@ -52,9 +52,10 @@ class OfficerRegisterView(APIView):
                     'id': user.id,
                     'phone_number': user.phone_number,
                     'full_name': serializer.validated_data['full_name'],
-                    'department': serializer.validated_data['department_name'],
+                    'department': serializer.validated_data.get('department_name', ''),
                     'is_officer': True,
-                    'is_department_manager': serializer.validated_data.get('is_manager', False),
+                    'is_department_manager': user.is_department_manager,
+                    'is_city_admin': user.is_city_admin,
                 }
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -109,10 +110,14 @@ class StatsView(APIView):
         # Determine which reports to show
         if user.is_city_admin or user.is_superuser:
             reports = Report.objects.all()
-        elif user.is_department_manager and hasattr(user, 'officer_profile'):
-            reports = Report.objects.filter(primary_department=user.officer_profile.department)
-        elif user.is_officer and hasattr(user, 'officer_profile'):
-            reports = Report.objects.filter(assigned_officer=user.officer_profile)
+        elif (user.is_department_manager or user.is_officer) and hasattr(user, 'officer_profile'):
+            if user.officer_profile.department:
+                reports = Report.objects.filter(
+                    Q(primary_department=user.officer_profile.department) |
+                    Q(assigned_officer=user.officer_profile)
+                )
+            else:
+                reports = Report.objects.all()
         else:
             reports = Report.objects.filter(citizen=user)
 

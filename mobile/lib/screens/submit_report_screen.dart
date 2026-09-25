@@ -329,22 +329,40 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
+      if (token == null) {
+        if (!mounted) return;
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please log in first to submit a report.'),
+            backgroundColor: Colors.orange,
+          )
+        );
+        return;
+      }
+
       final headers = {
         'Content-Type': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
+        'Authorization': 'Bearer $token',
       };
+
+      final fullDescription = _titleController.text.trim().isNotEmpty
+          ? '${_titleController.text.trim()}\n\n${_descriptionController.text.trim()}'
+          : _descriptionController.text.trim();
 
       final response = await http.post(
         Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/reports/'),
         headers: headers,
         body: jsonEncode({
-          'description': _descriptionController.text,
+          'description': fullDescription,
           'latitude': _currentPosition?.latitude ?? 8.5415,
           'longitude': _currentPosition?.longitude ?? 39.2689,
-          'aanaa': _selectedAanaa,
-          'kuta_magaalaa': _selectedKutaMagaalaa,
-          'iddoo_addaa': _iddooAddaaController.text,
+          'aanaa': _selectedAanaa ?? '',
+          'kuta_magaalaa': _selectedKutaMagaalaa ?? '',
+          'iddoo_addaa': _iddooAddaaController.text.trim(),
           'department_name': _selectedDepartment,
+          'category_name': _selectedCategory,
+          'priority': _selectedPriority,
         }),
       );
       
@@ -365,14 +383,28 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
       final caseNum = decoded['case_number'] ?? 'AD-ERROR';
       final realId = decoded['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString();
 
+      // Upload image if selected
+      if (_selectedImage != null) {
+        try {
+          final uri = Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/reports/$realId/upload_media/');
+          final req = http.MultipartRequest('POST', uri);
+          req.headers['Authorization'] = 'Bearer $token';
+          req.files.add(await http.MultipartFile.fromPath('file', _selectedImage!.path));
+          req.fields['media_type'] = 'IMAGE';
+          await req.send();
+        } catch (e) {
+          debugPrint('Image upload failed: $e');
+        }
+      }
+
       if (!mounted) return;
       setState(() => _isSubmitting = false);
 
       final newReport = ReportItem(
         id: realId,
         caseNumber: caseNum,
-        title: _titleController.text,
-        description: _descriptionController.text,
+        title: _titleController.text.isNotEmpty ? _titleController.text : _descriptionController.text,
+        description: fullDescription,
         status: 'SUBMITTED',
         priority: _selectedPriority,
         department: _selectedDepartment ?? 'Unassigned',

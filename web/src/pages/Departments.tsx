@@ -34,7 +34,9 @@ export default function Departments() {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         if (response.ok) {
-          setAllReports(await response.json())
+          const data = await response.json()
+          const list = Array.isArray(data) ? data : (data.results || [])
+          setAllReports(list)
         }
       } catch (err) {
         console.error("Failed to fetch reports", err)
@@ -42,11 +44,7 @@ export default function Departments() {
         setLoading(false)
       }
     }
-    if (role === 'city_admin') {
-      fetchReports()
-    } else {
-      setLoading(false)
-    }
+    fetchReports()
   }, [token, role])
 
   const departmentStats = useMemo(() => {

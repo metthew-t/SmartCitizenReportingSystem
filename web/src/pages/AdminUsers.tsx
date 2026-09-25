@@ -34,7 +34,8 @@ export default function AdminUsers() {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {
-        setUsers(await res.json())
+        const data = await res.json()
+        setUsers(Array.isArray(data) ? data : (data.results || []))
       } else {
         setError('Failed to fetch users')
       }

@@ -41,7 +41,9 @@ export default function MapView() {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         if (response.ok) {
-          setAllReports(await response.json())
+          const data = await response.json()
+          const list = Array.isArray(data) ? data : (data.results || [])
+          setAllReports(list)
         }
       } catch (err) {
         console.error("Failed to fetch reports", err)
