@@ -320,8 +320,7 @@ class DashboardContent extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }
 
