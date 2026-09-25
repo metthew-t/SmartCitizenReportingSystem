@@ -136,27 +136,28 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
 
     // If permissions are granted, get the location
     try {
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      ).timeout(const Duration(seconds: 10), onTimeout: () {
-        // Fallback coordinate if timeout
-        return Position(
-          longitude: 39.2689, latitude: 8.5415,
-          timestamp: DateTime.now(),
-          accuracy: 0.0, altitude: 0.0, heading: 0.0, speed: 0.0, speedAccuracy: 0.0,
-          altitudeAccuracy: 0.0, headingAccuracy: 0.0, floor: null, isMocked: false
-        );
-      });
-      setState(() {
-        _currentPosition = position;
-        _isLoadingLocation = false;
-        _locationError = '';
-      });
+      Position? position = await Geolocator.getLastKnownPosition();
+      
+      if (position == null) {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+        ).timeout(const Duration(seconds: 15));
+      }
+
+      if (mounted) {
+        setState(() {
+          _currentPosition = position;
+          _isLoadingLocation = false;
+          _locationError = '';
+        });
+      }
     } catch (e) {
-      setState(() {
-        _isLoadingLocation = false;
-        _locationError = 'Failed to get location. Please try again.';
-      });
+      if (mounted) {
+        setState(() {
+          _isLoadingLocation = false;
+          _locationError = 'Failed to get actual location. Please check your GPS and try again.';
+        });
+      }
     }
   }
 

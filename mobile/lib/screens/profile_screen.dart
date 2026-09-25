@@ -15,6 +15,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _fullName = '';
   String _phone = '';
   bool _isLoading = true;
+  bool _notificationsEnabled = true;
 
   @override
   void initState() {
@@ -178,22 +179,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         title: 'Language',
                         subtitle: 'English / Afaan Oromo',
                         iconColor: Colors.purple,
-                        onTap: () {},
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Select Language'),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ListTile(
+                                    title: const Text('English'),
+                                    trailing: const Icon(Icons.check, color: Colors.green),
+                                    onTap: () => Navigator.pop(ctx),
+                                  ),
+                                  ListTile(
+                                    title: const Text('Afaan Oromo'),
+                                    onTap: () => Navigator.pop(ctx),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       ),
                       _SettingsTile(
                         icon: Icons.notifications_active,
                         title: 'Notifications',
-                        subtitle: 'Push alerts enabled',
+                        subtitle: _notificationsEnabled ? 'Push alerts enabled' : 'Push alerts disabled',
                         iconColor: Colors.orange,
-                        trailing: Switch(value: true, activeColor: Colors.green, onChanged: (v) {}),
-                        onTap: () {},
+                        trailing: Switch(
+                          value: _notificationsEnabled, 
+                          activeColor: Colors.green, 
+                          onChanged: (v) {
+                            setState(() {
+                              _notificationsEnabled = v;
+                            });
+                          }
+                        ),
+                        onTap: () {
+                          setState(() {
+                            _notificationsEnabled = !_notificationsEnabled;
+                          });
+                        },
                       ),
                       _SettingsTile(
                         icon: Icons.security,
                         title: 'Privacy & Security',
                         subtitle: 'Manage your data',
                         iconColor: Colors.blue,
-                        onTap: () {},
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Privacy & Security'),
+                              content: const Text('All your data is securely encrypted. Manage your privacy settings here.'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))
+                              ],
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 24),
                       const Text('Support', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black54)),
@@ -203,14 +248,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         title: 'Help Center',
                         subtitle: 'FAQs and support',
                         iconColor: Colors.teal,
-                        onTap: () {},
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Help Center'),
+                              content: const Text('If you need help, please call 911 for emergencies or visit our local office for non-emergency issues.'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))
+                              ],
+                            ),
+                          );
+                        },
                       ),
                       _SettingsTile(
                         icon: Icons.info_outline,
                         title: 'About App',
                         subtitle: 'Adama Smart Citizen v1.0',
                         iconColor: Colors.indigo,
-                        onTap: () {},
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('About App'),
+                              content: const Text('Adama Smart Citizen Reporting System.\nVersion: 1.0.0\nDeveloped to improve citizen engagement and infrastructure reporting in Adama.'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))
+                              ],
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 24),
                       InkWell(
