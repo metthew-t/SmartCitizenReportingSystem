@@ -1,4 +1,26 @@
 {
   "app_name": "Adama Smart Citizen Reporting System",
-  "welcome": "Welcome"
+  "welcome": "Welcome",
+  "profile_title": "Profile & Settings",
+  "verified": "Verified",
+  "active_citizen": "Active Citizen",
+  "preferences": "Preferences",
+  "language": "Language",
+  "language_subtitle": "English / Afaan Oromo / Amharic",
+  "notifications": "Notifications",
+  "push_alerts_enabled": "Push alerts enabled",
+  "push_alerts_disabled": "Push alerts disabled",
+  "privacy_security": "Privacy & Security",
+  "manage_data": "Manage your data",
+  "support": "Support",
+  "help_center": "Help Center",
+  "help_center_subtitle": "FAQs and support",
+  "about_app": "About App",
+  "about_app_subtitle": "Adama Smart Citizen v1.0",
+  "log_out": "Log Out",
+  "select_language": "Select Language",
+  "change_password": "Change Password",
+  "delete_account": "Delete Account",
+  "location_permission": "Location Permission",
+  "camera_permission": "Camera Permission"
 }

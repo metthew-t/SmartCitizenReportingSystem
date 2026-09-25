@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:easy_localization/easy_localization.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -86,7 +87,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Profile & Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('profile_title'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
         elevation: 0,
         backgroundColor: Colors.green[700],
       ),
@@ -159,9 +160,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _ProfileStat(icon: Icons.verified_user, label: 'Verified', color: Colors.blue),
+                          _ProfileStat(icon: Icons.verified_user, label: 'verified'.tr(), color: Colors.blue),
                           const SizedBox(width: 20),
-                          _ProfileStat(icon: Icons.star_border, label: 'Active Citizen', color: Colors.amber),
+                          _ProfileStat(icon: Icons.star_border, label: 'active_citizen'.tr(), color: Colors.amber),
                         ],
                       ),
                       const SizedBox(height: 30),
@@ -172,29 +173,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      const Text('Preferences', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black54)),
+                      Text('preferences'.tr(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black54)),
                       const SizedBox(height: 12),
                       _SettingsTile(
                         icon: Icons.language,
-                        title: 'Language',
-                        subtitle: 'English / Afaan Oromo',
+                        title: 'language'.tr(),
+                        subtitle: 'language_subtitle'.tr(),
                         iconColor: Colors.purple,
                         onTap: () {
                           showDialog(
                             context: context,
                             builder: (ctx) => AlertDialog(
-                              title: const Text('Select Language'),
+                              title: Text('select_language'.tr()),
                               content: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   ListTile(
                                     title: const Text('English'),
-                                    trailing: const Icon(Icons.check, color: Colors.green),
-                                    onTap: () => Navigator.pop(ctx),
+                                    trailing: context.locale.languageCode == 'en' ? const Icon(Icons.check, color: Colors.green) : null,
+                                    onTap: () {
+                                      context.setLocale(const Locale('en'));
+                                      Navigator.pop(ctx);
+                                    },
                                   ),
                                   ListTile(
                                     title: const Text('Afaan Oromo'),
-                                    onTap: () => Navigator.pop(ctx),
+                                    trailing: context.locale.languageCode == 'om' ? const Icon(Icons.check, color: Colors.green) : null,
+                                    onTap: () {
+                                      context.setLocale(const Locale('om'));
+                                      Navigator.pop(ctx);
+                                    },
+                                  ),
+                                  ListTile(
+                                    title: const Text('አማርኛ'),
+                                    trailing: context.locale.languageCode == 'am' ? const Icon(Icons.check, color: Colors.green) : null,
+                                    onTap: () {
+                                      context.setLocale(const Locale('am'));
+                                      Navigator.pop(ctx);
+                                    },
                                   ),
                                 ],
                               ),
@@ -204,8 +220,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       _SettingsTile(
                         icon: Icons.notifications_active,
-                        title: 'Notifications',
-                        subtitle: _notificationsEnabled ? 'Push alerts enabled' : 'Push alerts disabled',
+                        title: 'notifications'.tr(),
+                        subtitle: _notificationsEnabled ? 'push_alerts_enabled'.tr() : 'push_alerts_disabled'.tr(),
                         iconColor: Colors.orange,
                         trailing: Switch(
                           value: _notificationsEnabled, 
@@ -224,35 +240,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       _SettingsTile(
                         icon: Icons.security,
-                        title: 'Privacy & Security',
-                        subtitle: 'Manage your data',
+                        title: 'privacy_security'.tr(),
+                        subtitle: 'manage_data'.tr(),
                         iconColor: Colors.blue,
                         onTap: () {
                           showDialog(
                             context: context,
                             builder: (ctx) => AlertDialog(
-                              title: const Text('Privacy & Security'),
-                              content: const Text('All your data is securely encrypted. Manage your privacy settings here.'),
+                              title: Text('privacy_security'.tr()),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ListTile(
+                                    leading: const Icon(Icons.lock_outline),
+                                    title: Text('change_password'.tr()),
+                                    onTap: () => Navigator.pop(ctx),
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.location_on_outlined),
+                                    title: Text('location_permission'.tr()),
+                                    onTap: () => Navigator.pop(ctx),
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.camera_alt_outlined),
+                                    title: Text('camera_permission'.tr()),
+                                    onTap: () => Navigator.pop(ctx),
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.delete_outline, color: Colors.red),
+                                    title: Text('delete_account'.tr(), style: const TextStyle(color: Colors.red)),
+                                    onTap: () => Navigator.pop(ctx),
+                                  ),
+                                ],
+                              ),
                               actions: [
-                                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))
+                                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))
                               ],
                             ),
                           );
                         },
                       ),
                       const SizedBox(height: 24),
-                      const Text('Support', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black54)),
+                      Text('support'.tr(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black54)),
                       const SizedBox(height: 12),
                       _SettingsTile(
                         icon: Icons.help_outline,
-                        title: 'Help Center',
-                        subtitle: 'FAQs and support',
+                        title: 'help_center'.tr(),
+                        subtitle: 'help_center_subtitle'.tr(),
                         iconColor: Colors.teal,
                         onTap: () {
                           showDialog(
                             context: context,
                             builder: (ctx) => AlertDialog(
-                              title: const Text('Help Center'),
+                              title: Text('help_center'.tr()),
                               content: const Text('If you need help, please call 911 for emergencies or visit our local office for non-emergency issues.'),
                               actions: [
                                 TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))
@@ -263,14 +303,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       _SettingsTile(
                         icon: Icons.info_outline,
-                        title: 'About App',
-                        subtitle: 'Adama Smart Citizen v1.0',
+                        title: 'about_app'.tr(),
+                        subtitle: 'about_app_subtitle'.tr(),
                         iconColor: Colors.indigo,
                         onTap: () {
                           showDialog(
                             context: context,
                             builder: (ctx) => AlertDialog(
-                              title: const Text('About App'),
+                              title: Text('about_app'.tr()),
                               content: const Text('Adama Smart Citizen Reporting System.\nVersion: 1.0.0\nDeveloped to improve citizen engagement and infrastructure reporting in Adama.'),
                               actions: [
                                 TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))
@@ -295,7 +335,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             children: [
                               Icon(Icons.logout, color: Colors.red[700]),
                               const SizedBox(width: 8),
-                              Text('Log Out', style: TextStyle(color: Colors.red[700], fontSize: 16, fontWeight: FontWeight.bold)),
+                              Text('log_out'.tr(), style: TextStyle(color: Colors.red[700], fontSize: 16, fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),

@@ -1,4 +1,26 @@
 {
-  "app_name": "Sirna Gabaasa Lammiiwwanii Magaalaa Adaamaa",
-  "welcome": "Baga nagaan dhuftan"
+  "app_name": "Sirna Gabaasa Lammiiwwan Adaamaa",
+  "welcome": "Baga nagaan dhuftan",
+  "profile_title": "Profaayilii fi Filannoo",
+  "verified": "Mirkanaa'e",
+  "active_citizen": "Lammii Dammaqaa",
+  "preferences": "Filannoowwan",
+  "language": "Afaan",
+  "language_subtitle": "Ingiliffa / Afaan Oromoo / Amaariffa",
+  "notifications": "Beeksisa",
+  "push_alerts_enabled": "Beeksisni banaadha",
+  "push_alerts_disabled": "Beeksisni cufaadha",
+  "privacy_security": "Dhuunfaa fi Nageenya",
+  "manage_data": "Ragaa kee to'adhu",
+  "support": "Deeggarsa",
+  "help_center": "Giddugala Deeggarsaa",
+  "help_center_subtitle": "Gaaffiilee fi deeggarsa",
+  "about_app": "Waa'ee Appii",
+  "about_app_subtitle": "Adaamaa Smart Citizen v1.0",
+  "log_out": "Ba'i",
+  "select_language": "Afaan Filadhu",
+  "change_password": "Jecha Iccitii Jijjiiri",
+  "delete_account": "Herrega Haqaa",
+  "location_permission": "Eeyyama Iddoo",
+  "camera_permission": "Eeyyama Kaameeraa"
 }
