@@ -104,39 +104,32 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Widget _buildCurrentPage() {
-    switch (_currentIndex) {
-      case 0:
-        return DashboardContent(
-          reports: _reports,
-          isLoading: _isLoading,
-          onRefresh: _fetchReports,
-          onReportSubmitted: _addLocalReport,
-        );
-      case 1:
-        return HomeMapContent(
-          reports: _reports,
-          isLoading: _isLoading,
-          onRefresh: _fetchReports,
-          onReportSubmitted: _addLocalReport,
-        );
-      case 2:
-        return MyReportsContent(
-          reports: _reports,
-          isLoading: _isLoading,
-          onRefresh: _fetchReports,
-        );
-      case 3:
-        return const ProfileScreen();
-      default:
-        return const SizedBox.shrink();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _buildCurrentPage(),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          DashboardContent(
+            reports: _reports,
+            isLoading: _isLoading,
+            onRefresh: _fetchReports,
+            onReportSubmitted: _addLocalReport,
+          ),
+          HomeMapContent(
+            reports: _reports,
+            isLoading: _isLoading,
+            onRefresh: _fetchReports,
+            onReportSubmitted: _addLocalReport,
+          ),
+          MyReportsContent(
+            reports: _reports,
+            isLoading: _isLoading,
+            onRefresh: _fetchReports,
+          ),
+          const ProfileScreen(),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, -5))],
@@ -179,61 +172,64 @@ class DashboardContent extends StatelessWidget {
     int resolved = reports.where((r) => r.status == 'RESOLVED' || r.status == 'CLOSED').length;
     int pending = reports.where((r) => r.status != 'RESOLVED' && r.status != 'CLOSED').length;
 
-    return RefreshIndicator(
-      onRefresh: () async => onRefresh(),
-      child: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 220,
-            floating: false,
-            pinned: true,
-            backgroundColor: Colors.green[700],
-            flexibleSpace: FlexibleSpaceBar(
-              title: const Text('Adama Smart Citizen', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Container(color: Colors.green[800]),
-                  Image.asset(
-                    'assets/images/adama_bg.jpg',
-                    fit: BoxFit.cover,
-                    color: Colors.black45,
-                    colorBlendMode: BlendMode.darken,
-                    errorBuilder: (_, __, ___) => Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Colors.green[900]!, Colors.green[700]!],
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: () async => onRefresh(),
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 220,
+              floating: false,
+              pinned: true,
+              backgroundColor: Colors.green[700],
+              automaticallyImplyLeading: false,
+              flexibleSpace: FlexibleSpaceBar(
+                title: const Text('Adama Smart Citizen', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                background: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Colors.green[900]!, Colors.green[700]!],
+                    ),
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Opacity(
+                        opacity: 0.3,
+                        child: Image.asset(
+                          'assets/images/adama_bg.jpg',
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                         ),
                       ),
-                    ),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Colors.green[900]!.withValues(alpha: 0.8)],
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.transparent, Colors.green[900]!.withValues(alpha: 0.7)],
+                          ),
+                        ),
                       ),
-                    ),
+                      const Positioned(
+                        bottom: 60,
+                        left: 20,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Welcome to Adama', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                            SizedBox(height: 4),
+                            Text('Report issues and improve your city', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  Positioned(
-                    bottom: 60,
-                    left: 20,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Welcome to Adama', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 4),
-                        Text('Report issues and improve your city', style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 14)),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -320,7 +316,8 @@ class DashboardContent extends StatelessWidget {
             ),
           ],
         ),
-      );
+      ),
+    );
   }
 }
 

@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
 from accounts.views import (
     CustomTokenObtainPairView, RegisterView, OfficerRegisterView,
-    CurrentUserView, UserListView, StatsView
+    CurrentUserView, UserListView, StatsView, ChangePasswordView, DeleteAccountView
 )
 from api.analytics_views import AnalyticsSummaryView, AnalyticsByDepartmentView, AnalyticsByStatusView, ReportGeoJSONView
 from rest_framework.routers import DefaultRouter
@@ -24,6 +24,8 @@ urlpatterns = [
     path('auth/register/', RegisterView.as_view(), name='register'),
     path('auth/officer-register/', OfficerRegisterView.as_view(), name='officer_register'),
     path('auth/me/', CurrentUserView.as_view(), name='current_user'),
+    path('auth/change-password/', ChangePasswordView.as_view(), name='change_password'),
+    path('auth/delete-account/', DeleteAccountView.as_view(), name='delete_account'),
     # Admin
     path('users/', UserListView.as_view(), name='user_list'),
     path('users/<int:pk>/', UserListView.as_view(), name='user_detail'),
