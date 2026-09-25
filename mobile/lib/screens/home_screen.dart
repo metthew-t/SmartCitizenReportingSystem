@@ -107,6 +107,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final pages = [
+      DashboardContent(
+        reports: _reports,
+        isLoading: _isLoading,
+        onRefresh: _fetchReports,
+        onReportSubmitted: _addLocalReport,
+      ),
       HomeMapContent(
         reports: _reports,
         isLoading: _isLoading,
@@ -135,11 +141,190 @@ class _HomeScreenState extends State<HomeScreen> {
           type: BottomNavigationBarType.fixed,
           elevation: 0,
           items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Home'),
             BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Map'),
             BottomNavigationBarItem(icon: Icon(Icons.list_alt_rounded), label: 'History'),
             BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Profile'),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class DashboardContent extends StatelessWidget {
+  final List<ReportItem> reports;
+  final bool isLoading;
+  final VoidCallback onRefresh;
+  final Function(ReportItem) onReportSubmitted;
+
+  const DashboardContent({
+    super.key,
+    required this.reports,
+    required this.isLoading,
+    required this.onRefresh,
+    required this.onReportSubmitted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    int resolved = reports.where((r) => r.status == 'RESOLVED' || r.status == 'CLOSED').length;
+    int pending = reports.where((r) => r.status != 'RESOLVED' && r.status != 'CLOSED').length;
+
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: () async => onRefresh(),
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 220,
+              floating: false,
+              pinned: true,
+              backgroundColor: Colors.green[700],
+              flexibleSpace: FlexibleSpaceBar(
+                title: const Text('Adama Smart Citizen', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
+                background: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset('assets/images/adama_bg.jpg', fit: BoxFit.cover, color: Colors.black45, colorBlendMode: BlendMode.darken),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Colors.transparent, Colors.green[900]!.withValues(alpha: 0.8)],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 60,
+                      left: 20,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Welcome to Adama', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text('Report issues and improve your city', style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 14)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Main Action Button
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.add_location_alt, size: 28),
+                      label: const Text('REPORT THE ISSUES', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green[700],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 8,
+                        shadowColor: Colors.green.withValues(alpha: 0.5),
+                      ),
+                      onPressed: () async {
+                        final result = await Navigator.push<ReportItem>(
+                          context,
+                          MaterialPageRoute(builder: (context) => const SubmitReportScreen()),
+                        );
+                        if (result != null) {
+                          onReportSubmitted(result);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 30),
+
+                    // Quick Stats
+                    const Text('Your Activity', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: _StatCard(title: 'Total', count: reports.length.toString(), color: Colors.blue)),
+                        const SizedBox(width: 12),
+                        Expanded(child: _StatCard(title: 'Pending', count: pending.toString(), color: Colors.orange)),
+                        const SizedBox(width: 12),
+                        Expanded(child: _StatCard(title: 'Resolved', count: resolved.toString(), color: Colors.green)),
+                      ],
+                    ),
+                    const SizedBox(height: 30),
+
+                    // Recent Reports
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Recent Reports', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        TextButton(
+                          onPressed: () {
+                            // The parent handles tab switching, but since we don't have direct access here, 
+                            // we can't easily switch to the history tab. 
+                            // This button can just refresh for now, or we can omit it.
+                            onRefresh();
+                          },
+                          child: const Text('Refresh'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    if (isLoading)
+                      const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+                    else if (reports.isEmpty)
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(16)),
+                          child: const Column(
+                            children: [
+                              Icon(Icons.info_outline, size: 48, color: Colors.grey),
+                              SizedBox(height: 16),
+                              Text('No reports yet', style: TextStyle(fontSize: 16, color: Colors.black54)),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      ...reports.take(3).map((r) => _ReportCard(report: r)).toList(),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final String title;
+  final String count;
+  final Color color;
+
+  const _StatCard({required this.title, required this.count, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Text(count, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
+          const SizedBox(height: 4),
+          Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[700])),
+        ],
       ),
     );
   }
@@ -246,7 +431,7 @@ class HomeMapContent extends StatelessWidget {
             child: SafeArea(
               child: ElevatedButton.icon(
                 icon: const Icon(Icons.add_location_alt, size: 24),
-                label: const Text('REPORT INCIDENT', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                label: const Text('REPORT THE ISSUES', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green[700],
                   foregroundColor: Colors.white,

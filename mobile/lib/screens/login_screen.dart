@@ -40,10 +40,38 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
     if (token != null && mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
+      try {
+        final response = await http.get(
+          Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/auth/me/'),
+          headers: {'Authorization': 'Bearer $token'},
+        ).timeout(const Duration(seconds: 10));
+        
+        if (response.statusCode == 200) {
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          }
+          return;
+        } else {
+          // Token invalid or expired
+          await prefs.remove('auth_token');
+          await prefs.remove('refresh_token');
+        }
+      } catch (e) {
+        // If network error, maybe let them in but they might get 401 later, 
+        // or force login. Let's force login on error for safety, or just proceed if we want offline.
+        // Actually, if it's just a network error, we can still go to HomeScreen, 
+        // but if they get 401 there, we should handle it.
+        // For now, if we can't verify, we'll stay on login or go to home. Let's go to home to allow offline view.
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        }
+      }
     }
   }
 

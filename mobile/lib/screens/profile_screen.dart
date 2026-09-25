@@ -83,63 +83,229 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile & Settings')),
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        title: const Text('Profile & Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+        elevation: 0,
+        backgroundColor: Colors.green[700],
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16.0),
-              children: [
-                Center(
-                  child: CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.green[100],
-                    child: Text(
-                      _fullName.isNotEmpty ? _fullName[0].toUpperCase() : '?',
-                      style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.green[700]),
-                    ),
+          : CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        height: 140,
+                        decoration: BoxDecoration(
+                          color: Colors.green[700],
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(30),
+                            bottomRight: Radius.circular(30),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 60,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5))
+                            ],
+                          ),
+                          child: CircleAvatar(
+                            radius: 50,
+                            backgroundColor: Colors.green[100],
+                            child: Text(
+                              _fullName.isNotEmpty ? _fullName[0].toUpperCase() : '?',
+                              style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.green[800]),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                Center(
-                  child: Text(_fullName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                SliverToBoxAdapter(
+                  child: const SizedBox(height: 70),
                 ),
-                Center(
-                  child: Text(_phone, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                SliverToBoxAdapter(
+                  child: Column(
+                    children: [
+                      Text(
+                        _fullName,
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green[50],
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _phone,
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.green[800]),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _ProfileStat(icon: Icons.verified_user, label: 'Verified', color: Colors.blue),
+                          const SizedBox(width: 20),
+                          _ProfileStat(icon: Icons.star_border, label: 'Active Citizen', color: Colors.amber),
+                        ],
+                      ),
+                      const SizedBox(height: 30),
+                    ],
+                  ),
                 ),
-
-                const SizedBox(height: 32),
-                const Text('Settings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 8),
-
-                ListTile(
-                  leading: const Icon(Icons.language),
-                  title: const Text('Language'),
-                  subtitle: const Text('Afaan Oromo'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {},
-                ),
-                const Divider(),
-                ListTile(
-                  leading: const Icon(Icons.notifications),
-                  title: const Text('Notifications'),
-                  trailing: Switch(value: true, activeColor: Colors.green, onChanged: (v) {}),
-                ),
-                const Divider(),
-                ListTile(
-                  leading: const Icon(Icons.info_outline),
-                  title: const Text('About'),
-                  subtitle: const Text('Adama Smart Citizen v1.0'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {},
-                ),
-                const Divider(),
-                ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.red),
-                  title: const Text('Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
-                  onTap: _handleLogout,
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      const Text('Preferences', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black54)),
+                      const SizedBox(height: 12),
+                      _SettingsTile(
+                        icon: Icons.language,
+                        title: 'Language',
+                        subtitle: 'English / Afaan Oromo',
+                        iconColor: Colors.purple,
+                        onTap: () {},
+                      ),
+                      _SettingsTile(
+                        icon: Icons.notifications_active,
+                        title: 'Notifications',
+                        subtitle: 'Push alerts enabled',
+                        iconColor: Colors.orange,
+                        trailing: Switch(value: true, activeColor: Colors.green, onChanged: (v) {}),
+                        onTap: () {},
+                      ),
+                      _SettingsTile(
+                        icon: Icons.security,
+                        title: 'Privacy & Security',
+                        subtitle: 'Manage your data',
+                        iconColor: Colors.blue,
+                        onTap: () {},
+                      ),
+                      const SizedBox(height: 24),
+                      const Text('Support', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black54)),
+                      const SizedBox(height: 12),
+                      _SettingsTile(
+                        icon: Icons.help_outline,
+                        title: 'Help Center',
+                        subtitle: 'FAQs and support',
+                        iconColor: Colors.teal,
+                        onTap: () {},
+                      ),
+                      _SettingsTile(
+                        icon: Icons.info_outline,
+                        title: 'About App',
+                        subtitle: 'Adama Smart Citizen v1.0',
+                        iconColor: Colors.indigo,
+                        onTap: () {},
+                      ),
+                      const SizedBox(height: 24),
+                      InkWell(
+                        onTap: _handleLogout,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.red[50],
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.red[100]!),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.logout, color: Colors.red[700]),
+                              const SizedBox(width: 8),
+                              Text('Log Out', style: TextStyle(color: Colors.red[700], fontSize: 16, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                    ]),
+                  ),
                 ),
               ],
             ),
+    );
+  }
+}
+
+class _ProfileStat extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _ProfileStat({required this.icon, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: 6),
+        Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700])),
+      ],
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color iconColor;
+  final Widget? trailing;
+  final VoidCallback onTap;
+
+  const _SettingsTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.iconColor,
+    this.trailing,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: iconColor.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: iconColor),
+        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+        trailing: trailing ?? Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+        onTap: onTap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
     );
   }
 }
