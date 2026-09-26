@@ -22,5 +22,9 @@
   "change_password": "የይለፍ ቃል ቀይር",
   "delete_account": "መለያ ሰርዝ",
   "location_permission": "የአካባቢ ፈቃድ",
-  "camera_permission": "የካሜራ ፈቃድ"
+  "camera_permission": "የካሜራ ፈቃድ",
+  "tab_home": "ዋና ገጽ",
+  "tab_map": "ካርታ",
+  "tab_history": "ታሪክ",
+  "tab_profile": "መገለጫ"
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter/cupertino.dart';
 import 'screens/login_screen.dart';
 
 void main() async {
@@ -23,6 +25,36 @@ void main() async {
   );
 }
 
+
+
+class FallbackMaterialLocalizationDelegate extends LocalizationsDelegate<MaterialLocalizations> {
+  const FallbackMaterialLocalizationDelegate();
+
+  @override
+  bool isSupported(Locale locale) => true;
+
+  @override
+  Future<MaterialLocalizations> load(Locale locale) async =>
+      const DefaultMaterialLocalizations();
+
+  @override
+  bool shouldReload(covariant LocalizationsDelegate<MaterialLocalizations> old) => false;
+}
+
+class FallbackCupertinoLocalizationDelegate extends LocalizationsDelegate<CupertinoLocalizations> {
+  const FallbackCupertinoLocalizationDelegate();
+
+  @override
+  bool isSupported(Locale locale) => true;
+
+  @override
+  Future<CupertinoLocalizations> load(Locale locale) async =>
+      const DefaultCupertinoLocalizations();
+
+  @override
+  bool shouldReload(covariant LocalizationsDelegate<CupertinoLocalizations> old) => false;
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -30,7 +62,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Adama Smart Citizen',
-      localizationsDelegates: context.localizationDelegates,
+      localizationsDelegates: [
+        ...context.localizationDelegates,
+        const FallbackMaterialLocalizationDelegate(),
+        const FallbackCupertinoLocalizationDelegate(),
+      ],
       supportedLocales: context.supportedLocales,
       locale: context.locale,
       theme: ThemeData(

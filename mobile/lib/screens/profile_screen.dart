@@ -7,7 +7,9 @@ import 'package:permission_handler/permission_handler.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  /// If true, renders without its own Scaffold (for use inside IndexedStack).
+  final bool embedded;
+  const ProfileScreen({super.key, this.embedded = false});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -226,19 +228,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: Text('profile_title'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
-        elevation: 0,
-        backgroundColor: Colors.green[700],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : CustomScrollView(
-              slivers: [
+  Widget _buildBody(BuildContext context) {
+    return _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : CustomScrollView(
+            slivers: [
                 SliverToBoxAdapter(
                   child: Stack(
                     clipBehavior: Clip.none,
@@ -325,6 +319,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         subtitle: 'language_subtitle'.tr(),
                         iconColor: Colors.purple,
                         onTap: () {
+                          // Capture outer context before dialog
+                          final outerContext = context;
                           showDialog(
                             context: context,
                             builder: (ctx) => AlertDialog(
@@ -336,24 +332,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     title: const Text('English'),
                                     trailing: context.locale.languageCode == 'en' ? const Icon(Icons.check, color: Colors.green) : null,
                                     onTap: () {
-                                      context.setLocale(const Locale('en'));
                                       Navigator.pop(ctx);
+                                      // Defer locale change to after dialog is fully dismissed
+                                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                                        if (outerContext.mounted) {
+                                          outerContext.setLocale(const Locale('en'));
+                                        }
+                                      });
                                     },
                                   ),
                                   ListTile(
                                     title: const Text('Afaan Oromo'),
                                     trailing: context.locale.languageCode == 'om' ? const Icon(Icons.check, color: Colors.green) : null,
                                     onTap: () {
-                                      context.setLocale(const Locale('om'));
                                       Navigator.pop(ctx);
+                                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                                        if (outerContext.mounted) {
+                                          outerContext.setLocale(const Locale('om'));
+                                        }
+                                      });
                                     },
                                   ),
                                   ListTile(
                                     title: const Text('አማርኛ'),
                                     trailing: context.locale.languageCode == 'am' ? const Icon(Icons.check, color: Colors.green) : null,
                                     onTap: () {
-                                      context.setLocale(const Locale('am'));
                                       Navigator.pop(ctx);
+                                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                                        if (outerContext.mounted) {
+                                          outerContext.setLocale(const Locale('am'));
+                                        }
+                                      });
                                     },
                                   ),
                                 ],
@@ -500,8 +509,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ]),
                   ),
                 ),
-              ],
-            ),
+            ],
+          );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.embedded) {
+      // Embedded inside IndexedStack — no Scaffold to avoid nesting
+      return Column(
+        children: [
+          AppBar(
+            automaticallyImplyLeading: false,
+            title: Text('profile_title'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
+            elevation: 0,
+            backgroundColor: Colors.green[700],
+            foregroundColor: Colors.white,
+          ),
+          Expanded(child: _buildBody(context)),
+        ],
+      );
+    }
+    // Standalone — full Scaffold with AppBar
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        title: Text('profile_title'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
+        elevation: 0,
+        backgroundColor: Colors.green[700],
+        foregroundColor: Colors.white,
+      ),
+      body: _buildBody(context),
     );
   }
 }

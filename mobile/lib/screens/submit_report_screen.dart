@@ -136,13 +136,9 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
 
     // If permissions are granted, get the location
     try {
-      Position? position = await Geolocator.getLastKnownPosition();
-      
-      if (position == null) {
-        position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.medium,
-        ).timeout(const Duration(seconds: 15));
-      }
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
 
       if (mounted) {
         setState(() {

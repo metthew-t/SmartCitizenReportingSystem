@@ -22,5 +22,9 @@
   "change_password": "Change Password",
   "delete_account": "Delete Account",
   "location_permission": "Location Permission",
-  "camera_permission": "Camera Permission"
+  "camera_permission": "Camera Permission",
+  "tab_home": "Home",
+  "tab_map": "Map",
+  "tab_history": "History",
+  "tab_profile": "Profile"
 }

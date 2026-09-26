@@ -22,5 +22,9 @@
   "change_password": "Jecha Iccitii Jijjiiri",
   "delete_account": "Herrega Haqaa",
   "location_permission": "Eeyyama Iddoo",
-  "camera_permission": "Eeyyama Kaameeraa"
+  "camera_permission": "Eeyyama Kaameeraa",
+  "tab_home": "Gabaasa",
+  "tab_map": "Kaartaa",
+  "tab_history": "Seenaa",
+  "tab_profile": "Ibsama"
 }

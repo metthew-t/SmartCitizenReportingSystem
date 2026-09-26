@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:easy_localization/easy_localization.dart';
 import 'submit_report_screen.dart';
 import 'report_details_screen.dart';
 import 'profile_screen.dart';
@@ -127,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
             isLoading: _isLoading,
             onRefresh: _fetchReports,
           ),
-          const ProfileScreen(),
+          const ProfileScreen(embedded: true),
         ],
       ),
       bottomNavigationBar: Container(
@@ -141,11 +142,11 @@ class _HomeScreenState extends State<HomeScreen> {
           unselectedItemColor: Colors.grey[400],
           type: BottomNavigationBarType.fixed,
           elevation: 0,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Map'),
-            BottomNavigationBarItem(icon: Icon(Icons.list_alt_rounded), label: 'History'),
-            BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Profile'),
+          items: [
+            BottomNavigationBarItem(icon: const Icon(Icons.dashboard_rounded), label: 'tab_home'.tr()),
+            BottomNavigationBarItem(icon: const Icon(Icons.map), label: 'tab_map'.tr()),
+            BottomNavigationBarItem(icon: const Icon(Icons.list_alt_rounded), label: 'tab_history'.tr()),
+            BottomNavigationBarItem(icon: const Icon(Icons.person_rounded), label: 'tab_profile'.tr()),
           ],
         ),
       ),
@@ -172,11 +173,10 @@ class DashboardContent extends StatelessWidget {
     int resolved = reports.where((r) => r.status == 'RESOLVED' || r.status == 'CLOSED').length;
     int pending = reports.where((r) => r.status != 'RESOLVED' && r.status != 'CLOSED').length;
 
-    return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: () async => onRefresh(),
-        child: CustomScrollView(
-          slivers: [
+    return RefreshIndicator(
+      onRefresh: () async => onRefresh(),
+      child: CustomScrollView(
+        slivers: [
             SliverAppBar(
               expandedHeight: 220,
               floating: false,
@@ -316,7 +316,6 @@ class DashboardContent extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -371,130 +370,134 @@ class HomeMapContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Adama Reports Map'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: onRefresh,
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          FlutterMap(
-            options: const MapOptions(
-              initialCenter: LatLng(8.5400, 39.2700),
-              initialZoom: 13.0,
+    return Column(
+      children: [
+        AppBar(
+          title: const Text('Adama Reports Map'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: onRefresh,
             ),
+          ],
+        ),
+        Expanded(
+          child: Stack(
             children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.adama.smartcitizen',
-              ),
-              MarkerLayer(
-                markers: reports.map((r) => Marker(
-                  point: r.location,
-                  width: 40,
-                  height: 40,
-                  child: GestureDetector(
-                    onTap: () {
-                      showModalBottomSheet(
-                        context: context,
-                        backgroundColor: Colors.transparent,
-                        builder: (ctx) => _MapReportPreview(report: r),
-                      );
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: _getMarkerColor(r.priority, r.status).withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
+              FlutterMap(
+                options: const MapOptions(
+                  initialCenter: LatLng(8.5400, 39.2700),
+                  initialZoom: 13.0,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.adama.smartcitizen',
+                  ),
+                  MarkerLayer(
+                    markers: reports.map((r) => Marker(
+                      point: r.location,
+                      width: 40,
+                      height: 40,
+                      child: GestureDetector(
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            backgroundColor: Colors.transparent,
+                            builder: (ctx) => _MapReportPreview(report: r),
+                          );
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: _getMarkerColor(r.priority, r.status).withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.location_on, color: _getMarkerColor(r.priority, r.status), size: 32),
+                        ),
                       ),
-                      child: Icon(Icons.location_on, color: _getMarkerColor(r.priority, r.status), size: 32),
+                    )).toList(),
+                  ),
+                ],
+              ),
+
+              // Loading indicator
+              if (isLoading)
+                const Center(child: CircularProgressIndicator()),
+
+              // No reports message
+              if (!isLoading && reports.isEmpty)
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    margin: const EdgeInsets.all(40),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Text(
+                      'No reports yet.\nTap the button below to submit your first report!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14, color: Colors.black54),
                     ),
                   ),
-                )).toList(),
+                ),
+
+              // Report button
+              Positioned(
+                bottom: 32,
+                right: 24,
+                left: 24,
+                child: SafeArea(
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.add_location_alt, size: 24),
+                    label: const Text('REPORT THE ISSUES', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[700],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 10,
+                      shadowColor: Colors.green.withValues(alpha: 0.5),
+                    ),
+                    onPressed: () async {
+                      final result = await Navigator.push<ReportItem>(
+                        context,
+                        MaterialPageRoute(builder: (context) => const SubmitReportScreen()),
+                      );
+                      if (result != null) {
+                        onReportSubmitted(result);
+                      }
+                    },
+                  ),
+                ),
+              ),
+
+              // Legend
+              Positioned(
+                top: 16,
+                left: 16,
+                right: 16,
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10)],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _LegendItem(color: Colors.red, label: 'Urgent'),
+                      _LegendItem(color: Colors.amber, label: 'In Progress'),
+                      _LegendItem(color: Colors.green, label: 'Resolved'),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
-
-          // Loading indicator
-          if (isLoading)
-            const Center(child: CircularProgressIndicator()),
-
-          // No reports message
-          if (!isLoading && reports.isEmpty)
-            Center(
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                margin: const EdgeInsets.all(40),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Text(
-                  'No reports yet.\nTap the button below to submit your first report!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Colors.black54),
-                ),
-              ),
-            ),
-
-          // Report button
-          Positioned(
-            bottom: 32,
-            right: 24,
-            left: 24,
-            child: SafeArea(
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.add_location_alt, size: 24),
-                label: const Text('REPORT THE ISSUES', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green[700],
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 10,
-                  shadowColor: Colors.green.withValues(alpha: 0.5),
-                ),
-                onPressed: () async {
-                  final result = await Navigator.push<ReportItem>(
-                    context,
-                    MaterialPageRoute(builder: (context) => const SubmitReportScreen()),
-                  );
-                  if (result != null) {
-                    onReportSubmitted(result);
-                  }
-                },
-              ),
-            ),
-          ),
-
-          // Legend
-          Positioned(
-            top: 16,
-            left: 16,
-            right: 16,
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.9),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10)],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _LegendItem(color: Colors.red, label: 'Urgent'),
-                  _LegendItem(color: Colors.amber, label: 'In Progress'),
-                  _LegendItem(color: Colors.green, label: 'Resolved'),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -680,66 +683,64 @@ class _MyReportsContentState extends State<MyReportsContent> {
       return true;
     }).toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Report History'),
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: widget.onRefresh),
-        ],
-      ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)]),
-            child: Column(
-              children: [
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search case number or description...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                  ),
-                  onChanged: (v) => setState(() => _searchQuery = v),
+    return Column(
+      children: [
+        AppBar(
+          title: const Text('Report History'),
+          actions: [
+            IconButton(icon: const Icon(Icons.refresh), onPressed: widget.onRefresh),
+          ],
+        ),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)]),
+          child: Column(
+            children: [
+              TextField(
+                decoration: InputDecoration(
+                  hintText: 'Search case number or description...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
                 ),
-                const SizedBox(height: 12),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: ['ALL', 'SUBMITTED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].map((s) {
-                      final isSelected = _statusFilter == s;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(s.replaceAll('_', ' ')),
-                          selected: isSelected,
-                          onSelected: (selected) => setState(() => _statusFilter = s),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                )
-              ],
-            ),
-          ),
-
-          Expanded(
-            child: widget.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : filteredReports.isEmpty
-                    ? Center(child: Text('No reports found', style: TextStyle(color: Colors.grey[500])))
-                    : RefreshIndicator(
-                        onRefresh: () async => widget.onRefresh(),
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(12),
-                          itemCount: filteredReports.length,
-                          itemBuilder: (context, index) => _ReportCard(report: filteredReports[index]),
-                        ),
+                onChanged: (v) => setState(() => _searchQuery = v),
+              ),
+              const SizedBox(height: 12),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: ['ALL', 'SUBMITTED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].map((s) {
+                    final isSelected = _statusFilter == s;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(s.replaceAll('_', ' ')),
+                        selected: isSelected,
+                        onSelected: (selected) => setState(() => _statusFilter = s),
                       ),
+                    );
+                  }).toList(),
+                ),
+              )
+            ],
           ),
-        ],
-      ),
+        ),
+
+        Expanded(
+          child: widget.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : filteredReports.isEmpty
+                  ? Center(child: Text('No reports found', style: TextStyle(color: Colors.grey[500])))
+                  : RefreshIndicator(
+                      onRefresh: () async => widget.onRefresh(),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: filteredReports.length,
+                        itemBuilder: (context, index) => _ReportCard(report: filteredReports[index]),
+                      ),
+                    ),
+        ),
+      ],
     );
   }
 }
