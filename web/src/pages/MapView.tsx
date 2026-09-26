@@ -236,6 +236,30 @@ export default function MapView() {
                   <Info size={12} /> {selected.category_name}
                 </div>
               </div>
+              
+              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <a
+                  href={`/reports/${selected.id}`}
+                  style={{
+                    flex: 1, textAlign: 'center', padding: '8px', borderRadius: 8,
+                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    color: 'white', textDecoration: 'none', fontSize: 12, fontWeight: 700,
+                  }}
+                >
+                  Full Report Details
+                </a>
+                <a
+                  href={`https://www.google.com/maps?q=${selected.latitude},${selected.longitude}&z=17`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{
+                    flex: 1, textAlign: 'center', padding: '8px', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    color: 'white', textDecoration: 'none', fontSize: 12, fontWeight: 700,
+                  }}
+                >
+                  <ExternalLink size={14} /> Google Maps
+                </a>
+              </div>
             </div>
           )}
         </div>

@@ -155,23 +155,8 @@ class ReportViewSet(viewsets.ModelViewSet):
                 
         return Response({"status": "success", "departments_created": created_count})
 
-class MessageViewSet(viewsets.ModelViewSet):
-    serializer_class = MessageSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        report_id = self.request.query_params.get('report', None)
-        if report_id:
-            return Message.objects.filter(report_id=report_id).order_by('created_at')
-        return Message.objects.none()
-
-    def perform_create(self, serializer):
-        # We also need to notify the recipient depending on who sends the message.
-        msg = serializer.save(sender=self.request.user)
-        # We can add chat notification logic here later.
-
     @action(detail=True, methods=['post'])
-    def change_status(self, request, pk=None):
+    def update_status(self, request, pk=None):
         report = self.get_object()
         new_status = request.data.get('status')
         if new_status not in dict(Report.STATUS_CHOICES):
@@ -222,3 +207,19 @@ class MessageViewSet(viewsets.ModelViewSet):
             'primary_department': DepartmentSerializer(primary).data if primary else None,
             'supporting_departments': DepartmentSerializer(supporting, many=True).data,
         })
+
+class MessageViewSet(viewsets.ModelViewSet):
+    serializer_class = MessageSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        report_id = self.request.query_params.get('report', None)
+        if report_id:
+            return Message.objects.filter(report_id=report_id).order_by('created_at')
+        return Message.objects.none()
+
+    def perform_create(self, serializer):
+        # We also need to notify the recipient depending on who sends the message.
+        msg = serializer.save(sender=self.request.user)
+        # We can add chat notification logic here later.
+

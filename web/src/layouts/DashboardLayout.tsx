@@ -291,7 +291,7 @@ export default function DashboardLayout() {
           backdropFilter: 'blur(12px)',
           borderBottom: '1px solid rgba(148,163,184,0.08)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 24px', flexShrink: 0,
+          padding: '0 24px', flexShrink: 0, zIndex: 50,
         }}>
           <div>
             {/* Can put page title or breadcrumbs here in future */}
