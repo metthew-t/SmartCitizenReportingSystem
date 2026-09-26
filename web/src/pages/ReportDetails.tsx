@@ -25,6 +25,10 @@ export default function ReportDetails() {
   const [newMessage, setNewMessage] = React.useState('')
   const [loading, setLoading] = React.useState(true)
   const [statusUpdating, setStatusUpdating] = React.useState(false)
+  const [departments, setDepartments] = React.useState<any[]>([])
+  const [selectedDept, setSelectedDept] = React.useState('')
+  const [officers, setOfficers] = React.useState<any[]>([])
+  const [selectedOfficer, setSelectedOfficer] = React.useState('')
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -55,7 +59,22 @@ export default function ReportDetails() {
             kutaMagaalaa: data.kuta_magaalaa || '',
             iddooAddaa: data.iddoo_addaa || '',
             media: data.media || [],
+            assigned_officer: data.assigned_officer,
+            shared_with: data.shared_with || [],
           })
+        }
+        
+        const deptsRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/departments/`, { headers })
+        if (deptsRes.ok) {
+          const deptsData = await deptsRes.json()
+          setDepartments(Array.isArray(deptsData) ? deptsData : deptsData.results || [])
+        }
+
+        if (useAuthStore.getState().role === 'department_manager' && data.primary_department) {
+          const offRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/departments/${data.primary_department}/officers/`, { headers })
+          if (offRes.ok) {
+            setOfficers(await offRes.json())
+          }
         }
         
         const msgRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/messages/?report=${id}`, { headers })
@@ -121,7 +140,7 @@ export default function ReportDetails() {
     setStatusUpdating(true)
     try {
       const token = useAuthStore.getState().token
-      const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/update-status/`, {
+      const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/update_status/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -467,8 +486,136 @@ export default function ReportDetails() {
         )}
       </div>
 
+      {/* Share Department */}
+      {(useAuthStore.getState().role === 'officer' || useAuthStore.getState().role === 'department_manager') && departments.length > 0 && (
+        <div style={{
+          background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16,
+          padding: 20, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 16
+        }}>
+          <div style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 600 }}>Share Report:</div>
+          <select
+            value={selectedDept}
+            onChange={e => setSelectedDept(e.target.value)}
+            style={{
+              flex: 1, padding: '10px 16px', borderRadius: 8, background: 'rgba(15,23,42,0.5)',
+              border: '1px solid rgba(148,163,184,0.2)', color: 'white', outline: 'none'
+            }}
+          >
+            <option value="">Select a department...</option>
+            {departments.map(d => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+          <button
+            disabled={!selectedDept || statusUpdating}
+            onClick={async () => {
+              setStatusUpdating(true)
+              try {
+                const token = useAuthStore.getState().token
+                const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/share_report/`, {
+                  method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ department_id: selectedDept })
+                })
+                if (res.ok) {
+                  const data = await res.json()
+                  setReport((prev: any) => ({ ...prev, shared_with: [...(prev.shared_with || []), data.department_name] }))
+                  setSelectedDept('')
+                }
+              } finally {
+                setStatusUpdating(false)
+              }
+            }}
+            style={{
+              padding: '10px 20px', borderRadius: 8, border: 'none',
+              background: !selectedDept ? 'rgba(148,163,184,0.2)' : 'linear-gradient(135deg, #3b82f6, #2563eb)',
+              color: !selectedDept ? '#64748b' : 'white', fontWeight: 600, cursor: !selectedDept ? 'not-allowed' : 'pointer',
+            }}
+          >
+            Share
+          </button>
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 24, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+        
+        {/* Manager assignment dropdown */}
+        {!report.assigned_officer && useAuthStore.getState().role === 'department_manager' && officers.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <select
+              value={selectedOfficer}
+              onChange={e => setSelectedOfficer(e.target.value)}
+              style={{
+                padding: '12px 16px', borderRadius: 12, background: 'rgba(15,23,42,0.5)',
+                border: '1px solid rgba(148,163,184,0.2)', color: 'white', outline: 'none'
+              }}
+            >
+              <option value="">Assign to officer...</option>
+              {officers.map(o => (
+                <option key={o.id} value={o.id}>{o.full_name}</option>
+              ))}
+            </select>
+            <button
+              disabled={!selectedOfficer || statusUpdating}
+              onClick={async () => {
+                setStatusUpdating(true)
+                try {
+                  const token = useAuthStore.getState().token
+                  const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/assign_officer/`, {
+                    method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ officer_id: selectedOfficer })
+                  })
+                  if (res.ok) {
+                    setReport((prev: any) => ({ ...prev, assigned_officer: Number(selectedOfficer), status: 'ASSIGNED' }))
+                  }
+                } finally {
+                  setStatusUpdating(false)
+                }
+              }}
+              style={{
+                padding: '12px 24px', borderRadius: 12, border: 'none', cursor: !selectedOfficer ? 'not-allowed' : 'pointer',
+                background: !selectedOfficer ? 'rgba(148,163,184,0.2)' : 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                color: !selectedOfficer ? '#64748b' : 'white', fontSize: 14, fontWeight: 700,
+              }}
+            >
+              Assign
+            </button>
+          </div>
+        )}
+
+        {/* Officer self-assignment */}
+        {!report.assigned_officer && useAuthStore.getState().role === 'officer' && (
+          <button
+            onClick={async () => {
+              setStatusUpdating(true)
+              try {
+                const token = useAuthStore.getState().token
+                const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/assign_officer/`, {
+                  method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({})
+                })
+                if (res.ok) {
+                  setReport((prev: any) => ({ ...prev, assigned_officer: useAuthStore.getState().user?.id, status: 'ASSIGNED' }))
+                }
+              } finally {
+                setStatusUpdating(false)
+              }
+            }}
+            disabled={statusUpdating}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '12px 24px', borderRadius: 12, border: 'none', cursor: 'pointer',
+              background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+              color: 'white', fontSize: 14, fontWeight: 700,
+              transition: 'all 0.3s', boxShadow: '0 4px 15px rgba(139,92,246,0.3)',
+              opacity: statusUpdating ? 0.5 : 1,
+            }}
+          >
+            Assign to Me
+          </button>
+        )}
+        
         <button
           onClick={() => updateStatus('REJECTED')}
           disabled={statusUpdating}

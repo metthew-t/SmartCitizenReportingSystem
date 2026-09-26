@@ -48,7 +48,7 @@ class ReportSerializer(serializers.ModelSerializer):
             'id', 'case_number', 'citizen', 'citizen_name', 'citizen_phone',
             'is_anonymous', 'category', 'category_name', 
             'description', 'latitude', 'longitude', 'status', 'priority', 
-            'primary_department', 'department_name', 'assigned_officer', 
+            'primary_department', 'department_name', 'shared_with', 'assigned_officer', 
             'created_at', 'updated_at', 'resolved_at', 'closed_at', 'media',
             'aanaa', 'kuta_magaalaa', 'iddoo_addaa'
         ]

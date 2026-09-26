@@ -80,6 +80,7 @@ class Report(gis_models.Model):
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='MEDIUM')
     
     primary_department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, related_name='primary_reports')
+    shared_with = models.ManyToManyField(Department, related_name='shared_reports', blank=True)
     assigned_officer = models.ForeignKey(OfficerProfile, on_delete=models.SET_NULL, null=True, related_name='assigned_reports')
     
     created_at = models.DateTimeField(auto_now_add=True)

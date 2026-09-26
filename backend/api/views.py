@@ -12,6 +12,13 @@ class DepartmentViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = DepartmentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    @action(detail=True, methods=['get'])
+    def officers(self, request, pk=None):
+        dept = self.get_object()
+        officers = dept.officers.all()
+        data = [{'id': o.id, 'full_name': o.full_name} for o in officers]
+        return Response(data)
+
 class ReportCategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = ReportCategory.objects.all()
     serializer_class = ReportCategorySerializer
@@ -29,8 +36,9 @@ class ReportViewSet(viewsets.ModelViewSet):
             if user.officer_profile.department:
                 return Report.objects.filter(
                     Q(primary_department=user.officer_profile.department) |
+                    Q(shared_with=user.officer_profile.department) |
                     Q(assigned_officer=user.officer_profile)
-                ).order_by('-created_at')
+                ).distinct().order_by('-created_at')
             return Report.objects.all().order_by('-created_at')
         else:
             return Report.objects.filter(citizen=user).order_by('-created_at')
@@ -155,7 +163,7 @@ class ReportViewSet(viewsets.ModelViewSet):
                 
         return Response({"status": "success", "departments_created": created_count})
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], url_path='update_status')
     def update_status(self, request, pk=None):
         report = self.get_object()
         new_status = request.data.get('status')
@@ -170,6 +178,47 @@ class ReportViewSet(viewsets.ModelViewSet):
         notify_status_changed(report)
         
         return Response({'status': 'status updated'})
+
+    @action(detail=True, methods=['post'], url_path='assign_officer')
+    def assign_officer(self, request, pk=None):
+        report = self.get_object()
+        officer_id = request.data.get('officer_id')
+        user = request.user
+        
+        from core.models import OfficerProfile
+        
+        if officer_id:
+            # Manager assigning to someone
+            if not user.is_department_manager and not user.is_city_admin:
+                return Response({'error': 'Not authorized to assign others'}, status=status.HTTP_403_FORBIDDEN)
+            officer = OfficerProfile.objects.filter(id=officer_id).first()
+            if not officer:
+                return Response({'error': 'Officer not found'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            # Officer assigning to self
+            if not hasattr(user, 'officer_profile'):
+                return Response({'error': 'Only officers can self-assign'}, status=status.HTTP_403_FORBIDDEN)
+            officer = user.officer_profile
+            
+        report.assigned_officer = officer
+        report.status = 'ASSIGNED'
+        report.save()
+        return Response({'status': 'assigned', 'officer_name': officer.full_name})
+
+    @action(detail=True, methods=['post'], url_path='share_report')
+    def share_report(self, request, pk=None):
+        report = self.get_object()
+        department_id = request.data.get('department_id')
+        if not department_id:
+            return Response({'error': 'Department ID required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        from core.models import Department
+        dept = Department.objects.filter(id=department_id).first()
+        if not dept:
+            return Response({'error': 'Department not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+        report.shared_with.add(dept)
+        return Response({'status': 'shared', 'department_name': dept.name})
 
     @action(detail=True, methods=['post'])
     def upload_media(self, request, pk=None):
