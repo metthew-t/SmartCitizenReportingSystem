@@ -102,11 +102,22 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         }),
       );
 
-      if (response.statusCode == 200) {
+        if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', data['access']);
         await prefs.setString('refresh_token', data['refresh']);
+
+        try {
+          final meRes = await http.get(
+            Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/auth/me/'),
+            headers: {'Authorization': 'Bearer ${data['access']}'},
+          );
+          if (meRes.statusCode == 200) {
+            final me = jsonDecode(meRes.body);
+            await prefs.setInt('user_id', me['id']);
+          }
+        } catch (_) {}
 
         if (mounted) {
           Navigator.pushReplacement(
@@ -152,6 +163,17 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', data['access']);
         await prefs.setString('refresh_token', data['refresh']);
+        
+        try {
+          final meRes = await http.get(
+            Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/auth/me/'),
+            headers: {'Authorization': 'Bearer ${data['access']}'},
+          );
+          if (meRes.statusCode == 200) {
+            final me = jsonDecode(meRes.body);
+            await prefs.setInt('user_id', me['id']);
+          }
+        } catch (_) {}
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

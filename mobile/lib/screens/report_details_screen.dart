@@ -83,6 +83,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
+      final currentUserId = prefs.getInt('user_id');
       final headers = {
         'Content-Type': 'application/json',
         if (token != null) 'Authorization': 'Bearer $token',
@@ -98,7 +99,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
         setState(() {
           _messages = data.map((m) {
             return <String, dynamic>{
-              'sender': 'citizen', // simplified
+              'sender': m['sender'] == currentUserId ? 'citizen' : m['sender'], // use citizen if it's me
               'text': m['content'] ?? '',
               'time': m['created_at'] != null ? m['created_at'].toString().substring(11, 16) : '',
               'sender_name': m['sender_name'] ?? 'Unknown',
@@ -402,6 +403,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Text(isMe ? 'You' : msg['sender_name'], style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isMe ? Colors.green[800] : Colors.grey[700])),
+                            const SizedBox(height: 2),
                             Text(msg['text'], style: const TextStyle(fontSize: 14)),
                             const SizedBox(height: 4),
                             Text(msg['time'], style: TextStyle(fontSize: 10, color: Colors.grey[600])),

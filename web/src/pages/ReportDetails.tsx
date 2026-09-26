@@ -121,7 +121,7 @@ export default function ReportDetails() {
     setStatusUpdating(true)
     try {
       const token = useAuthStore.getState().token
-      const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/update_status/`, {
+      const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/update-status/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -525,19 +525,25 @@ export default function ReportDetails() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16, maxHeight: 300, overflowY: 'auto' }}>
           {messages.length === 0 ? (
             <div style={{ color: '#64748b', fontSize: 14, textAlign: 'center', padding: 20 }}>No messages yet.</div>
-          ) : messages.map((msg, idx) => (
-            <div key={idx} style={{
-              alignSelf: msg.sender === useAuthStore.getState().user?.id ? 'flex-end' : 'flex-start',
-              background: msg.sender === useAuthStore.getState().user?.id ? 'rgba(99,102,241,0.2)' : 'rgba(148,163,184,0.1)',
-              padding: '12px 16px', borderRadius: 14, maxWidth: '80%',
-              border: `1px solid ${msg.sender === useAuthStore.getState().user?.id ? 'rgba(99,102,241,0.4)' : 'rgba(148,163,184,0.2)'}`
-            }}>
-              <div style={{ fontSize: 14, color: '#e2e8f0' }}>{msg.content}</div>
-              <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 4, textAlign: 'right' }}>
-                {new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+          ) : messages.map((msg, idx) => {
+            const isMe = msg.sender === useAuthStore.getState().user?.id;
+            return (
+              <div key={idx} style={{
+                alignSelf: isMe ? 'flex-end' : 'flex-start',
+                background: isMe ? 'rgba(99,102,241,0.2)' : 'rgba(148,163,184,0.1)',
+                padding: '12px 16px', borderRadius: 14, maxWidth: '80%',
+                border: `1px solid ${isMe ? 'rgba(99,102,241,0.4)' : 'rgba(148,163,184,0.2)'}`
+              }}>
+                <div style={{ fontSize: 11, color: isMe ? '#a5b4fc' : '#94a3b8', marginBottom: 4, fontWeight: 600 }}>
+                  {isMe ? 'You' : (msg.sender_name || 'Citizen')}
+                </div>
+                <div style={{ fontSize: 14, color: '#e2e8f0' }}>{msg.content}</div>
+                <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 4, textAlign: 'right' }}>
+                  {new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <input

@@ -63,6 +63,7 @@ function Login() {
         })
         const me = meRes.ok ? await meRes.json() : null
         login(data.access, {
+          id: me?.id || null,
           phone: phone,
           name: me?.full_name || phone,
           department_name: me?.department_name || null,
@@ -99,6 +100,7 @@ function Login() {
         const data = await res.json()
         const isCity = data.user?.is_city_admin || isCityAdmin
         login(data.access, {
+          id: data.user?.id || null,
           phone: phone,
           name: fullName,
           department_name: isCity ? 'City Administration' : department,
