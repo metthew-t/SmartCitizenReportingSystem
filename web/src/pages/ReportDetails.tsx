@@ -25,6 +25,7 @@ export default function ReportDetails() {
   const [newMessage, setNewMessage] = React.useState('')
   const [loading, setLoading] = React.useState(true)
   const [statusUpdating, setStatusUpdating] = React.useState(false)
+  const [statusMsg, setStatusMsg] = React.useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [departments, setDepartments] = React.useState<any[]>([])
   const [selectedDept, setSelectedDept] = React.useState('')
   const [officers, setOfficers] = React.useState<any[]>([])
@@ -60,6 +61,7 @@ export default function ReportDetails() {
             iddooAddaa: data.iddoo_addaa || '',
             media: data.media || [],
             assigned_officer: data.assigned_officer,
+            assignedOfficerName: data.assigned_officer_name,
             shared_with: data.shared_with || [],
           })
         }
@@ -150,11 +152,16 @@ export default function ReportDetails() {
       })
       if (res.ok) {
         setReport((prev: any) => ({ ...prev, status: newStatus }))
+        setStatusMsg({ type: 'success', text: `Report marked as ${newStatus === 'RESOLVED' ? '✅ Resolved' : '❌ Rejected'} successfully!` })
+      } else {
+        const errData = await res.json().catch(() => ({}))
+        setStatusMsg({ type: 'error', text: `Failed: ${errData.error || errData.detail || res.statusText}` })
       }
     } catch (err) {
-      console.error("Failed to update status", err)
+      setStatusMsg({ type: 'error', text: 'Network error — could not update status.' })
     } finally {
       setStatusUpdating(false)
+      setTimeout(() => setStatusMsg(null), 5000)
     }
   }
 
@@ -310,6 +317,14 @@ export default function ReportDetails() {
           value={catName}
           accentColor="#8b5cf6"
         />
+        {report.assigned_officer && (
+          <DetailCard
+            icon={<User size={18} color="#10b981" />}
+            label="Assigned To"
+            value={report.assignedOfficerName || 'Officer'}
+            accentColor="#10b981"
+          />
+        )}
       </div>
 
       {/* Location Details — Full Address Info */}
@@ -537,6 +552,19 @@ export default function ReportDetails() {
         </div>
       )}
 
+      {/* Status Feedback Banner */}
+      {statusMsg && (
+        <div style={{
+          padding: '14px 20px', borderRadius: 12, marginBottom: 16,
+          background: statusMsg.type === 'success' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+          border: `1px solid ${statusMsg.type === 'success' ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`,
+          color: statusMsg.type === 'success' ? '#10b981' : '#ef4444',
+          fontWeight: 600, fontSize: 14,
+        }}>
+          {statusMsg.text}
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 24, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
         
@@ -566,8 +594,9 @@ export default function ReportDetails() {
                     method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ officer_id: selectedOfficer })
                   })
+                  const data = await res.json()
                   if (res.ok) {
-                    setReport((prev: any) => ({ ...prev, assigned_officer: Number(selectedOfficer), status: 'ASSIGNED' }))
+                    setReport((prev: any) => ({ ...prev, assigned_officer: Number(selectedOfficer), assignedOfficerName: data.officer_name, status: 'ASSIGNED' }))
                   }
                 } finally {
                   setStatusUpdating(false)
@@ -595,8 +624,9 @@ export default function ReportDetails() {
                   method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                   body: JSON.stringify({})
                 })
+                const data = await res.json()
                 if (res.ok) {
-                  setReport((prev: any) => ({ ...prev, assigned_officer: useAuthStore.getState().user?.id, status: 'ASSIGNED' }))
+                  setReport((prev: any) => ({ ...prev, assigned_officer: useAuthStore.getState().user?.id, assignedOfficerName: data.officer_name, status: 'ASSIGNED' }))
                 }
               } finally {
                 setStatusUpdating(false)

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from core.models import Report, ReportCategory, Department, ReportMedia, Message
+from core.models import Report, ReportCategory, Department, ReportMedia, Message, DepartmentMessage
 
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -33,6 +33,29 @@ class MessageSerializer(serializers.ModelSerializer):
             return obj.sender.phone_number
         return 'Unknown'
 
+class DepartmentMessageSerializer(serializers.ModelSerializer):
+    sender_name = serializers.SerializerMethodField()
+    sender_dept_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DepartmentMessage
+        fields = ['id', 'department', 'sender', 'sender_name', 'sender_dept_name', 'content', 'created_at']
+        read_only_fields = ['sender']
+
+    def get_sender_name(self, obj):
+        if obj.sender:
+            if hasattr(obj.sender, 'officer_profile'):
+                return obj.sender.officer_profile.full_name
+            elif hasattr(obj.sender, 'citizen_profile'):
+                return obj.sender.citizen_profile.full_name
+            return obj.sender.phone_number
+        return 'Unknown'
+
+    def get_sender_dept_name(self, obj):
+        if obj.sender and hasattr(obj.sender, 'officer_profile') and obj.sender.officer_profile.department:
+            return obj.sender.officer_profile.department.name
+        return None
+
 class ReportSerializer(serializers.ModelSerializer):
     media = ReportMediaSerializer(many=True, read_only=True)
     department_name = serializers.CharField(source='primary_department.name', read_only=True)
@@ -42,13 +65,15 @@ class ReportSerializer(serializers.ModelSerializer):
     citizen_name = serializers.SerializerMethodField()
     citizen_phone = serializers.SerializerMethodField()
 
+    assigned_officer_name = serializers.CharField(source='assigned_officer.full_name', read_only=True)
+
     class Meta:
         model = Report
         fields = [
             'id', 'case_number', 'citizen', 'citizen_name', 'citizen_phone',
             'is_anonymous', 'category', 'category_name', 
             'description', 'latitude', 'longitude', 'status', 'priority', 
-            'primary_department', 'department_name', 'shared_with', 'assigned_officer', 
+            'primary_department', 'department_name', 'shared_with', 'assigned_officer', 'assigned_officer_name',
             'created_at', 'updated_at', 'resolved_at', 'closed_at', 'media',
             'aanaa', 'kuta_magaalaa', 'iddoo_addaa'
         ]

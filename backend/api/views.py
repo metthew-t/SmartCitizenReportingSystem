@@ -1,8 +1,8 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from core.models import Report, Department, ReportCategory, Message
-from .serializers import ReportSerializer, DepartmentSerializer, ReportCategorySerializer, MessageSerializer
+from core.models import Report, Department, ReportCategory, Message, DepartmentMessage
+from .serializers import ReportSerializer, DepartmentSerializer, ReportCategorySerializer, MessageSerializer, DepartmentMessageSerializer
 from django.contrib.gis.geos import Point
 from django.db.models import Q
 import uuid
@@ -268,7 +268,22 @@ class MessageViewSet(viewsets.ModelViewSet):
         return Message.objects.none()
 
     def perform_create(self, serializer):
-        # We also need to notify the recipient depending on who sends the message.
-        msg = serializer.save(sender=self.request.user)
-        # We can add chat notification logic here later.
+        serializer.save(sender=self.request.user)
+
+
+class DepartmentMessageViewSet(viewsets.ModelViewSet):
+    """Inter-department messaging channel"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        dept_id = self.request.query_params.get('department', None)
+        if dept_id:
+            return DepartmentMessage.objects.filter(department_id=dept_id)
+        return DepartmentMessage.objects.none()
+
+    def get_serializer_class(self):
+        return DepartmentMessageSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(sender=self.request.user)
 

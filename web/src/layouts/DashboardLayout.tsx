@@ -3,7 +3,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import {
   LayoutDashboard, FileText, Map, Users, Settings, LogOut,
-  Bell, Menu, X, Building2, ShieldCheck, Clock, AlertTriangle
+  Bell, Menu, X, Building2, ShieldCheck, Clock, AlertTriangle, MessageSquare
 } from 'lucide-react'
 
 interface Notification {
@@ -100,6 +100,9 @@ export default function DashboardLayout() {
   const navItems = [...baseNavItems]
   if (role === 'city_admin' || role === 'department_manager') {
     navItems.push({ path: '/departments', label: 'Departments', icon: Building2 })
+  }
+  if (role !== 'city_admin') {
+    navItems.push({ path: '/dept-chat', label: 'Dept Chat', icon: MessageSquare })
   }
   if (role === 'city_admin') {
     navItems.push({ path: '/users', label: 'User Management', icon: Users })

@@ -6,7 +6,7 @@ from accounts.views import (
 )
 from api.analytics_views import AnalyticsSummaryView, AnalyticsByDepartmentView, AnalyticsByStatusView, ReportGeoJSONView
 from rest_framework.routers import DefaultRouter
-from api.views import ReportViewSet, DepartmentViewSet, ReportCategoryViewSet, MessageViewSet
+from api.views import ReportViewSet, DepartmentViewSet, ReportCategoryViewSet, MessageViewSet, DepartmentMessageViewSet
 from api.notification_views import NotificationViewSet, DeviceTokenViewSet
 
 router = DefaultRouter()
@@ -16,6 +16,7 @@ router.register(r'categories', ReportCategoryViewSet, basename='category')
 router.register(r'notifications', NotificationViewSet, basename='notification')
 router.register(r'device-tokens', DeviceTokenViewSet, basename='device-token')
 router.register(r'messages', MessageViewSet, basename='message')
+router.register(r'dept-messages', DepartmentMessageViewSet, basename='dept-message')
 
 urlpatterns = [
     # Auth Endpoints

@@ -123,6 +123,19 @@ class Message(models.Model):
     media_url = models.URLField(max_length=1000, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+class DepartmentMessage(models.Model):
+    """Inter-department communication messages"""
+    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='dept_messages')
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"[{self.department.name}] {self.sender} - {self.content[:40]}"
+
 class AuditLog(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     action = models.CharField(max_length=100)

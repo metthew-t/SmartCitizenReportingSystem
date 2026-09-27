@@ -8,6 +8,7 @@ import MapView from './pages/MapView'
 import Settings from './pages/Settings'
 import ReportDetails from './pages/ReportDetails'
 import AdminUsers from './pages/AdminUsers'
+import DeptChat from './pages/DeptChat'
 import { useAuthStore } from './store/authStore'
 import { Building2, LogIn, UserPlus, ChevronDown } from 'lucide-react'
 
@@ -307,6 +308,7 @@ export default function App() {
           <Route path="/departments" element={<Departments />} />
           <Route path="/map" element={<MapView />} />
           <Route path="/users" element={<AdminUsers />} />
+          <Route path="/dept-chat" element={<DeptChat />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>
