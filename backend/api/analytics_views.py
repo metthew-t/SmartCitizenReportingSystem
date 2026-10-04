@@ -1,10 +1,26 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Count, Avg
+from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import timedelta
 from core.models import Report, Department
+
+
+def _scoped_reports(user):
+    """Return a Report queryset scoped to what the requesting user is allowed to see."""
+    if user.is_city_admin or user.is_superuser:
+        return Report.objects.all()
+    elif (user.is_department_manager or user.is_officer) and hasattr(user, 'officer_profile'):
+        if user.officer_profile.department:
+            return Report.objects.filter(
+                Q(primary_department=user.officer_profile.department) |
+                Q(shared_with=user.officer_profile.department) |
+                Q(assigned_officer=user.officer_profile)
+            ).distinct()
+        return Report.objects.all()
+    else:
+        return Report.objects.filter(citizen=user)
 
 
 class AnalyticsSummaryView(APIView):
@@ -14,7 +30,7 @@ class AnalyticsSummaryView(APIView):
         now = timezone.now()
         last_30 = now - timedelta(days=30)
 
-        qs = Report.objects.all()
+        qs = _scoped_reports(request.user)
 
         return Response({
             'total_reports': qs.count(),
@@ -35,8 +51,9 @@ class AnalyticsByDepartmentView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        qs = _scoped_reports(request.user)
         data = (
-            Report.objects.values('primary_department__name')
+            qs.values('primary_department__name')
             .annotate(total=Count('id'))
             .order_by('-total')
         )
@@ -47,8 +64,9 @@ class AnalyticsByStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        qs = _scoped_reports(request.user)
         data = (
-            Report.objects.values('status')
+            qs.values('status')
             .annotate(total=Count('id'))
             .order_by('status')
         )
@@ -63,7 +81,7 @@ class ReportGeoJSONView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        qs = Report.objects.exclude(location__isnull=True)
+        qs = _scoped_reports(request.user).exclude(location__isnull=True)
 
         # Optional filters
         status_filter = request.query_params.get('status')

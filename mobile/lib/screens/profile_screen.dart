@@ -30,7 +30,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _fetchProfile() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
-    if (token == null) return;
+
+    if (token == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
 
     try {
       final response = await http.get(
@@ -45,6 +49,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _phone = data['phone_number'] ?? '';
             _isLoading = false;
           });
+        }
+      } else if (response.statusCode == 401) {
+        // Token expired — clear and redirect to login
+        await prefs.remove('auth_token');
+        await prefs.remove('refresh_token');
+        if (mounted) {
+          setState(() => _isLoading = false);
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
         }
       } else {
         if (mounted) setState(() => _isLoading = false);

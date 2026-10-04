@@ -120,23 +120,33 @@ class ReportViewSet(viewsets.ModelViewSet):
             import traceback
             return Response({'error': str(e), 'traceback': traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def fix_db(self, request):
-        from django.db import connection
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute('ALTER TABLE core_report ADD COLUMN aanaa VARCHAR(255) NULL;')
-                cursor.execute('ALTER TABLE core_report ADD COLUMN kuta_magaalaa VARCHAR(255) NULL;')
-                cursor.execute('ALTER TABLE core_report ADD COLUMN iddoo_addaa VARCHAR(255) NULL;')
-            return Response({"status": "fixed"})
-        except Exception as e:
-            return Response({"status": "error", "message": str(e)})
+        """One-time migration helper. Restricted to superusers only."""
+        if not (request.user.is_superuser or request.user.is_city_admin):
+            return Response({'error': 'Superuser or city admin access required.'}, status=status.HTTP_403_FORBIDDEN)
 
-    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+        from django.db import connection
+        results = {}
+        columns_to_add = {
+            'aanaa': 'VARCHAR(255) NULL',
+            'kuta_magaalaa': 'VARCHAR(255) NULL',
+            'iddoo_addaa': 'VARCHAR(255) NULL',
+        }
+        for col, col_def in columns_to_add.items():
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute(f'ALTER TABLE core_report ADD COLUMN {col} {col_def};')
+                results[col] = 'added'
+            except Exception as e:
+                # Column likely already exists — not an error
+                results[col] = f'skipped: {e}'
+        return Response({"status": "done", "columns": results})
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def init_departments(self, request):
-        import os
-        from django.conf import settings
-        from core.models import Department
+        if not (request.user.is_superuser or request.user.is_city_admin):
+            return Response({'error': 'Superuser or city admin access required.'}, status=status.HTTP_403_FORBIDDEN)
         
         departments = [
             "Galmeessa Siivilii", "Waajjira Invastimantii", "Bulchiinsaa fi Nageenya",
@@ -207,18 +217,38 @@ class ReportViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='share_report')
     def share_report(self, request, pk=None):
+        # Only department managers and city admins may share reports
+        user = request.user
+        if not (user.is_department_manager or user.is_city_admin or user.is_superuser):
+            return Response(
+                {'error': 'Only department managers or city admins can share reports.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         report = self.get_object()
         department_id = request.data.get('department_id')
         if not department_id:
             return Response({'error': 'Department ID required'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         from core.models import Department
         dept = Department.objects.filter(id=department_id).first()
         if not dept:
             return Response({'error': 'Department not found'}, status=status.HTTP_404_NOT_FOUND)
-            
+
         report.shared_with.add(dept)
-        return Response({'status': 'shared', 'department_name': dept.name})
+
+        # Notify the target department about the newly shared report
+        try:
+            from core.push_service import notify_department_new_report
+            notify_department_new_report(report)
+        except Exception as ne:
+            print(f"[Notification] share_report warning: {ne}")
+
+        return Response({
+            'status': 'shared',
+            'department_name': dept.name,
+            'shared_with': list(report.shared_with.values_list('name', flat=True)),
+        })
 
     @action(detail=True, methods=['post'])
     def upload_media(self, request, pk=None):

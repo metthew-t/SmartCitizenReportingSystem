@@ -57,9 +57,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchReports() async {
+    if (mounted) setState(() => _isLoading = true);
+
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
-    if (token == null) return;
+
+    // Token missing — user is not logged in
+    if (token == null) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please log in to see your reports.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
 
     try {
       final response = await http.get(
@@ -91,11 +106,40 @@ class _HomeScreenState extends State<HomeScreen> {
             _isLoading = false;
           });
         }
+      } else if (response.statusCode == 401) {
+        // Token expired — clear it and prompt re-login
+        await prefs.remove('auth_token');
+        await prefs.remove('refresh_token');
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Session expired. Please log in again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       } else {
-        if (mounted) setState(() => _isLoading = false);
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to load reports (${response.statusCode}). Pull down to retry.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Network error. Check your connection and pull down to retry.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -709,7 +753,7 @@ class _MyReportsContentState extends State<MyReportsContent> {
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: ['ALL', 'SUBMITTED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].map((s) {
+                  children: ['ALL', 'SUBMITTED', 'ASSIGNED', 'UNDER_INVESTIGATION', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REJECTED'].map((s) {
                     final isSelected = _statusFilter == s;
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),

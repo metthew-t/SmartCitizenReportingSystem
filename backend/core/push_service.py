@@ -78,6 +78,12 @@ def notify_report_submitted(report):
             body=f'Lakkoofsi wabii keessan: {report.case_number}',
             data={'type': 'REPORT_SUBMITTED', 'report_id': report.id}
         )
+        # Also send SMS via TextBee
+        try:
+            from core.sms_service import sms_report_submitted
+            sms_report_submitted(report)
+        except Exception as e:
+            print(f'[SMS] notify_report_submitted warning: {e}')
 
 
 def notify_status_changed(report):
@@ -88,6 +94,12 @@ def notify_status_changed(report):
             body=f'Gabaasi keessan {report.case_number} amma "{report.status}" ta\'e.',
             data={'type': 'STATUS_CHANGED', 'report_id': report.id}
         )
+        # Also send SMS via TextBee
+        try:
+            from core.sms_service import sms_status_changed
+            sms_status_changed(report)
+        except Exception as e:
+            print(f'[SMS] notify_status_changed warning: {e}')
 
 
 def notify_officer_assigned(report):
@@ -98,6 +110,12 @@ def notify_officer_assigned(report):
             body=f'Lakk. {report.case_number} - {report.description[:60]}',
             data={'type': 'REPORT_ASSIGNED', 'report_id': report.id}
         )
+        # Also send SMS to officer
+        try:
+            from core.sms_service import sms_report_assigned
+            sms_report_assigned(report)
+        except Exception as e:
+            print(f'[SMS] notify_officer_assigned warning: {e}')
 
 def notify_department_new_report(report):
     if report.primary_department:

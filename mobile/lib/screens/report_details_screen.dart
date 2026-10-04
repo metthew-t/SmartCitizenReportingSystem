@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
+const String _baseUrl = 'https://smartcitizenreportingsystem.onrender.com/api/v1';
+
 class ReportDetailsScreen extends StatefulWidget {
   final String reportId;
   final String caseNumber;
@@ -17,23 +19,41 @@ class ReportDetailsScreen extends StatefulWidget {
 }
 
 class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
-  int _currentTab = 0; // 0: Details, 1: Chat
+  // 0: Details, 1: Citizen Chat, 2: Department Channel
+  int _currentTab = 0;
 
   // Report data
   String _description = '';
   String _status = 'SUBMITTED';
   String _priority = 'MEDIUM';
   String _department = '';
+  String _primaryDeptId = '';
   String _category = '';
   String _citizenName = '';
   DateTime _createdAt = DateTime.now();
   bool _isLoadingReport = true;
 
-  // Chat State
+  // Shared-with departments (names for display)
+  List<String> _sharedWithNames = [];
+
+  // Current user role flags
+  bool _isOfficer = false;
+  bool _isDeptManager = false;
+  bool _isCityAdmin = false;
+
+  // Citizen chat state
   final _chatController = TextEditingController();
   List<Map<String, dynamic>> _messages = [];
 
-  // Feedback State
+  // Dept channel state
+  final _deptChatController = TextEditingController();
+  List<Map<String, dynamic>> _deptMessages = [];
+  bool _isLoadingDeptMessages = false;
+
+  // All available departments for the share dialog
+  List<Map<String, dynamic>> _allDepartments = [];
+
+  // Feedback state
   int _rating = 0;
   bool? _isSatisfied;
   final _feedbackController = TextEditingController();
@@ -42,34 +62,84 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
   @override
   void initState() {
     super.initState();
+    _loadUserRole();
     _fetchReportDetails();
     _fetchMessages();
   }
 
+  @override
+  void dispose() {
+    _chatController.dispose();
+    _deptChatController.dispose();
+    _feedbackController.dispose();
+    super.dispose();
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  Future<Map<String, String>> _authHeaders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
+
+  Future<int?> _currentUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('user_id');
+  }
+
+  /// Returns true if user can share / view the department channel
+  bool get _canShareOrViewDeptChannel => _isOfficer || _isDeptManager || _isCityAdmin;
+
+  // ── Data fetching ─────────────────────────────────────────────────────────
+
+  Future<void> _loadUserRole() async {
+    try {
+      final headers = await _authHeaders();
+      final res = await http.get(Uri.parse('$_baseUrl/auth/me/'), headers: headers);
+      if (res.statusCode == 200 && mounted) {
+        final data = jsonDecode(res.body);
+        setState(() {
+          _isOfficer = data['is_officer'] == true;
+          _isDeptManager = data['is_department_manager'] == true;
+          _isCityAdmin = data['is_city_admin'] == true;
+        });
+      }
+    } catch (_) {}
+  }
+
   Future<void> _fetchReportDetails() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
+      final headers = await _authHeaders();
       final res = await http.get(
-        Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${widget.reportId}/'),
-        headers: {
-          'Content-Type': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
+        Uri.parse('$_baseUrl/reports/${widget.reportId}/'),
+        headers: headers,
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         if (mounted) {
+          // Parse shared_with list — serializer returns list of dept IDs, but
+          // department_name for primary is returned separately. We fetch dept
+          // names from the all-departments endpoint and cross-reference.
+          final rawShared = data['shared_with'] as List<dynamic>? ?? [];
           setState(() {
             _description = data['description'] ?? '';
             _status = data['status'] ?? 'SUBMITTED';
             _priority = data['priority'] ?? 'MEDIUM';
             _department = data['department_name'] ?? 'Unknown';
+            _primaryDeptId = (data['primary_department'] ?? '').toString();
             _category = data['category_name'] ?? 'General';
-            _citizenName = 'You';
+            _citizenName = data['citizen_name'] ?? 'Citizen';
             _createdAt = DateTime.tryParse(data['created_at'] ?? '') ?? DateTime.now();
             _isLoadingReport = false;
+            // shared_with comes as list of dept IDs; resolve names later
+            _sharedWithNames = rawShared.map((e) => e.toString()).toList();
           });
+          // Resolve IDs → names
+          _resolveSharedDeptNames(rawShared.map((e) => e.toString()).toList());
         }
       } else {
         if (mounted) setState(() => _isLoadingReport = false);
@@ -79,31 +149,64 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
     }
   }
 
+  Future<void> _resolveSharedDeptNames(List<String> ids) async {
+    if (ids.isEmpty) return;
+    try {
+      final headers = await _authHeaders();
+      final res = await http.get(Uri.parse('$_baseUrl/departments/'), headers: headers);
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        final List depts = decoded is List ? decoded : (decoded['results'] ?? []);
+        _allDepartments = depts
+            .map<Map<String, dynamic>>((d) => {'id': d['id'].toString(), 'name': d['name'].toString()})
+            .toList();
+        final names = _allDepartments
+            .where((d) => ids.contains(d['id']))
+            .map<String>((d) => d['name'])
+            .toList();
+        if (mounted) setState(() => _sharedWithNames = names);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _fetchDepartments() async {
+    if (_allDepartments.isNotEmpty) return; // already loaded
+    try {
+      final headers = await _authHeaders();
+      final res = await http.get(Uri.parse('$_baseUrl/departments/'), headers: headers);
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        final List depts = decoded is List ? decoded : (decoded['results'] ?? []);
+        if (mounted) {
+          setState(() {
+            _allDepartments = depts
+                .map<Map<String, dynamic>>((d) => {'id': d['id'].toString(), 'name': d['name'].toString()})
+                .toList();
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
   Future<void> _fetchMessages() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
-      final currentUserId = prefs.getInt('user_id');
-      final headers = {
-        'Content-Type': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      };
-
+      final headers = await _authHeaders();
+      final uid = await _currentUserId();
       final res = await http.get(
-        Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/messages/?report=${widget.reportId}'),
-        headers: headers
+        Uri.parse('$_baseUrl/messages/?report=${widget.reportId}'),
+        headers: headers,
       );
-      if (res.statusCode == 200) {
+      if (res.statusCode == 200 && mounted) {
         final decoded = jsonDecode(res.body);
         final List<dynamic> data = decoded is List ? decoded : (decoded['results'] ?? []);
         setState(() {
-          _messages = data.map((m) {
-            return <String, dynamic>{
-              'sender': m['sender'] == currentUserId ? 'citizen' : m['sender'], // use citizen if it's me
-              'text': m['content'] ?? '',
-              'time': m['created_at'] != null ? m['created_at'].toString().substring(11, 16) : '',
-              'sender_name': m['sender_name'] ?? 'Unknown',
-            };
+          _messages = data.map((m) => <String, dynamic>{
+            'sender': m['sender'] == uid ? 'me' : 'other',
+            'text': m['content'] ?? '',
+            'time': (m['created_at'] ?? '').toString().length >= 16
+                ? m['created_at'].toString().substring(11, 16)
+                : '',
+            'sender_name': m['sender_name'] ?? 'Unknown',
           }).toList();
         });
       }
@@ -112,36 +215,53 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _chatController.dispose();
-    _feedbackController.dispose();
-    super.dispose();
+  Future<void> _fetchDeptMessages() async {
+    if (_primaryDeptId.isEmpty) return;
+    if (mounted) setState(() => _isLoadingDeptMessages = true);
+    try {
+      final headers = await _authHeaders();
+      final res = await http.get(
+        Uri.parse('$_baseUrl/dept-messages/?department=$_primaryDeptId'),
+        headers: headers,
+      );
+      if (res.statusCode == 200 && mounted) {
+        final decoded = jsonDecode(res.body);
+        final List<dynamic> data = decoded is List ? decoded : (decoded['results'] ?? []);
+        final uid = await _currentUserId();
+        setState(() {
+          _deptMessages = data.map((m) => <String, dynamic>{
+            'sender': m['sender'] == uid ? 'me' : 'other',
+            'text': m['content'] ?? '',
+            'time': (m['created_at'] ?? '').toString().length >= 16
+                ? m['created_at'].toString().substring(11, 16)
+                : '',
+            'sender_name': m['sender_name'] ?? 'Unknown',
+            'sender_dept': m['sender_dept_name'] ?? '',
+          }).toList();
+          _isLoadingDeptMessages = false;
+        });
+      } else {
+        if (mounted) setState(() => _isLoadingDeptMessages = false);
+      }
+    } catch (e) {
+      debugPrint('Error fetching dept messages: $e');
+      if (mounted) setState(() => _isLoadingDeptMessages = false);
+    }
   }
 
-  Future<void> _sendMessage() async {
-    if (_chatController.text.trim().isEmpty) return;
-    
-    final text = _chatController.text;
+  // ── Actions ───────────────────────────────────────────────────────────────
+
+  Future<void> _sendCitizenMessage() async {
+    final text = _chatController.text.trim();
+    if (text.isEmpty) return;
     setState(() {
-      _messages.add({
-        'sender': 'citizen',
-        'text': text,
-        'time': 'Sending...',
-      });
+      _messages.add({'sender': 'me', 'text': text, 'time': 'Sending...', 'sender_name': 'You'});
       _chatController.clear();
     });
-
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
-      final headers = {
-        'Content-Type': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      };
-
+      final headers = await _authHeaders();
       final res = await http.post(
-        Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/messages/'),
+        Uri.parse('$_baseUrl/messages/'),
         headers: headers,
         body: jsonEncode({'report': int.tryParse(widget.reportId) ?? widget.reportId, 'content': text}),
       );
@@ -150,31 +270,173 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Chat Error ${res.statusCode}: ${res.body}'), backgroundColor: Colors.red)
+          SnackBar(content: Text('Error ${res.statusCode}: ${res.body}'), backgroundColor: Colors.red),
         );
         setState(() => _messages.removeLast());
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Network error: $e'), backgroundColor: Colors.red)
+          SnackBar(content: Text('Network error: $e'), backgroundColor: Colors.red),
+        );
+        setState(() => _messages.removeLast());
+      }
+    }
+  }
+
+  Future<void> _sendDeptMessage() async {
+    final text = _deptChatController.text.trim();
+    if (text.isEmpty || _primaryDeptId.isEmpty) return;
+    setState(() {
+      _deptMessages.add({'sender': 'me', 'text': text, 'time': 'Sending...', 'sender_name': 'You', 'sender_dept': ''});
+      _deptChatController.clear();
+    });
+    try {
+      final headers = await _authHeaders();
+      final res = await http.post(
+        Uri.parse('$_baseUrl/dept-messages/'),
+        headers: headers,
+        body: jsonEncode({
+          'department': int.tryParse(_primaryDeptId) ?? _primaryDeptId,
+          'content': text,
+        }),
+      );
+      if (res.statusCode == 201) {
+        _fetchDeptMessages();
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error ${res.statusCode}: ${res.body}'), backgroundColor: Colors.red),
+        );
+        setState(() => _deptMessages.removeLast());
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Network error: $e'), backgroundColor: Colors.red),
+        );
+        setState(() => _deptMessages.removeLast());
+      }
+    }
+  }
+
+  Future<void> _shareWithDepartment(String deptId, String deptName) async {
+    try {
+      final headers = await _authHeaders();
+      final res = await http.post(
+        Uri.parse('$_baseUrl/reports/${widget.reportId}/share_report/'),
+        headers: headers,
+        body: jsonEncode({'department_id': int.tryParse(deptId) ?? deptId}),
+      );
+      if (res.statusCode == 200 && mounted) {
+        setState(() {
+          if (!_sharedWithNames.contains(deptName)) {
+            _sharedWithNames.add(deptName);
+          }
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Report shared with $deptName'),
+            backgroundColor: Colors.green[700],
+          ),
+        );
+      } else if (res.statusCode == 403) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Only department managers or city admins can share reports.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to share: ${res.body}'), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Network error: $e'), backgroundColor: Colors.red),
         );
       }
     }
   }
 
+  void _showShareDialog() async {
+    await _fetchDepartments();
+    if (!mounted) return;
+
+    // Filter out the primary dept and already-shared depts
+    final available = _allDepartments.where((d) {
+      if (d['id'] == _primaryDeptId) return false;
+      if (_sharedWithNames.contains(d['name'])) return false;
+      return true;
+    }).toList();
+
+    if (available.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No additional departments to share with.')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.share, color: Colors.indigo[700], size: 22),
+            const SizedBox(width: 8),
+            const Text('Share with Department'),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: available.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (ctx, i) {
+              final dept = available[i];
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.indigo[50],
+                  child: Icon(Icons.account_balance, size: 18, color: Colors.indigo[700]),
+                ),
+                title: Text(dept['name'], style: const TextStyle(fontSize: 13)),
+                trailing: Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _shareWithDepartment(dept['id'], dept['name']);
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+        ],
+      ),
+    );
+  }
+
   void _submitFeedback() {
     if (_rating == 0 || _isSatisfied == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select rating and satisfaction.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a rating and satisfaction level.')),
+      );
       return;
     }
     setState(() => _feedbackSubmitted = true);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feedback submitted. Thank you!')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Feedback submitted. Thank you!'), backgroundColor: Colors.green),
+    );
   }
 
   Future<void> _downloadReceipt() async {
     final pdf = pw.Document();
-
     pdf.addPage(
       pw.Page(
         build: (pw.Context context) => pw.Column(
@@ -194,6 +456,10 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
             pw.Text('Department: $_department'),
             pw.SizedBox(height: 10),
             pw.Text('Date Submitted: ${_createdAt.toString()}'),
+            if (_sharedWithNames.isNotEmpty) ...[
+              pw.SizedBox(height: 10),
+              pw.Text('Also Shared With: ${_sharedWithNames.join(", ")}'),
+            ],
             pw.SizedBox(height: 20),
             pw.Text('Description:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 5),
@@ -205,9 +471,10 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
         ),
       ),
     );
-
     await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
   }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -218,10 +485,25 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
       );
     }
 
+    // Tab labels — 3rd tab only shown to officers/managers
+    final tabs = [
+      _TabItem(label: 'Details', icon: Icons.info_outline),
+      _TabItem(label: 'Chat', icon: Icons.chat_bubble_outline),
+      if (_canShareOrViewDeptChannel)
+        _TabItem(label: 'Dept Channel', icon: Icons.groups_outlined),
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.caseNumber),
         actions: [
+          // Share button — only for officers/managers
+          if (_canShareOrViewDeptChannel)
+            IconButton(
+              icon: const Icon(Icons.share_outlined),
+              tooltip: 'Share with Department',
+              onPressed: _showShareDialog,
+            ),
           IconButton(
             icon: const Icon(Icons.picture_as_pdf),
             tooltip: 'Download Receipt',
@@ -231,50 +513,81 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
       ),
       body: Column(
         children: [
-          // Tab Bar
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _currentTab = 0),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    decoration: BoxDecoration(border: Border(bottom: BorderSide(color: _currentTab == 0 ? Colors.green : Colors.transparent, width: 3))),
-                    child: Text('Details', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, color: _currentTab == 0 ? Colors.green[800] : Colors.grey)),
+          // ── Tab bar ──
+          Container(
+            color: Colors.white,
+            child: Row(
+              children: List.generate(tabs.length, (i) {
+                final isSelected = _currentTab == i;
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() => _currentTab = i);
+                      // Lazy-load dept messages when switching to that tab
+                      if (i == 2 && _deptMessages.isEmpty) _fetchDeptMessages();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: isSelected ? Colors.green : Colors.transparent,
+                            width: 3,
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(tabs[i].icon, size: 16, color: isSelected ? Colors.green[800] : Colors.grey),
+                          const SizedBox(width: 6),
+                          Text(
+                            tabs[i].label,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: isSelected ? Colors.green[800] : Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _currentTab = 1),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    decoration: BoxDecoration(border: Border(bottom: BorderSide(color: _currentTab == 1 ? Colors.green : Colors.transparent, width: 3))),
-                    child: Text('Chat & Updates', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, color: _currentTab == 1 ? Colors.green[800] : Colors.grey)),
-                  ),
-                ),
-              ),
-            ],
+                );
+              }),
+            ),
           ),
 
-          // Content
+          // ── Content ──
           Expanded(
-            child: _currentTab == 0 ? _buildDetailsTab() : _buildChatTab(),
+            child: IndexedStack(
+              index: _currentTab,
+              children: [
+                _buildDetailsTab(),
+                _buildChatTab(),
+                if (_canShareOrViewDeptChannel) _buildDeptChannelTab(),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
+  // ── Details tab ───────────────────────────────────────────────────────────
+
   Widget _buildDetailsTab() {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Status header
+          // Status / priority header
           Container(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(gradient: LinearGradient(colors: [_statusColor(_status), _statusColor(_status).withValues(alpha: 0.7)])),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [_statusColor(_status), _statusColor(_status).withValues(alpha: 0.7)]),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -306,20 +619,80 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Feedback section (if resolved)
+                // ── Shared-with section ──────────────────────────────────
+                if (_sharedWithNames.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.indigo[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.indigo[100]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.share, size: 16, color: Colors.indigo[700]),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Shared With',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.indigo[800]),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: _sharedWithNames.map((name) => Chip(
+                            avatar: Icon(Icons.account_balance, size: 14, color: Colors.indigo[700]),
+                            label: Text(name, style: const TextStyle(fontSize: 11)),
+                            backgroundColor: Colors.indigo[100],
+                            padding: EdgeInsets.zero,
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          )).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // ── Share button (officers/managers only) ────────────────
+                if (_canShareOrViewDeptChannel) ...[
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.share_outlined, size: 18),
+                    label: const Text('Share with Another Department'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.indigo[700],
+                      side: BorderSide(color: Colors.indigo[300]!),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: _showShareDialog,
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
+                // ── Feedback (resolved / closed) ─────────────────────────
                 if ((_status == 'RESOLVED' || _status == 'CLOSED') && !_feedbackSubmitted) ...[
                   Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: Colors.orange[50], borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.orange[200]!)),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.orange[200]!),
+                    ),
                     child: Column(
                       children: [
                         Text('Rate Your Experience', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.orange[900])),
                         const SizedBox(height: 12),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(5, (index) => IconButton(
-                            icon: Icon(index < _rating ? Icons.star : Icons.star_border, size: 32, color: Colors.orange),
-                            onPressed: () => setState(() => _rating = index + 1),
+                          children: List.generate(5, (idx) => IconButton(
+                            icon: Icon(idx < _rating ? Icons.star : Icons.star_border, size: 32, color: Colors.orange),
+                            onPressed: () => setState(() => _rating = idx + 1),
                           )),
                         ),
                         const SizedBox(height: 12),
@@ -332,20 +705,28 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        TextField(controller: _feedbackController, decoration: const InputDecoration(hintText: 'Leave a comment... (optional)', filled: true, fillColor: Colors.white, border: OutlineInputBorder()), maxLines: 2),
+                        TextField(
+                          controller: _feedbackController,
+                          decoration: const InputDecoration(hintText: 'Leave a comment... (optional)', filled: true, fillColor: Colors.white, border: OutlineInputBorder()),
+                          maxLines: 2,
+                        ),
                         const SizedBox(height: 12),
-                        ElevatedButton(onPressed: _submitFeedback, style: ElevatedButton.styleFrom(backgroundColor: Colors.orange), child: const Text('Submit Feedback', style: TextStyle(color: Colors.white))),
+                        ElevatedButton(
+                          onPressed: _submitFeedback,
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                          child: const Text('Submit Feedback', style: TextStyle(color: Colors.white)),
+                        ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 24),
                 ],
 
-                // Description
+                // ── Description ──────────────────────────────────────────
                 _DetailSection(title: 'Description', icon: Icons.description, child: Text(_description, style: const TextStyle(fontSize: 14, height: 1.6))),
                 const SizedBox(height: 16),
 
-                // Details grid
+                // ── Info grid ────────────────────────────────────────────
                 Row(
                   children: [
                     Expanded(child: _InfoTile(icon: Icons.business, label: 'Department', value: _department)),
@@ -363,7 +744,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Status workflow
+                // ── Progress timeline ────────────────────────────────────
                 _DetailSection(title: 'Report Progress', icon: Icons.timeline, child: _StatusWorkflow(currentStatus: _status)),
               ],
             ),
@@ -372,6 +753,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
       ),
     );
   }
+
+  // ── Citizen chat tab ──────────────────────────────────────────────────────
 
   Widget _buildChatTab() {
     return Column(
@@ -382,70 +765,87 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
               : ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: _messages.length,
-                  itemBuilder: (context, index) {
-                    final msg = _messages[index];
-                    final isMe = msg['sender'] == 'citizen';
-                    return Align(
-                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(12),
-                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-                        decoration: BoxDecoration(
-                          color: isMe ? Colors.green[100] : Colors.grey[200],
-                          borderRadius: BorderRadius.only(
-                            topLeft: const Radius.circular(16),
-                            topRight: const Radius.circular(16),
-                            bottomLeft: Radius.circular(isMe ? 16 : 0),
-                            bottomRight: Radius.circular(isMe ? 0 : 16),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(isMe ? 'You' : msg['sender_name'], style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isMe ? Colors.green[800] : Colors.grey[700])),
-                            const SizedBox(height: 2),
-                            Text(msg['text'], style: const TextStyle(fontSize: 14)),
-                            const SizedBox(height: 4),
-                            Text(msg['time'], style: TextStyle(fontSize: 10, color: Colors.grey[600])),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+                  itemBuilder: (_, i) => _ChatBubble(msg: _messages[i], myKey: 'me'),
                 ),
         ),
+        _ChatInputBar(controller: _chatController, onSend: _sendCitizenMessage, hint: 'Message the department officer...'),
+      ],
+    );
+  }
+
+  // ── Department channel tab ────────────────────────────────────────────────
+
+  Widget _buildDeptChannelTab() {
+    return Column(
+      children: [
+        // Info banner
         Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5))]),
+          margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.indigo[50],
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.indigo[100]!),
+          ),
           child: Row(
             children: [
+              Icon(Icons.groups, size: 18, color: Colors.indigo[700]),
+              const SizedBox(width: 8),
               Expanded(
-                child: TextField(
-                  controller: _chatController,
-                  decoration: InputDecoration(
-                    hintText: 'Type a message...',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  ),
+                child: Text(
+                  'Internal channel for $_department${_sharedWithNames.isNotEmpty ? " + ${_sharedWithNames.join(", ")}" : ""}',
+                  style: TextStyle(fontSize: 12, color: Colors.indigo[800]),
                 ),
               ),
-              const SizedBox(width: 8),
-              CircleAvatar(
-                backgroundColor: Colors.green[700],
-                child: IconButton(icon: const Icon(Icons.send, color: Colors.white, size: 18), onPressed: _sendMessage),
+              IconButton(
+                icon: Icon(Icons.refresh, size: 18, color: Colors.indigo[600]),
+                onPressed: _fetchDeptMessages,
+                tooltip: 'Refresh',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
               ),
             ],
           ),
+        ),
+
+        // Messages
+        Expanded(
+          child: _isLoadingDeptMessages
+              ? const Center(child: CircularProgressIndicator())
+              : _deptMessages.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.forum_outlined, size: 48, color: Colors.grey[300]),
+                          const SizedBox(height: 12),
+                          Text('No department messages yet.', style: TextStyle(color: Colors.grey[500])),
+                          const SizedBox(height: 4),
+                          Text('Start a discussion with other departments.', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: _deptMessages.length,
+                      itemBuilder: (_, i) => _DeptChatBubble(msg: _deptMessages[i]),
+                    ),
+        ),
+
+        _ChatInputBar(
+          controller: _deptChatController,
+          onSend: _sendDeptMessage,
+          hint: 'Message all departments on this report...',
+          accentColor: Colors.indigo,
         ),
       ],
     );
   }
 
-  Color _statusColor(String status) {
-    switch (status) {
+  // ── Utility ───────────────────────────────────────────────────────────────
+
+  Color _statusColor(String s) {
+    switch (s) {
       case 'SUBMITTED': return Colors.indigo;
       case 'RECEIVED': return Colors.purple;
       case 'ASSIGNED': return Colors.blue;
@@ -458,8 +858,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
     }
   }
 
-  Color _priorityColor(String priority) {
-    switch (priority) {
+  Color _priorityColor(String p) {
+    switch (p) {
       case 'CRITICAL': return Colors.red;
       case 'HIGH': return Colors.orange;
       case 'MEDIUM': return Colors.blue;
@@ -469,8 +869,162 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
   }
 
   String _formatDate(DateTime dt) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+  }
+}
+
+// ── Supporting widgets ────────────────────────────────────────────────────────
+
+class _TabItem {
+  final String label;
+  final IconData icon;
+  const _TabItem({required this.label, required this.icon});
+}
+
+class _ChatBubble extends StatelessWidget {
+  final Map<String, dynamic> msg;
+  final String myKey;
+  const _ChatBubble({required this.msg, required this.myKey});
+
+  @override
+  Widget build(BuildContext context) {
+    final isMe = msg['sender'] == myKey;
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        decoration: BoxDecoration(
+          color: isMe ? Colors.green[100] : Colors.grey[200],
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(isMe ? 16 : 0),
+            bottomRight: Radius.circular(isMe ? 0 : 16),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isMe ? 'You' : (msg['sender_name'] ?? 'Unknown'),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isMe ? Colors.green[800] : Colors.grey[700]),
+            ),
+            const SizedBox(height: 2),
+            Text(msg['text'] ?? '', style: const TextStyle(fontSize: 14)),
+            const SizedBox(height: 4),
+            Text(msg['time'] ?? '', style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DeptChatBubble extends StatelessWidget {
+  final Map<String, dynamic> msg;
+  const _DeptChatBubble({required this.msg});
+
+  @override
+  Widget build(BuildContext context) {
+    final isMe = msg['sender'] == 'me';
+    final deptLabel = msg['sender_dept'] as String? ?? '';
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
+        decoration: BoxDecoration(
+          color: isMe ? Colors.indigo[50] : Colors.grey[100],
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(isMe ? 16 : 0),
+            bottomRight: Radius.circular(isMe ? 0 : 16),
+          ),
+          border: Border.all(color: isMe ? Colors.indigo[100]! : Colors.grey[300]!),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  isMe ? 'You' : (msg['sender_name'] ?? 'Unknown'),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isMe ? Colors.indigo[800] : Colors.grey[700]),
+                ),
+                if (deptLabel.isNotEmpty) ...[
+                  const SizedBox(width: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(color: Colors.indigo[100], borderRadius: BorderRadius.circular(6)),
+                    child: Text(deptLabel, style: TextStyle(fontSize: 9, color: Colors.indigo[700])),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(msg['text'] ?? '', style: const TextStyle(fontSize: 14)),
+            const SizedBox(height: 4),
+            Text(msg['time'] ?? '', style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatInputBar extends StatelessWidget {
+  final TextEditingController controller;
+  final VoidCallback onSend;
+  final String hint;
+  final MaterialColor accentColor;
+
+  const _ChatInputBar({
+    required this.controller,
+    required this.onSend,
+    required this.hint,
+    this.accentColor = Colors.green,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5))],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: hint,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                filled: true,
+                fillColor: Colors.grey[100],
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              ),
+              onSubmitted: (_) => onSend(),
+            ),
+          ),
+          const SizedBox(width: 8),
+          CircleAvatar(
+            backgroundColor: accentColor[700],
+            child: IconButton(
+              icon: const Icon(Icons.send, color: Colors.white, size: 18),
+              onPressed: onSend,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -486,7 +1040,11 @@ class _DetailSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(children: [Icon(icon, size: 18, color: Colors.green[700]), const SizedBox(width: 8), Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))]),
+        Row(children: [
+          Icon(icon, size: 18, color: Colors.green[700]),
+          const SizedBox(width: 8),
+          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        ]),
         const SizedBox(height: 12),
         child,
       ],
@@ -505,11 +1063,19 @@ class _InfoTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[200]!)),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [Icon(icon, size: 14, color: Colors.grey[500]), const SizedBox(width: 6), Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.w500))]),
+          Row(children: [
+            Icon(icon, size: 14, color: Colors.grey[500]),
+            const SizedBox(width: 6),
+            Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+          ]),
           const SizedBox(height: 6),
           Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600), maxLines: 2, overflow: TextOverflow.ellipsis),
         ],
@@ -524,7 +1090,15 @@ class _StatusWorkflow extends StatelessWidget {
   const _StatusWorkflow({required this.currentStatus});
 
   static const _steps = ['SUBMITTED', 'RECEIVED', 'ASSIGNED', 'UNDER_INVESTIGATION', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
-  static const _stepLabels = {'SUBMITTED': 'Submitted', 'RECEIVED': 'Received', 'ASSIGNED': 'Assigned', 'UNDER_INVESTIGATION': 'Investigating', 'IN_PROGRESS': 'In Progress', 'RESOLVED': 'Resolved', 'CLOSED': 'Closed'};
+  static const _stepLabels = {
+    'SUBMITTED': 'Submitted',
+    'RECEIVED': 'Received',
+    'ASSIGNED': 'Assigned',
+    'UNDER_INVESTIGATION': 'Under Investigation',
+    'IN_PROGRESS': 'In Progress',
+    'RESOLVED': 'Resolved',
+    'CLOSED': 'Closed',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -540,17 +1114,31 @@ class _StatusWorkflow extends StatelessWidget {
             Column(
               children: [
                 Container(
-                  width: isCurrent ? 20 : 14, height: isCurrent ? 20 : 14,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: isPast ? (isCurrent ? Colors.green : Colors.green[300]) : Colors.grey[300], border: isCurrent ? Border.all(color: Colors.green.withValues(alpha: 0.3), width: 3) : null),
-                  child: isPast ? Icon(isCurrent ? Icons.radio_button_checked : Icons.check, size: isCurrent ? 12 : 10, color: Colors.white) : null,
+                  width: isCurrent ? 20 : 14,
+                  height: isCurrent ? 20 : 14,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isPast ? (isCurrent ? Colors.green : Colors.green[300]) : Colors.grey[300],
+                    border: isCurrent ? Border.all(color: Colors.green.withValues(alpha: 0.3), width: 3) : null,
+                  ),
+                  child: isPast
+                      ? Icon(isCurrent ? Icons.radio_button_checked : Icons.check, size: isCurrent ? 12 : 10, color: Colors.white)
+                      : null,
                 ),
                 if (!isLast) Container(width: 2, height: 28, color: isPast ? Colors.green[300] : Colors.grey[200]),
               ],
             ),
             const SizedBox(width: 12),
             Padding(
-              padding: const EdgeInsets.only(top: 0),
-              child: Text(_stepLabels[_steps[i]] ?? _steps[i], style: TextStyle(fontSize: 13, fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal, color: isPast ? Colors.black87 : Colors.grey[400])),
+              padding: const EdgeInsets.only(top: 1),
+              child: Text(
+                _stepLabels[_steps[i]] ?? _steps[i],
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                  color: isPast ? Colors.black87 : Colors.grey[400],
+                ),
+              ),
             ),
           ],
         );

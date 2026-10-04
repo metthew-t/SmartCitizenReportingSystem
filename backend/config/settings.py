@@ -129,3 +129,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS Config
 CORS_ALLOW_ALL_ORIGINS = True
 
+# ── TextBee SMS Gateway ────────────────────────────────────────────────────
+TEXTBEE_API_KEY = env('TEXTBEE_API_KEY', default='')
+TEXTBEE_DEVICE_ID = env('TEXTBEE_DEVICE_ID', default='')  # optional – uses default device when blank
+OTP_EXPIRY_MINUTES = env.int('OTP_EXPIRY_MINUTES', default=10)
+
+# ── Firebase Cloud Messaging ───────────────────────────────────────────────
+FIREBASE_SERVER_KEY = env('FIREBASE_SERVER_KEY', default='')
+
