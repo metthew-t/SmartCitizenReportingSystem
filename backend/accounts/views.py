@@ -8,15 +8,15 @@ from django.contrib.auth import get_user_model
 from django.conf import settings as django_settings
 from .serializers import (
 
+    RegisterSerializer, OfficerRegisterSerializer,
+    CustomTokenObtainPairSerializer, UserSerializer
+)
+
 def _safe_hasattr(obj, attr):
     try:
         return getattr(obj, attr) is not None
     except Exception:
         return False
-
-    RegisterSerializer, OfficerRegisterSerializer,
-    CustomTokenObtainPairSerializer, UserSerializer
-)
 
 User = get_user_model()
 
