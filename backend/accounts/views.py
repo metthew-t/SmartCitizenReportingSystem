@@ -267,7 +267,8 @@ class StatsView(APIView):
     def get(self, request):
         from core.models import Report, Department
         from django.db.models import Count, Q
-        from datetime import datetime, timedelta
+        from django.utils import timezone
+        from datetime import timedelta
 
         user = request.user
 
@@ -296,7 +297,7 @@ class StatsView(APIView):
         resolution_rate = round(((resolved + closed) / total) * 100) if total > 0 else 0
 
         weekly_trend = []
-        now = datetime.now()
+        now = timezone.now()
         for w in range(7, -1, -1):
             week_start = now - timedelta(weeks=w + 1)
             week_end = now - timedelta(weeks=w)

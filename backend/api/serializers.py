@@ -65,14 +65,13 @@ class DepartmentMessageSerializer(serializers.ModelSerializer):
 
 class ReportSerializer(serializers.ModelSerializer):
     media = ReportMediaSerializer(many=True, read_only=True)
-    department_name = serializers.CharField(source='primary_department.name', read_only=True)
-    category_name = serializers.CharField(source='category.name_en', read_only=True)
-    latitude = serializers.FloatField(source='location.y', read_only=True)
-    longitude = serializers.FloatField(source='location.x', read_only=True)
+    department_name = serializers.SerializerMethodField()
+    category_name = serializers.SerializerMethodField()
+    latitude = serializers.SerializerMethodField()
+    longitude = serializers.SerializerMethodField()
     citizen_name = serializers.SerializerMethodField()
     citizen_phone = serializers.SerializerMethodField()
-
-    assigned_officer_name = serializers.CharField(source='assigned_officer.full_name', read_only=True)
+    assigned_officer_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Report
@@ -86,18 +85,56 @@ class ReportSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['case_number', 'status', 'citizen']
 
+    def get_department_name(self, obj):
+        try:
+            return obj.primary_department.name if obj.primary_department else None
+        except Exception:
+            return None
+
+    def get_category_name(self, obj):
+        try:
+            return obj.category.name_en if obj.category else None
+        except Exception:
+            return None
+
+    def get_latitude(self, obj):
+        try:
+            return obj.location.y if obj.location else None
+        except Exception:
+            return None
+
+    def get_longitude(self, obj):
+        try:
+            return obj.location.x if obj.location else None
+        except Exception:
+            return None
+
+    def get_assigned_officer_name(self, obj):
+        try:
+            return obj.assigned_officer.full_name if obj.assigned_officer else None
+        except Exception:
+            return None
+
     def get_citizen_name(self, obj):
-        if obj.is_anonymous:
-            return "Anonymous"
-        if obj.citizen:
-            if _safe_hasattr(obj.citizen, 'citizen_profile') and obj.citizen.citizen_profile.full_name:
-                return obj.citizen.citizen_profile.full_name
-            return obj.citizen.phone_number
-        return "Unknown"
+        try:
+            if obj.is_anonymous:
+                return "Anonymous"
+            if obj.citizen:
+                if _safe_hasattr(obj.citizen, 'citizen_profile'):
+                    cp = obj.citizen.citizen_profile
+                    if cp and cp.full_name:
+                        return cp.full_name
+                return obj.citizen.phone_number
+            return "Unknown"
+        except Exception:
+            return "Unknown"
 
     def get_citizen_phone(self, obj):
-        if obj.is_anonymous:
+        try:
+            if obj.is_anonymous:
+                return ""
+            if obj.citizen:
+                return obj.citizen.phone_number
             return ""
-        if obj.citizen:
-            return obj.citizen.phone_number
-        return ""
+        except Exception:
+            return ""
