@@ -7,6 +7,13 @@ from django.contrib.gis.geos import Point
 from django.db.models import Q
 import uuid
 
+def _safe_hasattr(obj, attr):
+    try:
+        return getattr(obj, attr) is not None
+    except Exception:
+        return False
+
+
 class DepartmentViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
@@ -32,7 +39,7 @@ class ReportViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.is_city_admin or user.is_superuser:
             return Report.objects.all().order_by('-created_at')
-        elif (user.is_department_manager or user.is_officer) and hasattr(user, 'officer_profile'):
+        elif (user.is_department_manager or user.is_officer) and _safe_hasattr(user, 'officer_profile'):
             if user.officer_profile.department:
                 return Report.objects.filter(
                     Q(primary_department=user.officer_profile.department) |
@@ -206,7 +213,7 @@ class ReportViewSet(viewsets.ModelViewSet):
                 return Response({'error': 'Officer not found'}, status=status.HTTP_404_NOT_FOUND)
         else:
             # Officer assigning to self
-            if not hasattr(user, 'officer_profile'):
+            if not _safe_hasattr(user, 'officer_profile'):
                 return Response({'error': 'Only officers can self-assign'}, status=status.HTTP_403_FORBIDDEN)
             officer = user.officer_profile
             

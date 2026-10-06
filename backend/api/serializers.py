@@ -1,6 +1,13 @@
 from rest_framework import serializers
 from core.models import Report, ReportCategory, Department, ReportMedia, Message, DepartmentMessage
 
+def _safe_hasattr(obj, attr):
+    try:
+        return getattr(obj, attr) is not None
+    except Exception:
+        return False
+
+
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Department
@@ -26,9 +33,9 @@ class MessageSerializer(serializers.ModelSerializer):
 
     def get_sender_name(self, obj):
         if obj.sender:
-            if hasattr(obj.sender, 'citizen_profile'):
+            if _safe_hasattr(obj.sender, 'citizen_profile'):
                 return obj.sender.citizen_profile.full_name
-            elif hasattr(obj.sender, 'officer_profile'):
+            elif _safe_hasattr(obj.sender, 'officer_profile'):
                 return obj.sender.officer_profile.full_name
             return obj.sender.phone_number
         return 'Unknown'
@@ -44,15 +51,15 @@ class DepartmentMessageSerializer(serializers.ModelSerializer):
 
     def get_sender_name(self, obj):
         if obj.sender:
-            if hasattr(obj.sender, 'officer_profile'):
+            if _safe_hasattr(obj.sender, 'officer_profile'):
                 return obj.sender.officer_profile.full_name
-            elif hasattr(obj.sender, 'citizen_profile'):
+            elif _safe_hasattr(obj.sender, 'citizen_profile'):
                 return obj.sender.citizen_profile.full_name
             return obj.sender.phone_number
         return 'Unknown'
 
     def get_sender_dept_name(self, obj):
-        if obj.sender and hasattr(obj.sender, 'officer_profile') and obj.sender.officer_profile.department:
+        if obj.sender and _safe_hasattr(obj.sender, 'officer_profile') and obj.sender.officer_profile.department:
             return obj.sender.officer_profile.department.name
         return None
 
@@ -83,7 +90,7 @@ class ReportSerializer(serializers.ModelSerializer):
         if obj.is_anonymous:
             return "Anonymous"
         if obj.citizen:
-            if hasattr(obj.citizen, 'citizen_profile') and obj.citizen.citizen_profile.full_name:
+            if _safe_hasattr(obj.citizen, 'citizen_profile') and obj.citizen.citizen_profile.full_name:
                 return obj.citizen.citizen_profile.full_name
             return obj.citizen.phone_number
         return "Unknown"

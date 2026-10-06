@@ -2,6 +2,13 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+def _safe_hasattr(obj, attr):
+    try:
+        return getattr(obj, attr) is not None
+    except Exception:
+        return False
+
+
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
@@ -16,14 +23,14 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ('is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin')
 
     def get_full_name(self, obj):
-        if hasattr(obj, 'citizen_profile'):
+        if _safe_hasattr(obj, 'citizen_profile'):
             return obj.citizen_profile.full_name
-        if hasattr(obj, 'officer_profile'):
+        if _safe_hasattr(obj, 'officer_profile'):
             return obj.officer_profile.full_name
         return obj.phone_number
 
     def get_department_name(self, obj):
-        if hasattr(obj, 'officer_profile') and obj.officer_profile.department:
+        if _safe_hasattr(obj, 'officer_profile') and obj.officer_profile.department:
             return obj.officer_profile.department.name
         return None
 

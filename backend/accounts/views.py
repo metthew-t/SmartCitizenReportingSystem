@@ -7,6 +7,13 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from django.conf import settings as django_settings
 from .serializers import (
+
+def _safe_hasattr(obj, attr):
+    try:
+        return getattr(obj, attr) is not None
+    except Exception:
+        return False
+
     RegisterSerializer, OfficerRegisterSerializer,
     CustomTokenObtainPairSerializer, UserSerializer
 )
@@ -266,7 +273,7 @@ class StatsView(APIView):
 
         if user.is_city_admin or user.is_superuser:
             reports = Report.objects.all()
-        elif (user.is_department_manager or user.is_officer) and hasattr(user, 'officer_profile'):
+        elif (user.is_department_manager or user.is_officer) and _safe_hasattr(user, 'officer_profile'):
             if user.officer_profile.department:
                 reports = Report.objects.filter(
                     Q(primary_department=user.officer_profile.department) |

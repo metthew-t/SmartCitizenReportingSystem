@@ -6,12 +6,19 @@ from django.utils import timezone
 from datetime import timedelta
 from core.models import Report, Department
 
+def _safe_hasattr(obj, attr):
+    try:
+        return getattr(obj, attr) is not None
+    except Exception:
+        return False
+
+
 
 def _scoped_reports(user):
     """Return a Report queryset scoped to what the requesting user is allowed to see."""
     if user.is_city_admin or user.is_superuser:
         return Report.objects.all()
-    elif (user.is_department_manager or user.is_officer) and hasattr(user, 'officer_profile'):
+    elif (user.is_department_manager or user.is_officer) and _safe_hasattr(user, 'officer_profile'):
         if user.officer_profile.department:
             return Report.objects.filter(
                 Q(primary_department=user.officer_profile.department) |
