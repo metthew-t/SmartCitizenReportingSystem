@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { MessageSquare, Send, Building2, Users, Search, Circle } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 
@@ -67,7 +67,8 @@ export default function DeptChat() {
         body: JSON.stringify({ department: selectedDept.id, content: newMsg.trim() })
       })
       if (res.ok) {
-        setMessages(prev => [...prev, await res.json()])
+        const msg = await res.json()
+        setMessages(prev => [...prev, msg])
         setNewMsg('')
       }
     } finally {

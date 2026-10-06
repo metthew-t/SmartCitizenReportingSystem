@@ -39,8 +39,9 @@ export default function ReportDetails() {
         const headers = { 'Authorization': `Bearer ${token}` }
         
         const repRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/`, { headers })
+        let data: any = null;
         if (repRes.ok) {
-          const data = await repRes.json()
+          data = await repRes.json()
           setReport({
             id: data.id,
             caseNumber: data.case_number,
@@ -72,7 +73,7 @@ export default function ReportDetails() {
           setDepartments(Array.isArray(deptsData) ? deptsData : deptsData.results || [])
         }
 
-        if (useAuthStore.getState().role === 'department_manager' && data.primary_department) {
+        if (useAuthStore.getState().role === 'department_manager' && data && data.primary_department) {
           const offRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/departments/${data.primary_department}/officers/`, { headers })
           if (offRes.ok) {
             setOfficers(await offRes.json())
