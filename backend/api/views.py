@@ -3,7 +3,6 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from core.models import Report, Department, ReportCategory, Message, DepartmentMessage
 from .serializers import ReportSerializer, DepartmentSerializer, ReportCategorySerializer, MessageSerializer, DepartmentMessageSerializer
-from django.contrib.gis.geos import Point
 from django.db.models import Q
 import uuid
 
@@ -57,7 +56,8 @@ class ReportViewSet(viewsets.ModelViewSet):
         if not lat or not lng:
             return Response({'error': 'Location is required'}, status=status.HTTP_400_BAD_REQUEST)
         
-        point = Point(float(lng), float(lat))
+        lat = float(lat)
+        lng = float(lng)
         
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -105,7 +105,8 @@ class ReportViewSet(viewsets.ModelViewSet):
         try:
             report = serializer.save(
                 citizen=request.user,
-                location=point,
+                latitude=lat,
+                longitude=lng,
                 case_number=case_number,
                 status='SUBMITTED',
                 primary_department=department,

@@ -26,9 +26,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     
-    # PostGIS support
-    'django.contrib.gis',
-
     # Third-party apps
     'rest_framework',
     'corsheaders',
@@ -75,12 +72,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 if env('DATABASE_URL', default=None):
     DATABASES = {
-        'default': dj_database_url.parse(env('DATABASE_URL'), engine='django.contrib.gis.db.backends.postgis')
+        'default': dj_database_url.parse(env('DATABASE_URL'), conn_max_age=600)
     }
 else:
     DATABASES = {
         'default': {
-            'ENGINE': 'django.contrib.gis.db.backends.postgis',
+            'ENGINE': 'django.db.backends.postgresql',
             'NAME': env('DB_NAME', default='adama_reports_db'),
             'USER': env('DB_USER', default='postgres'),
             'PASSWORD': env('DB_PASSWORD', default='postgrespassword'),

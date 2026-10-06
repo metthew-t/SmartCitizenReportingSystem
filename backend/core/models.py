@@ -1,6 +1,5 @@
 from django.db import models
 from django.conf import settings
-from django.contrib.gis.db import models as gis_models
 
 class Department(models.Model):
     name = models.CharField(max_length=255, unique=True)
@@ -41,7 +40,7 @@ class ReportCategory(models.Model):
     def __str__(self):
         return self.name_en
 
-class Report(gis_models.Model):
+class Report(models.Model):
     STATUS_CHOICES = [
         ('SUBMITTED', 'Submitted'),
         ('RECEIVED', 'Received'),
@@ -69,7 +68,8 @@ class Report(gis_models.Model):
     description = models.TextField()
     
     # Location
-    location = gis_models.PointField(geography=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
     location_accuracy = models.FloatField(null=True, blank=True)
     address = models.TextField(blank=True, null=True)
     aanaa = models.CharField(max_length=255, blank=True, null=True)

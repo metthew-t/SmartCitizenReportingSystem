@@ -88,7 +88,7 @@ class ReportGeoJSONView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        qs = _scoped_reports(request.user).exclude(location__isnull=True)
+        qs = _scoped_reports(request.user).exclude(latitude__isnull=True)
 
         # Optional filters
         status_filter = request.query_params.get('status')
@@ -108,7 +108,7 @@ class ReportGeoJSONView(APIView):
                 'type': 'Feature',
                 'geometry': {
                     'type': 'Point',
-                    'coordinates': [report.location.x, report.location.y],
+                    'coordinates': [report.longitude, report.latitude],
                 },
                 'properties': {
                     'id': report.id,

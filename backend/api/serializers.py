@@ -99,13 +99,13 @@ class ReportSerializer(serializers.ModelSerializer):
 
     def get_latitude(self, obj):
         try:
-            return obj.location.y if obj.location else None
+            return obj.latitude
         except Exception:
             return None
 
     def get_longitude(self, obj):
         try:
-            return obj.location.x if obj.location else None
+            return obj.longitude
         except Exception:
             return None
 
