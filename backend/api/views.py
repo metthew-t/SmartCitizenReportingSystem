@@ -180,6 +180,95 @@ class ReportViewSet(viewsets.ModelViewSet):
                     results[f'{table}.{col}'] = 'added'
                 except Exception as e:
                     results[f'{table}.{col}'] = f'skipped/error: {e}'
+        
+        # Create missing tables (M2M join tables, etc.)
+        tables_to_create = [
+            """CREATE TABLE IF NOT EXISTS core_report_shared_with (
+                id SERIAL PRIMARY KEY,
+                report_id INTEGER NOT NULL,
+                department_id INTEGER NOT NULL,
+                UNIQUE(report_id, department_id)
+            )""",
+            """CREATE TABLE IF NOT EXISTS core_reportmedia (
+                id SERIAL PRIMARY KEY,
+                media_type VARCHAR(20) NOT NULL,
+                file_url VARCHAR(1000) NOT NULL,
+                uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                report_id INTEGER NOT NULL
+            )""",
+            """CREATE TABLE IF NOT EXISTS core_message (
+                id SERIAL PRIMARY KEY,
+                content TEXT NULL,
+                media_url VARCHAR(1000) NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                report_id INTEGER NOT NULL,
+                sender_id INTEGER NOT NULL
+            )""",
+            """CREATE TABLE IF NOT EXISTS core_feedback (
+                id SERIAL PRIMARY KEY,
+                rating INTEGER NOT NULL,
+                comment TEXT NULL,
+                is_satisfied BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                report_id INTEGER NOT NULL UNIQUE,
+                citizen_id INTEGER NOT NULL
+            )""",
+            """CREATE TABLE IF NOT EXISTS core_auditlog (
+                id SERIAL PRIMARY KEY,
+                action VARCHAR(100) NOT NULL,
+                entity_type VARCHAR(100) NOT NULL,
+                entity_id VARCHAR(100) NOT NULL,
+                changes JSONB NULL,
+                timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                user_id INTEGER NULL
+            )""",
+            """CREATE TABLE IF NOT EXISTS core_devicetoken (
+                id SERIAL PRIMARY KEY,
+                token VARCHAR(500) NOT NULL,
+                device_type VARCHAR(20) DEFAULT 'android',
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                user_id INTEGER NOT NULL
+            )""",
+            """CREATE TABLE IF NOT EXISTS core_notification (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                body TEXT NOT NULL,
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                user_id INTEGER NOT NULL,
+                report_id INTEGER NULL
+            )""",
+            """CREATE TABLE IF NOT EXISTS core_routingrule (
+                id SERIAL PRIMARY KEY,
+                priority INTEGER DEFAULT 0,
+                is_active BOOLEAN DEFAULT TRUE,
+                department_id INTEGER NOT NULL,
+                category_id INTEGER NULL
+            )""",
+            """CREATE TABLE IF NOT EXISTS core_routingkeyword (
+                id SERIAL PRIMARY KEY,
+                keyword VARCHAR(100) NOT NULL,
+                language VARCHAR(10) NOT NULL,
+                rule_id INTEGER NOT NULL
+            )""",
+            """CREATE TABLE IF NOT EXISTS core_departmentmessage (
+                id SERIAL PRIMARY KEY,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                department_id INTEGER NOT NULL,
+                sender_id INTEGER NOT NULL
+            )""",
+        ]
+        for sql in tables_to_create:
+            table_name = sql.split('IF NOT EXISTS ')[1].split(' ')[0] if 'IF NOT EXISTS' in sql else 'unknown'
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute(sql)
+                results[f'table:{table_name}'] = 'created/exists'
+            except Exception as e:
+                results[f'table:{table_name}'] = f'error: {e}'
+        
         return Response({"status": "done", "columns": results})
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
