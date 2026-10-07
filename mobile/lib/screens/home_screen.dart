@@ -124,8 +124,9 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() => _isLoading = false);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to load reports (${response.statusCode}). Pull down to retry.'),
+              content: Text('Error ${response.statusCode}: ${response.body.length > 200 ? response.body.substring(0, 200) : response.body}'),
               backgroundColor: Colors.red,
+              duration: const Duration(seconds: 15),
             ),
           );
         }

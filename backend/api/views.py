@@ -157,6 +157,18 @@ class ReportViewSet(viewsets.ModelViewSet):
                     results[f'{table}.{col}'] = f'skipped/error: {e}'
         return Response({"status": "done", "columns": results})
 
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    def debug_reports(self, request):
+        """Debug endpoint to test report serialization."""
+        import traceback
+        try:
+            reports = Report.objects.all()[:5]
+            serializer = ReportSerializer(reports, many=True)
+            data = serializer.data
+            return Response({"status": "ok", "count": len(data), "data": data})
+        except Exception as e:
+            return Response({"status": "error", "error": str(e), "traceback": traceback.format_exc()}, status=500)
+
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def init_departments(self, request):
         if not (request.user.is_superuser or request.user.is_city_admin):
