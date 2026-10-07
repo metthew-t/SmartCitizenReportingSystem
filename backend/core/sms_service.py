@@ -59,6 +59,7 @@ def send_sms(phone_number: str, message: str) -> dict:
             headers={
                 'x-api-key': api_key,
                 'Content-Type': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             },
             method='POST',
         )
