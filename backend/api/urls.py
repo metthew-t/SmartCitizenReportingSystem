@@ -5,7 +5,10 @@ from accounts.views import (
     CurrentUserView, UserListView, StatsView, ChangePasswordView, DeleteAccountView,
     SendOTPView, VerifyOTPView, ResetPasswordView,
 )
-from api.analytics_views import AnalyticsSummaryView, AnalyticsByDepartmentView, AnalyticsByStatusView, ReportGeoJSONView
+from api.analytics_views import (
+    AnalyticsSummaryView, AnalyticsByDepartmentView, AnalyticsByStatusView, ReportGeoJSONView,
+    SLAOverviewView, DepartmentPerformanceView, AuditLogView
+)
 from rest_framework.routers import DefaultRouter
 from api.views import ReportViewSet, DepartmentViewSet, ReportCategoryViewSet, MessageViewSet, DepartmentMessageViewSet
 from api.notification_views import NotificationViewSet, DeviceTokenViewSet
@@ -40,4 +43,7 @@ urlpatterns = [
     path('analytics/by-department/', AnalyticsByDepartmentView.as_view(), name='analytics_by_dept'),
     path('analytics/by-status/', AnalyticsByStatusView.as_view(), name='analytics_by_status'),
     path('analytics/geojson/', ReportGeoJSONView.as_view(), name='analytics_geojson'),
+    path('analytics/sla-overview/', SLAOverviewView.as_view(), name='analytics_sla'),
+    path('analytics/performance/', DepartmentPerformanceView.as_view(), name='analytics_performance'),
+    path('analytics/audit-logs/', AuditLogView.as_view(), name='analytics_audit_logs'),
 ] + router.urls
