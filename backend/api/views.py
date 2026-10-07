@@ -135,6 +135,15 @@ class ReportViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Superuser or city admin access required.'}, status=status.HTTP_403_FORBIDDEN)
         from django.db import connection
         results = {}
+        
+        # Drop old columns that are no longer in the model but cause NOT NULL constraint errors
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute('ALTER TABLE core_report DROP COLUMN IF EXISTS location;')
+            results['core_report.location'] = 'dropped'
+        except Exception as e:
+            results['core_report.location'] = f'error: {e}'
+            
         columns_to_add = {
             'core_report': {
                 'latitude': 'DOUBLE PRECISION NULL',
