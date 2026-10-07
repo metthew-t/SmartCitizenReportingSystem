@@ -35,6 +35,7 @@ interface Report {
   created_at: string
   aanaa: string
   kuta_magaalaa: string
+  kebele: string
   iddoo_addaa: string
 }
 
@@ -75,6 +76,7 @@ export default function Reports() {
           created_at: item.created_at,
           aanaa: item.aanaa || '',
           kuta_magaalaa: item.kuta_magaalaa || '',
+          kebele: item.kebele || '',
           iddoo_addaa: item.iddoo_addaa || '',
         }))
         
@@ -111,7 +113,8 @@ export default function Reports() {
           r.description.toLowerCase().includes(q) ||
           r.department_name.toLowerCase().includes(q) ||
           r.aanaa.toLowerCase().includes(q) ||
-          r.kuta_magaalaa.toLowerCase().includes(q)
+          r.kuta_magaalaa.toLowerCase().includes(q) ||
+          r.kebele.toLowerCase().includes(q)
         )
       }
       return true
@@ -242,7 +245,7 @@ export default function Reports() {
                     </td>
                     <td style={{ ...tdStyle, color: '#94a3b8' }}>{report.department_name}</td>
                     <td style={{ ...tdStyle, color: '#94a3b8', fontSize: 12 }}>
-                      {[report.kuta_magaalaa, report.aanaa].filter(Boolean).join(', ') || '—'}
+                      {[report.kuta_magaalaa, report.kebele, report.aanaa].filter(Boolean).join(', ') || '—'}
                     </td>
                     <td style={tdStyle}>
                       <span style={{
@@ -370,6 +373,10 @@ export default function Reports() {
                   <div>
                     <div style={{ color: '#64748b', fontSize: 10, fontWeight: 600 }}>Kuta Magaalaa</div>
                     <div style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 600, marginTop: 2 }}>{selectedReport.kuta_magaalaa || '—'}</div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#64748b', fontSize: 10, fontWeight: 600 }}>Kebele</div>
+                    <div style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 600, marginTop: 2 }}>{selectedReport.kebele || '—'}</div>
                   </div>
                   <div>
                     <div style={{ color: '#64748b', fontSize: 10, fontWeight: 600 }}>Iddoo Addaa</div>

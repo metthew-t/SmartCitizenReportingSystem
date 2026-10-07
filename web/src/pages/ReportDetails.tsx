@@ -59,6 +59,7 @@ export default function ReportDetails() {
             updatedAt: data.updated_at,
             aanaa: data.aanaa || '',
             kutaMagaalaa: data.kuta_magaalaa || '',
+            kebele: data.kebele || '',
             iddooAddaa: data.iddoo_addaa || '',
             media: data.media || [],
             assigned_officer: data.assigned_officer,
@@ -363,6 +364,18 @@ export default function ReportDetails() {
               {report.kutaMagaalaa || '—'}
             </div>
           </div>
+          {/* Kebele */}
+          <div style={{
+            padding: '14px 16px', borderRadius: 12,
+            background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.12)',
+          }}>
+            <div style={{ color: '#64748b', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+              📍 Kebele
+            </div>
+            <div style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 600 }}>
+              {(report as any).kebele || '—'}
+            </div>
+          </div>
           {/* Iddoo Addaa */}
           <div style={{
             padding: '14px 16px', borderRadius: 12,
@@ -503,7 +516,7 @@ export default function ReportDetails() {
       </div>
 
       {/* Share Department */}
-      {(useAuthStore.getState().role === 'officer' || useAuthStore.getState().role === 'department_manager') && departments.length > 0 && (
+      {(useAuthStore.getState().role === 'city_admin' || useAuthStore.getState().role === 'department_manager') && departments.length > 0 && (
         <div style={{
           background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
           border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16,
