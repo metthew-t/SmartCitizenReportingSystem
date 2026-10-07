@@ -17,6 +17,12 @@ class EmailOrPhoneModelBackend(ModelBackend):
             return None
         except User.MultipleObjectsReturned:
             return User.objects.filter(Q(phone_number=identifier) | Q(email=identifier)).order_by('id').first()
+        except Exception:
+            # email column might not exist yet
+            try:
+                user = User.objects.get(phone_number=identifier)
+            except User.DoesNotExist:
+                return None
 
         if user.check_password(password) and self.user_can_authenticate(user):
             return user

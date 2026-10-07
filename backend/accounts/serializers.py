@@ -55,7 +55,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         from django.db.models import Q
         identifier = attrs.get(User.USERNAME_FIELD, '')
         try:
-            user = User.objects.get(Q(phone_number=identifier) | Q(email=identifier))
+            try:
+                user = User.objects.get(Q(phone_number=identifier) | Q(email=identifier))
+            except Exception:
+                # email column might not exist yet during migration transition
+                user = User.objects.get(phone_number=identifier)
             # Replace the identifier with the actual USERNAME_FIELD value
             attrs[User.USERNAME_FIELD] = user.phone_number or user.email
         except (User.DoesNotExist, User.MultipleObjectsReturned):
