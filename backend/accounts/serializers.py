@@ -17,7 +17,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'phone_number', 'full_name', 'department_name',
+        fields = ('id', 'phone_number', 'email', 'full_name', 'department_name',
                   'is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin',
                   'date_joined')
         read_only_fields = ('is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin')
@@ -74,16 +74,16 @@ class RegisterSerializer(serializers.Serializer):
         return user
 
 class OfficerRegisterSerializer(serializers.Serializer):
-    phone_number = serializers.CharField(max_length=20)
+    email = serializers.EmailField()
     password = serializers.CharField(write_only=True, min_length=4)
     full_name = serializers.CharField(max_length=255)
     department_name = serializers.CharField(max_length=255, required=False, allow_blank=True, default='')
     is_manager = serializers.BooleanField(default=False)
     is_city_admin = serializers.BooleanField(default=False)
 
-    def validate_phone_number(self, value):
-        if User.objects.filter(phone_number=value).exists():
-            raise serializers.ValidationError('A user with this phone number already exists.')
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError('A user with this email already exists.')
         return value
 
     def validate_department_name(self, value):
@@ -102,7 +102,8 @@ class OfficerRegisterSerializer(serializers.Serializer):
         is_manager = validated_data.get('is_manager', False)
 
         user = User.objects.create_user(
-            phone_number=validated_data['phone_number'],
+            phone_number=None,
+            email=validated_data['email'],
             password=validated_data['password'],
             is_officer=True,
             is_department_manager=is_manager or is_city_admin,

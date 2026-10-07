@@ -140,3 +140,9 @@ OTP_EXPIRY_MINUTES = env.int('OTP_EXPIRY_MINUTES', default=10)
 # ── Firebase Cloud Messaging ───────────────────────────────────────────────
 FIREBASE_SERVER_KEY = env('FIREBASE_SERVER_KEY', default='')
 
+
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.EmailOrPhoneModelBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+

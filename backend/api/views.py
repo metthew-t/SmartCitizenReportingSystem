@@ -140,9 +140,11 @@ class ReportViewSet(viewsets.ModelViewSet):
         try:
             with connection.cursor() as cursor:
                 cursor.execute('ALTER TABLE core_report DROP COLUMN IF EXISTS location;')
-            results['core_report.location'] = 'dropped'
+                cursor.execute('ALTER TABLE accounts_user ADD COLUMN IF NOT EXISTS email VARCHAR(254) UNIQUE NULL;')
+                cursor.execute('ALTER TABLE accounts_user ALTER COLUMN phone_number DROP NOT NULL;')
+            results['schema_fixes'] = 'applied'
         except Exception as e:
-            results['core_report.location'] = f'error: {e}'
+            results['schema_fixes'] = f'error: {e}'
             
         columns_to_add = {
             'core_report': {
