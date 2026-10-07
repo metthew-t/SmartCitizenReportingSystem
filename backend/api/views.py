@@ -142,6 +142,9 @@ class ReportViewSet(viewsets.ModelViewSet):
             },
             'core_citizenprofile': {
                 'national_id': 'VARCHAR(50) NULL',
+            },
+            'accounts_user': {
+                'is_city_admin': 'BOOLEAN DEFAULT FALSE',
             }
         }
         for table, columns in columns_to_add.items():
