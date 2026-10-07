@@ -215,8 +215,8 @@ class _LoginScreenState extends State<LoginScreen>
       _showError('National ID (FAN) is required');
       return;
     }
-    if (nationalId.length != 14 || !RegExp(r'^\d{14}$').hasMatch(nationalId)) {
-      _showError('National ID (FAN) must be exactly 14 digits');
+    if (nationalId.length != 16 || !RegExp(r'^\d{16}$').hasMatch(nationalId)) {
+      _showError('National ID (FAN) must be exactly 16 digits');
       return;
     }
     if (_passwordController.text.length < 4) {
@@ -755,12 +755,12 @@ class _LoginScreenState extends State<LoginScreen>
         TextField(
           controller: _nationalIdController,
           keyboardType: TextInputType.number,
-          maxLength: 14,
+          maxLength: 16,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           decoration: InputDecoration(
             labelText: 'National ID (FAN) *',
-            hintText: 'Enter your 14-digit FAN number',
-            helperText: 'Fayyadama Addaa Naannoo (FAN) — 14 digits required',
+            hintText: 'e.g. 1234567890123456',
+            helperText: 'FAN — 16 digits required',
             helperMaxLines: 2,
             counterText: '',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -783,8 +783,8 @@ class _LoginScreenState extends State<LoginScreen>
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'FAN (Fayyadama Addaa Naannoo) is your Ethiopian National ID number. '
-                  'It contains exactly 14 digits. You can find it on your national ID card.',
+                  'Your FAN number is 16 digits found on your national ID card. '
+                  'Example: 1234567890123456',
                   style: TextStyle(fontSize: 12, color: Colors.blue[800], height: 1.4),
                 ),
               ),
