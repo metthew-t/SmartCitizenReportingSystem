@@ -74,6 +74,7 @@ class Report(models.Model):
     address = models.TextField(blank=True, null=True)
     aanaa = models.CharField(max_length=255, blank=True, null=True)
     kuta_magaalaa = models.CharField(max_length=255, blank=True, null=True)
+    kebele = models.CharField(max_length=255, blank=True, null=True)
     iddoo_addaa = models.CharField(max_length=255, blank=True, null=True)
     
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='SUBMITTED')

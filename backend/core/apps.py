@@ -12,6 +12,7 @@ class CoreConfig(AppConfig):
                 # Add missing columns safely in Postgres
                 cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS aanaa VARCHAR(255) NULL;')
                 cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS kuta_magaalaa VARCHAR(255) NULL;')
+                cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS kebele VARCHAR(255) NULL;')
                 cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS iddoo_addaa VARCHAR(255) NULL;')
         except Exception as e:
             pass

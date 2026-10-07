@@ -29,6 +29,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
   // Address Fields
   String? _selectedKutaMagaalaa;
   String? _selectedAanaa;
+  String? _selectedKebele;
   final _iddooAddaaController = TextEditingController();
 
   final List<String> _kutaMagaalaaList = [
@@ -37,6 +38,13 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
 
   final List<String> _aanaaList = [
     'Dhakaa Adii', 'Diree Nagayaa', 'Goro', 'Haroreetii', 'Migiiraa', 'Solloqqee Dongorree', 'Torban Oboo', 'Other'
+  ];
+
+  final List<String> _kebeleList = [
+    'Kebele 01', 'Kebele 02', 'Kebele 03', 'Kebele 04', 'Kebele 05',
+    'Kebele 06', 'Kebele 07', 'Kebele 08', 'Kebele 09', 'Kebele 10',
+    'Kebele 11', 'Kebele 12', 'Kebele 13', 'Kebele 14', 'Kebele 15',
+    'Kebele 16', 'Kebele 17', 'Kebele 18', 'Other'
   ];
 
   // Location
@@ -356,6 +364,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
           'longitude': _currentPosition?.longitude ?? 39.2689,
           'aanaa': _selectedAanaa ?? '',
           'kuta_magaalaa': _selectedKutaMagaalaa ?? '',
+          'kebele': _selectedKebele ?? '',
           'iddoo_addaa': _iddooAddaaController.text.trim(),
           'department_name': _selectedDepartment,
           'category_name': _selectedCategory,
@@ -585,6 +594,18 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                     value: _selectedAanaa,
                     items: _aanaaList.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
                     onChanged: (val) => setState(() => _selectedAanaa = val),
+                    validator: (value) => value == null ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: 'Kebele / ቀበሌ',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    value: _selectedKebele,
+                    items: _kebeleList.map((k) => DropdownMenuItem(value: k, child: Text(k))).toList(),
+                    onChanged: (val) => setState(() => _selectedKebele = val),
                     validator: (value) => value == null ? 'Required' : null,
                   ),
                   const SizedBox(height: 16),

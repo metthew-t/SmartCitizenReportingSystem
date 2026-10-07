@@ -21,6 +21,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
   // 'login' | 'register_phone' | 'register_otp' | 'register_profile'
+  // 'forgot_phone' | 'forgot_otp' | 'forgot_newpass'
   String _mode = 'login';
 
   // Shared controllers
@@ -31,6 +32,10 @@ class _LoginScreenState extends State<LoginScreen>
   final _fullNameController = TextEditingController();
   final _nationalIdController = TextEditingController();
 
+  // Forgot password controllers
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
   // OTP step state
   String _otpPhone = ''; // phone sent to (normalised)
   bool _otpResendEnabled = false;
@@ -39,6 +44,8 @@ class _LoginScreenState extends State<LoginScreen>
 
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
 
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
@@ -63,6 +70,8 @@ class _LoginScreenState extends State<LoginScreen>
     _passwordController.dispose();
     _fullNameController.dispose();
     _nationalIdController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     _resendTimer?.cancel();
     super.dispose();
   }
@@ -177,8 +186,13 @@ class _LoginScreenState extends State<LoginScreen>
       );
       if (res.statusCode == 200) {
         _resendTimer?.cancel();
-        setState(() => _mode = 'register_profile');
-        _showSuccess('Phone verified! Complete your profile.');
+        if (_mode == 'forgot_otp') {
+          setState(() => _mode = 'forgot_newpass');
+          _showSuccess('Phone verified! Set your new password.');
+        } else {
+          setState(() => _mode = 'register_profile');
+          _showSuccess('Phone verified! Complete your profile.');
+        }
       } else {
         _showError('Incorrect or expired code. Try again.');
       }
@@ -196,6 +210,15 @@ class _LoginScreenState extends State<LoginScreen>
       _showError('Full name is required');
       return;
     }
+    final nationalId = _nationalIdController.text.trim();
+    if (nationalId.isEmpty) {
+      _showError('National ID (FAN) is required');
+      return;
+    }
+    if (nationalId.length != 14 || !RegExp(r'^\d{14}$').hasMatch(nationalId)) {
+      _showError('National ID (FAN) must be exactly 14 digits');
+      return;
+    }
     if (_passwordController.text.length < 4) {
       _showError('Password must be at least 4 characters');
       return;
@@ -209,7 +232,7 @@ class _LoginScreenState extends State<LoginScreen>
           'phone_number': _otpPhone,
           'password': _passwordController.text,
           'full_name': _fullNameController.text.trim(),
-          'national_id': _nationalIdController.text.trim(),
+          'national_id': nationalId,
         }),
       );
       if (res.statusCode == 201) {
@@ -230,6 +253,86 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
+  // ── Forgot Password flow — Step 1: enter phone ─────────────────────────────
+
+  Future<void> _handleForgotSendOTP() async {
+    final phone = _phoneController.text.trim();
+    if (phone.isEmpty) {
+      _showError('Enter your phone number first');
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      final res = await http.post(
+        Uri.parse('$_base/auth/send-otp/'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'phone_number': phone, 'is_forgot_password': true}),
+      );
+      if (res.statusCode == 200) {
+        setState(() {
+          _otpPhone = phone;
+          _mode = 'forgot_otp';
+        });
+        _startResendTimer();
+        _showSuccess('Reset code sent to $phone');
+      } else {
+        final body = _safeDecodeError(res.body);
+        _showError(body);
+      }
+    } catch (_) {
+      _showError('Connection error. Check your internet.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // ── Forgot Password flow — Step 3: set new password ─────────────────────────
+
+  Future<void> _handleResetPassword() async {
+    final newPass = _newPasswordController.text;
+    final confirmPass = _confirmPasswordController.text;
+    if (newPass.isEmpty) {
+      _showError('Enter a new password');
+      return;
+    }
+    if (newPass.length < 6) {
+      _showError('Password must be at least 6 characters');
+      return;
+    }
+    if (newPass != confirmPass) {
+      _showError('Passwords do not match');
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      final res = await http.post(
+        Uri.parse('$_base/auth/reset-password/'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'phone_number': _otpPhone,
+          'new_password': newPass,
+        }),
+      );
+      if (res.statusCode == 200) {
+        _showSuccess('Password reset successfully! Please login.');
+        setState(() {
+          _mode = 'login';
+          _phoneController.text = _otpPhone;
+          _passwordController.clear();
+          _newPasswordController.clear();
+          _confirmPasswordController.clear();
+        });
+      } else {
+        final body = _safeDecodeError(res.body);
+        _showError(body);
+      }
+    } catch (_) {
+      _showError('Connection error. Check your internet.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   // ── Resend OTP ──────────────────────────────────────────────────────────────
 
   Future<void> _handleResendOTP() async {
@@ -238,11 +341,15 @@ class _LoginScreenState extends State<LoginScreen>
       _otpResendEnabled = false;
       _isLoading = true;
     });
+    final isForgot = _mode == 'forgot_otp';
     try {
       final res = await http.post(
         Uri.parse('$_base/auth/send-otp/'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'phone_number': _otpPhone}),
+        body: jsonEncode({
+          'phone_number': _otpPhone,
+          if (isForgot) 'is_forgot_password': true,
+        }),
       );
       if (res.statusCode == 200) {
         _startResendTimer();
@@ -449,6 +556,12 @@ class _LoginScreenState extends State<LoginScreen>
         return _buildOTPStep();
       case 'register_profile':
         return _buildProfileStep();
+      case 'forgot_phone':
+        return _buildForgotPhoneStep();
+      case 'forgot_otp':
+        return _buildForgotOTPStep();
+      case 'forgot_newpass':
+        return _buildForgotNewPassStep();
       default:
         return _buildLoginStep();
     }
@@ -470,7 +583,28 @@ class _LoginScreenState extends State<LoginScreen>
         _buildPhoneField(),
         const SizedBox(height: 14),
         _buildPasswordField(),
-        const SizedBox(height: 24),
+        const SizedBox(height: 8),
+        // Forgot Password Link
+        Align(
+          alignment: Alignment.centerRight,
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _mode = 'forgot_phone';
+                _passwordController.clear();
+              });
+            },
+            child: Text(
+              'Forgot Password?',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.green[700],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
         _buildPrimaryButton(
           label: 'Sign In',
           onPressed: _handleLogin,
@@ -545,30 +679,7 @@ class _LoginScreenState extends State<LoginScreen>
         const SizedBox(height: 24),
 
         // Resend row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              "Didn't receive the code? ",
-              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-            ),
-            GestureDetector(
-              onTap: _otpResendEnabled ? _handleResendOTP : null,
-              child: Text(
-                _otpResendEnabled
-                    ? 'Resend'
-                    : 'Resend in ${_resendCountdown}s',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: _otpResendEnabled
-                      ? Colors.green[700]
-                      : Colors.grey[400],
-                ),
-              ),
-            ),
-          ],
-        ),
+        _buildResendRow(),
         const SizedBox(height: 8),
       ],
     );
@@ -632,7 +743,7 @@ class _LoginScreenState extends State<LoginScreen>
           controller: _fullNameController,
           textCapitalization: TextCapitalization.words,
           decoration: InputDecoration(
-            labelText: 'Full Name',
+            labelText: 'Full Name *',
             hintText: 'Enter your full name',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             prefixIcon: const Icon(Icons.person_outline),
@@ -640,13 +751,44 @@ class _LoginScreenState extends State<LoginScreen>
         ),
         const SizedBox(height: 14),
 
-        // National ID (optional)
+        // National ID (FAN) - REQUIRED
         TextField(
           controller: _nationalIdController,
+          keyboardType: TextInputType.number,
+          maxLength: 14,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           decoration: InputDecoration(
-            labelText: 'National ID (Optional)',
+            labelText: 'National ID (FAN) *',
+            hintText: 'Enter your 14-digit FAN number',
+            helperText: 'Fayyadama Addaa Naannoo (FAN) — 14 digits required',
+            helperMaxLines: 2,
+            counterText: '',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             prefixIcon: const Icon(Icons.badge_outlined),
+          ),
+        ),
+        const SizedBox(height: 6),
+        // FAN info box
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.blue[50],
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.blue[200]!),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline, color: Colors.blue[700], size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'FAN (Fayyadama Addaa Naannoo) is your Ethiopian National ID number. '
+                  'It contains exactly 14 digits. You can find it on your national ID card.',
+                  style: TextStyle(fontSize: 12, color: Colors.blue[800], height: 1.4),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 14),
@@ -664,7 +806,200 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  // ── Forgot Password — Step 1: enter phone ─────────────────────────────────
+
+  Widget _buildForgotPhoneStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+              onPressed: () => setState(() {
+                _mode = 'login';
+                _phoneController.clear();
+              }),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+            const SizedBox(width: 4),
+            Text('Back to Login', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _buildStepHeader(
+          title: 'Forgot Password',
+          subtitle: 'Enter your registered phone number to receive a reset code',
+        ),
+        const SizedBox(height: 6),
+        _buildStepProgress(current: 1, total: 3),
+        const SizedBox(height: 20),
+        _buildPhoneField(),
+        const SizedBox(height: 24),
+        _buildPrimaryButton(
+          label: 'Send Reset Code',
+          icon: Icons.sms_outlined,
+          onPressed: _handleForgotSendOTP,
+        ),
+      ],
+    );
+  }
+
+  // ── Forgot Password — Step 2: enter OTP ─────────────────────────────────────
+
+  Widget _buildForgotOTPStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+              onPressed: () => setState(() {
+                _mode = 'forgot_phone';
+                _resendTimer?.cancel();
+              }),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+            const SizedBox(width: 4),
+            Text('Back', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _buildStepHeader(
+          title: 'Enter Reset Code',
+          subtitle: 'Sent via SMS to $_otpPhone',
+        ),
+        const SizedBox(height: 6),
+        _buildStepProgress(current: 2, total: 3),
+        const SizedBox(height: 28),
+
+        _OTPInputField(
+          onCompleted: _handleVerifyOTP,
+          isLoading: _isLoading,
+        ),
+        const SizedBox(height: 24),
+
+        _buildResendRow(),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  // ── Forgot Password — Step 3: set new password ──────────────────────────────
+
+  Widget _buildForgotNewPassStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 8),
+        // Phone verified badge
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.green[50],
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.green[200]!),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.verified, color: Colors.green[700], size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '$_otpPhone verified',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green[800],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildStepHeader(
+          title: 'Set New Password',
+          subtitle: 'Choose a new password for your account',
+        ),
+        const SizedBox(height: 6),
+        _buildStepProgress(current: 3, total: 3),
+        const SizedBox(height: 20),
+
+        // New password
+        TextField(
+          controller: _newPasswordController,
+          obscureText: _obscureNewPassword,
+          decoration: InputDecoration(
+            labelText: 'New Password',
+            hintText: 'At least 6 characters',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            prefixIcon: const Icon(Icons.lock_outline),
+            suffixIcon: IconButton(
+              icon: Icon(_obscureNewPassword ? Icons.visibility_off : Icons.visibility),
+              onPressed: () => setState(() => _obscureNewPassword = !_obscureNewPassword),
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Confirm password
+        TextField(
+          controller: _confirmPasswordController,
+          obscureText: _obscureConfirmPassword,
+          decoration: InputDecoration(
+            labelText: 'Confirm Password',
+            hintText: 'Re-enter your new password',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            prefixIcon: const Icon(Icons.lock_outline),
+            suffixIcon: IconButton(
+              icon: Icon(_obscureConfirmPassword ? Icons.visibility_off : Icons.visibility),
+              onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        _buildPrimaryButton(
+          label: 'Reset Password',
+          icon: Icons.check_circle_outline,
+          onPressed: _handleResetPassword,
+        ),
+      ],
+    );
+  }
+
   // ── Shared UI pieces ──────────────────────────────────────────────────────────
+
+  Widget _buildResendRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          "Didn't receive the code? ",
+          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+        ),
+        GestureDetector(
+          onTap: _otpResendEnabled ? _handleResendOTP : null,
+          child: Text(
+            _otpResendEnabled
+                ? 'Resend'
+                : 'Resend in ${_resendCountdown}s',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: _otpResendEnabled
+                  ? Colors.green[700]
+                  : Colors.grey[400],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _buildModeTabs() {
     final isLogin = _mode == 'login';

@@ -81,7 +81,7 @@ class ReportSerializer(serializers.ModelSerializer):
             'description', 'latitude', 'longitude', 'status', 'priority', 
             'primary_department', 'department_name', 'shared_with', 'assigned_officer', 'assigned_officer_name',
             'created_at', 'updated_at', 'resolved_at', 'closed_at', 'media',
-            'aanaa', 'kuta_magaalaa', 'iddoo_addaa'
+            'aanaa', 'kuta_magaalaa', 'kebele', 'iddoo_addaa'
         ]
         read_only_fields = ['case_number', 'status', 'citizen']
 

@@ -3,7 +3,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from accounts.views import (
     CustomTokenObtainPairView, RegisterView, OfficerRegisterView,
     CurrentUserView, UserListView, StatsView, ChangePasswordView, DeleteAccountView,
-    SendOTPView, VerifyOTPView,
+    SendOTPView, VerifyOTPView, ResetPasswordView,
 )
 from api.analytics_views import AnalyticsSummaryView, AnalyticsByDepartmentView, AnalyticsByStatusView, ReportGeoJSONView
 from rest_framework.routers import DefaultRouter
@@ -26,6 +26,7 @@ urlpatterns = [
     path('auth/send-otp/', SendOTPView.as_view(), name='send_otp'),
     path('auth/verify-otp/', VerifyOTPView.as_view(), name='verify_otp'),
     path('auth/register/', RegisterView.as_view(), name='register'),
+    path('auth/reset-password/', ResetPasswordView.as_view(), name='reset_password'),
     path('auth/officer-register/', OfficerRegisterView.as_view(), name='officer_register'),
     path('auth/me/', CurrentUserView.as_view(), name='current_user'),
     path('auth/change-password/', ChangePasswordView.as_view(), name='change_password'),

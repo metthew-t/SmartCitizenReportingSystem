@@ -44,7 +44,26 @@ class SendOTPView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        from core.sms_service import send_otp_sms
+        from core.sms_service import send_otp_sms, _normalise_e164
+        normalised = _normalise_e164(phone_number)
+        
+        # Check if user already exists for registration
+        is_forgot_password = request.data.get('is_forgot_password', False)
+        
+        user_exists = User.objects.filter(phone_number__in=[phone_number, normalised]).exists()
+        
+        if not is_forgot_password and user_exists:
+            return Response(
+                {'error': 'This user phone number already exists.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        if is_forgot_password and not user_exists:
+            return Response(
+                {'error': 'Phone number not found.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
         result = send_otp_sms(phone_number)
 
         if result['success']:
@@ -132,6 +151,51 @@ class DeleteAccountView(APIView):
             return Response({'error': 'Password is incorrect.'}, status=status.HTTP_400_BAD_REQUEST)
         user.delete()
         return Response({'message': 'Account deleted successfully.'}, status=status.HTTP_200_OK)
+
+
+class ResetPasswordView(APIView):
+    """
+    Reset password for users who forgot their password.
+    Requires phone OTP to have been verified first.
+    Body: { "phone_number": "...", "new_password": "..." }
+    """
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        phone_number = request.data.get('phone_number', '').strip()
+        new_password = request.data.get('new_password', '')
+        
+        if not phone_number or not new_password:
+            return Response({'error': 'phone_number and new_password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if len(new_password) < 6:
+            return Response({'error': 'New password must be at least 6 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from core.sms_service import is_phone_verified, consume_phone_verified, _normalise_e164
+        normalised = _normalise_e164(phone_number)
+        
+        if not is_phone_verified(phone_number) and not is_phone_verified(normalised):
+            return Response(
+                {'error': 'Phone number not verified. Please verify your phone with OTP first.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        try:
+            # Get the user by phone number or normalised phone number
+            user = User.objects.filter(phone_number__in=[phone_number, normalised]).first()
+            if not user:
+                return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+                
+            user.set_password(new_password)
+            user.save()
+            
+            # Consume the verified flag so it can't be reused
+            consume_phone_verified(phone_number)
+            consume_phone_verified(normalised)
+            
+            return Response({'message': 'Password reset successfully.'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
