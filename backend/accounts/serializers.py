@@ -41,12 +41,26 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         # Add custom claims
         token['phone_number'] = user.phone_number
+        token['email'] = user.email
         token['is_citizen'] = user.is_citizen
         token['is_officer'] = user.is_officer
         token['is_department_manager'] = user.is_department_manager
         token['is_city_admin'] = user.is_city_admin
 
         return token
+
+    def validate(self, attrs):
+        # The default USERNAME_FIELD is phone_number, but officials log in with email.
+        # Resolve the identifier to the actual phone_number so SimpleJWT can find the user.
+        from django.db.models import Q
+        identifier = attrs.get(User.USERNAME_FIELD, '')
+        try:
+            user = User.objects.get(Q(phone_number=identifier) | Q(email=identifier))
+            # Replace the identifier with the actual USERNAME_FIELD value
+            attrs[User.USERNAME_FIELD] = user.phone_number or user.email
+        except (User.DoesNotExist, User.MultipleObjectsReturned):
+            pass  # let SimpleJWT handle the error
+        return super().validate(attrs)
 
 class RegisterSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=20)

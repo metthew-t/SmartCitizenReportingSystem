@@ -104,7 +104,7 @@ export default function DashboardLayout() {
   if (role !== 'city_admin') {
     navItems.push({ path: '/dept-chat', label: 'Dept Chat', icon: MessageSquare })
   }
-  if (role === 'city_admin') {
+  if (role === 'city_admin' || role === 'department_manager') {
     navItems.push({ path: '/users', label: 'User Management', icon: Users })
   }
   navItems.push({ path: '/settings', label: 'Settings', icon: Settings })

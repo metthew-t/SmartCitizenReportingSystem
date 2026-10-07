@@ -48,7 +48,7 @@ function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    if (!phone || !password) { setError('Phone and password are required'); return }
+    if (!phone || !password) { setError('Email/Phone and password are required'); return }
     setLoading(true)
     try {
       const res = await fetch(`${API}/auth/login/`, {
@@ -72,7 +72,7 @@ function Login() {
         }, me?.department_name || (me?.is_city_admin ? 'City Administration' : null), me?.is_city_admin ? 'city_admin' : (me?.is_department_manager ? 'department_manager' : 'officer'))
         navigate('/dashboard')
       } else {
-        setError('Invalid phone number or password.')
+        setError('Invalid email/phone number or password.')
       }
     } catch {
       setError('Network error. Please try again.')
@@ -159,30 +159,11 @@ function Login() {
           borderRadius: 24, padding: 32,
           boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
         }}>
-          {/* Tabs */}
-          <div style={{
-            display: 'flex', background: '#f1f5f9', borderRadius: 12, padding: 4, marginBottom: 28,
-          }}>
-            {(['login', 'register'] as const).map(m => (
-              <button key={m} onClick={() => { setMode(m); setError('') }} style={{
-                flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
-                background: mode === m ? 'white' : 'transparent',
-                color: mode === m ? '#4f46e5' : '#64748b',
-                fontWeight: 600, fontSize: 14, cursor: 'pointer',
-                boxShadow: mode === m ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
-                transition: 'all 0.2s',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              }}>
-                {m === 'login' ? <><LogIn size={16} /> Sign In</> : <><UserPlus size={16} /> Register</>}
-              </button>
-            ))}
-          </div>
-
           <h3 style={{ color: '#0f172a', fontSize: 20, fontWeight: 700, margin: '0 0 6px' }}>
-            {mode === 'login' ? 'Welcome Back' : 'Create Officer Account'}
+            Welcome Back
           </h3>
           <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 24px' }}>
-            {mode === 'login' ? 'Sign in to manage your department' : 'Register as a department officer or manager'}
+            Sign in with your email or phone number
           </p>
 
           {error && (
@@ -193,49 +174,8 @@ function Login() {
             }}>{error}</div>
           )}
 
-          <form onSubmit={mode === 'login' ? handleLogin : handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {mode === 'register' && (
-              <>
-                <Input label="Full Name" value={fullName} onChange={setFullName} placeholder="Enter your full name" />
-                <div style={{
-                  background: isCityAdmin ? 'rgba(99,102,241,0.08)' : '#f8fafc',
-                  border: isCityAdmin ? '1px solid #818cf8' : '1px solid #e2e8f0',
-                  borderRadius: 10, padding: '10px 12px',
-                  display: 'flex', gap: 10, alignItems: 'center'
-                }}>
-                  <input
-                    type="checkbox"
-                    id="isCityAdmin"
-                    checked={isCityAdmin}
-                    onChange={e => {
-                      setIsCityAdmin(e.target.checked)
-                      if (e.target.checked) setDepartment('')
-                    }}
-                  />
-                  <label htmlFor="isCityAdmin" style={{ color: '#1e293b', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                    Register as City Administrator (All 33 Departments)
-                  </label>
-                </div>
-
-                {!isCityAdmin && (
-                  <div>
-                    <label style={labelStyle}>Department</label>
-                    <select value={department} onChange={e => setDepartment(e.target.value)} style={inputStyle as any}>
-                      <option value="">Select department...</option>
-                      {DEPT_NAMES.map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </div>
-                )}
-                
-                {!isCityAdmin && (
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <input type="checkbox" id="isManager" checked={isManager} onChange={e => setIsManager(e.target.checked)} />
-                    <label htmlFor="isManager" style={{ color: '#475569', fontSize: 13, cursor: 'pointer' }}>Register as Department Manager</label>
-                  </div>
-                )}
-              </>
-            )}
-            <Input label="Phone Number" value={phone} onChange={setPhone} placeholder="09xxxxxxxx" />
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <Input label="Email or Phone Number" value={phone} onChange={setPhone} placeholder="admin@adama.gov.et or 09xxxxxxxx" />
             <Input label="Password" value={password} onChange={setPassword} placeholder="••••••••" type="password" />
 
             <button type="submit" disabled={loading} style={{
@@ -246,7 +186,7 @@ function Login() {
               boxShadow: '0 8px 25px rgba(99,102,241,0.4)',
               opacity: loading ? 0.7 : 1,
             }}>
-              {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+              {loading ? 'Please wait...' : 'Sign In'}
             </button>
           </form>
         </div>

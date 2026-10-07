@@ -65,6 +65,7 @@ export default function ReportDetails() {
             assigned_officer: data.assigned_officer,
             assignedOfficerName: data.assigned_officer_name,
             shared_with: data.shared_with || [],
+            resolutionNotes: data.resolution_notes || '',
           })
         }
         
@@ -141,6 +142,13 @@ export default function ReportDetails() {
   }
 
   const updateStatus = async (newStatus: string) => {
+    let resolutionNotes = ''
+    if (newStatus === 'RESOLVED') {
+      const notes = window.prompt('Please enter resolution notes describing how this was fixed (optional):')
+      if (notes === null) return // user cancelled
+      resolutionNotes = notes
+    }
+
     setStatusUpdating(true)
     try {
       const token = useAuthStore.getState().token
@@ -150,10 +158,10 @@ export default function ReportDetails() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ status: newStatus, resolution_notes: resolutionNotes })
       })
       if (res.ok) {
-        setReport((prev: any) => ({ ...prev, status: newStatus }))
+        setReport((prev: any) => ({ ...prev, status: newStatus, resolution_notes: resolutionNotes }))
         setStatusMsg({ type: 'success', text: `Report marked as ${newStatus === 'RESOLVED' ? '✅ Resolved' : '❌ Rejected'} successfully!` })
       } else {
         const errData = await res.json().catch(() => ({}))
@@ -289,6 +297,17 @@ export default function ReportDetails() {
         <p style={{ color: '#cbd5e1', fontSize: 14, lineHeight: 1.8, margin: 0 }}>
           {report.description}
         </p>
+
+        {report.resolutionNotes && (
+          <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+            <h4 style={{ margin: '0 0 8px', color: '#10b981', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              ✅ Resolution Notes
+            </h4>
+            <p style={{ color: '#e2e8f0', fontSize: 14, lineHeight: 1.6, margin: 0 }}>
+              {report.resolutionNotes}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Citizen & Department Info */}

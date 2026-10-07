@@ -263,27 +263,28 @@ class RegisterView(APIView):
 
 
 class OfficerRegisterView(APIView):
-    """Officer / Department Manager registration (admin-initiated, no OTP required)."""
-    permission_classes = (AllowAny,)
+    """Officer / Department Manager registration (admin-initiated)."""
+    permission_classes = (IsAuthenticated,)
 
     def post(self, request):
-        serializer = OfficerRegisterSerializer(data=request.data)
+        user = request.user
+        if not (user.is_city_admin or user.is_superuser or user.is_department_manager):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+            
+        data = request.data.copy()
+        
+        # Enforce department restriction for department managers
+        if user.is_department_manager and not (user.is_city_admin or user.is_superuser):
+            dept = user.officer_profile.department
+            if dept:
+                data['department_name'] = dept.name
+            data['is_manager'] = False # Managers cannot create other managers
+            data['is_city_admin'] = False
+
+        serializer = OfficerRegisterSerializer(data=data)
         if serializer.is_valid():
-            user = serializer.save()
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-                'user': {
-                    'id': user.id,
-                    'phone_number': user.phone_number,
-                    'full_name': serializer.validated_data['full_name'],
-                    'department': serializer.validated_data.get('department_name', ''),
-                    'is_officer': True,
-                    'is_department_manager': user.is_department_manager,
-                    'is_city_admin': user.is_city_admin,
-                },
-            }, status=status.HTTP_201_CREATED)
+            new_user = serializer.save()
+            return Response({'status': 'User created successfully', 'email': new_user.email}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -302,23 +303,38 @@ class UserListView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        if not (request.user.is_city_admin or request.user.is_superuser):
+        user = request.user
+        if not (user.is_city_admin or user.is_superuser or user.is_department_manager):
             return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
-        users = User.objects.all().order_by('-date_joined')
+        
+        if user.is_city_admin or user.is_superuser:
+            users = User.objects.all().order_by('-date_joined')
+        else:
+            # Department manager can only see users in their department
+            dept = user.officer_profile.department
+            users = User.objects.filter(officer_profile__department=dept).order_by('-date_joined')
+            
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
 
     def delete(self, request, pk=None):
-        if not (request.user.is_city_admin or request.user.is_superuser):
+        user = request.user
+        if not (user.is_city_admin or user.is_superuser or user.is_department_manager):
             return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         user_id = pk or request.data.get('user_id')
         if not user_id:
             return Response({'error': 'user_id is required'}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            user = User.objects.get(id=user_id)
-            if user.id == request.user.id:
+            target_user = User.objects.get(id=user_id)
+            if target_user.id == user.id:
                 return Response({'error': 'Cannot delete your own account'}, status=status.HTTP_400_BAD_REQUEST)
-            user.delete()
+            
+            if user.is_department_manager and not (user.is_city_admin or user.is_superuser):
+                dept = user.officer_profile.department
+                if not target_user.is_officer or target_user.officer_profile.department != dept:
+                    return Response({'error': 'You can only delete officers in your department'}, status=status.HTTP_403_FORBIDDEN)
+
+            target_user.delete()
             return Response({'status': 'User deleted'}, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)

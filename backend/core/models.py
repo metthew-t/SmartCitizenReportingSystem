@@ -90,6 +90,7 @@ class Report(models.Model):
     closed_at = models.DateTimeField(null=True, blank=True)
     
     rejection_reason = models.TextField(blank=True, null=True)
+    resolution_notes = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return self.case_number

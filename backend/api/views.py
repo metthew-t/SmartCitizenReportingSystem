@@ -170,6 +170,7 @@ class ReportViewSet(viewsets.ModelViewSet):
                 'assigned_officer_id': 'INTEGER NULL',
                 'case_number': 'VARCHAR(50) NULL',
                 'description': 'TEXT NULL',
+                'resolution_notes': 'TEXT NULL',
             },
             'core_citizenprofile': {
                 'national_id': 'VARCHAR(50) NULL',
@@ -320,10 +321,15 @@ class ReportViewSet(viewsets.ModelViewSet):
     def update_status(self, request, pk=None):
         report = self.get_object()
         new_status = request.data.get('status')
+        resolution_notes = request.data.get('resolution_notes')
+        
         if new_status not in dict(Report.STATUS_CHOICES):
             return Response({'error': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
         
         report.status = new_status
+        if resolution_notes is not None:
+            report.resolution_notes = resolution_notes
+            
         report.save()
         
         # Fire notification
