@@ -128,9 +128,12 @@ class ReportViewSet(viewsets.ModelViewSet):
             import traceback
             return Response({'error': str(e), 'traceback': traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def fix_db(self, request):
-        """One-time migration helper. Public temporarily to fix DB."""
+        """One-time migration helper. Restricted to superusers only."""
+        if not (request.user.is_superuser or request.user.is_city_admin):
+            return Response({'error': 'Superuser or city admin access required.'}, status=status.HTTP_403_FORBIDDEN)
+            
         from django.db import connection
         results = {}
         columns_to_add = {
