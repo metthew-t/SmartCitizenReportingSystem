@@ -135,17 +135,42 @@ class ReportViewSet(viewsets.ModelViewSet):
         results = {}
         columns_to_add = {
             'core_report': {
+                'latitude': 'DOUBLE PRECISION NULL',
+                'longitude': 'DOUBLE PRECISION NULL',
+                'location_accuracy': 'DOUBLE PRECISION NULL',
+                'address': 'TEXT NULL',
                 'aanaa': 'VARCHAR(255) NULL',
                 'kuta_magaalaa': 'VARCHAR(255) NULL',
                 'kebele': 'VARCHAR(255) NULL',
                 'iddoo_addaa': 'VARCHAR(255) NULL',
+                'status': "VARCHAR(30) DEFAULT 'SUBMITTED'",
+                'priority': "VARCHAR(20) DEFAULT 'MEDIUM'",
+                'is_anonymous': 'BOOLEAN DEFAULT FALSE',
+                'rejection_reason': 'TEXT NULL',
+                'resolved_at': 'TIMESTAMP WITH TIME ZONE NULL',
+                'closed_at': 'TIMESTAMP WITH TIME ZONE NULL',
+                'created_at': 'TIMESTAMP WITH TIME ZONE DEFAULT NOW()',
+                'updated_at': 'TIMESTAMP WITH TIME ZONE DEFAULT NOW()',
+                'citizen_id': 'INTEGER NULL',
+                'category_id': 'INTEGER NULL',
+                'primary_department_id': 'INTEGER NULL',
+                'assigned_officer_id': 'INTEGER NULL',
+                'case_number': 'VARCHAR(50) NULL',
+                'description': 'TEXT NULL',
             },
             'core_citizenprofile': {
                 'national_id': 'VARCHAR(50) NULL',
+                'full_name': 'VARCHAR(255) NULL',
+                'preferred_language': "VARCHAR(10) DEFAULT 'om'",
+                'created_at': 'TIMESTAMP WITH TIME ZONE DEFAULT NOW()',
+                'user_id': 'INTEGER NULL',
             },
             'accounts_user': {
                 'is_city_admin': 'BOOLEAN DEFAULT FALSE',
-            }
+                'is_citizen': 'BOOLEAN DEFAULT FALSE',
+                'is_officer': 'BOOLEAN DEFAULT FALSE',
+                'is_department_manager': 'BOOLEAN DEFAULT FALSE',
+            },
         }
         for table, columns in columns_to_add.items():
             for col, col_def in columns.items():
