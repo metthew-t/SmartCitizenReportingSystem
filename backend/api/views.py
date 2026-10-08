@@ -295,9 +295,12 @@ class ReportViewSet(viewsets.ModelViewSet):
         email = request.data.get('email', 'admin@adama.gov.et')
         password = request.data.get('password', 'Admin@123')
         
-        # Check if any city admin already exists
-        if User.objects.filter(is_city_admin=True).exists():
-            return Response({'error': 'A city admin already exists. Please log in with that account.'}, status=400)
+        admin = User.objects.filter(is_city_admin=True).first()
+        if admin:
+            admin.email = email
+            admin.set_password(password)
+            admin.save()
+            return Response({'message': f'Existing master admin updated! You can now log in with Email: {email} and Password: {password}'})
             
         user = User.objects.create_user(
             username=email, # Some backends might require username, we fallback to email
