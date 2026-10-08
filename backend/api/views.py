@@ -287,6 +287,28 @@ class ReportViewSet(viewsets.ModelViewSet):
 
 
 
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def setup_admin(self, request):
+        """One-time endpoint to create the master City Admin account."""
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        email = request.data.get('email', 'admin@adama.gov.et')
+        password = request.data.get('password', 'Admin@123')
+        
+        # Check if any city admin already exists
+        if User.objects.filter(is_city_admin=True).exists():
+            return Response({'error': 'A city admin already exists. Please log in with that account.'}, status=400)
+            
+        user = User.objects.create_user(
+            username=email, # Some backends might require username, we fallback to email
+            email=email,
+            password=password,
+            is_city_admin=True,
+            is_staff=True,
+            is_superuser=True
+        )
+        return Response({'message': f'Master admin created! You can now log in with Email: {email} and Password: {password}'})
+
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def init_departments(self, request):
         if not (request.user.is_superuser or request.user.is_city_admin):
