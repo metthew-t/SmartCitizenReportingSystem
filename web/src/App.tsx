@@ -10,7 +10,7 @@ import ReportDetails from './pages/ReportDetails'
 import AdminUsers from './pages/AdminUsers'
 import DeptChat from './pages/DeptChat'
 import { useAuthStore } from './store/authStore'
-import { Building2, LogIn, UserPlus, ChevronDown } from 'lucide-react'
+import { Building2, LogIn } from 'lucide-react'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
@@ -33,13 +33,8 @@ const DEPT_NAMES = [
 ]
 
 function Login() {
-  const [mode, setMode] = useState<'login' | 'register'>('login')
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
-  const [fullName, setFullName] = useState('')
-  const [department, setDepartment] = useState('')
-  const [isManager, setIsManager] = useState(true)
-  const [isCityAdmin, setIsCityAdmin] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const login = useAuthStore(state => state.login)
@@ -73,45 +68,6 @@ function Login() {
         navigate('/dashboard')
       } else {
         setError('Invalid email/phone number or password.')
-      }
-    } catch {
-      setError('Network error. Please try again.')
-    } finally { setLoading(false) }
-  }
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    if (!phone || !password || !fullName || (!department && !isCityAdmin)) { setError('All fields are required'); return }
-    setLoading(true)
-    try {
-      const res = await fetch(`${API}/auth/officer-register/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone_number: phone,
-          password,
-          full_name: fullName,
-          department_name: isCityAdmin ? 'City Administration' : department,
-          is_manager: isManager || isCityAdmin,
-          is_city_admin: isCityAdmin,
-        })
-      })
-      if (res.ok) {
-        const data = await res.json()
-        const isCity = data.user?.is_city_admin || isCityAdmin
-        login(data.access, {
-          id: data.user?.id || null,
-          phone: phone,
-          name: fullName,
-          department_name: isCity ? 'City Administration' : department,
-          is_city_admin: isCity,
-        }, isCity ? 'City Administration' : department, isCity ? 'city_admin' : (isManager ? 'department_manager' : 'officer'))
-        navigate('/dashboard')
-      } else {
-        const body = await res.json()
-        const msg = Object.values(body).flat().join(', ')
-        setError(msg || 'Registration failed.')
       }
     } catch {
       setError('Network error. Please try again.')
