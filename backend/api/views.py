@@ -302,14 +302,14 @@ class ReportViewSet(viewsets.ModelViewSet):
             admin.save()
             return Response({'message': f'Existing master admin updated! You can now log in with Email: {email} and Password: {password}'})
             
-        user = User.objects.create_user(
-            username=email, # Some backends might require username, we fallback to email
+        user = User(
             email=email,
-            password=password,
             is_city_admin=True,
             is_staff=True,
             is_superuser=True
         )
+        user.set_password(password)
+        user.save()
         return Response({'message': f'Master admin created! You can now log in with Email: {email} and Password: {password}'})
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
