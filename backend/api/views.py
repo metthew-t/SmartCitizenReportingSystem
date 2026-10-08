@@ -287,9 +287,12 @@ class ReportViewSet(viewsets.ModelViewSet):
 
 
 
-    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def setup_admin(self, request):
         """One-time endpoint to create the master City Admin account."""
+        if not (request.user.is_superuser or request.user.is_city_admin):
+            return Response({'error': 'Superuser or city admin access required.'}, status=status.HTTP_403_FORBIDDEN)
+            
         from django.contrib.auth import get_user_model
         User = get_user_model()
         email = request.data.get('email', 'admin@adama.gov.et')
