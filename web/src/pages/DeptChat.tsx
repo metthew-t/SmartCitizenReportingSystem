@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/authStore'
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
 export default function DeptChat() {
-  const { token, user } = useAuthStore()
+  const { token, user, role } = useAuthStore()
   const [departments, setDepartments] = React.useState<any[]>([])
   const [selectedDept, setSelectedDept] = React.useState<any>(null)
   const [messages, setMessages] = React.useState<any[]>([])
@@ -81,7 +81,7 @@ export default function DeptChat() {
     d.name !== user?.department_name && d.name?.toLowerCase().includes(search.toLowerCase())
   )
 
-  const isManagerOrAdmin = user?.role === 'city_admin' || user?.role === 'department_manager' || user?.is_city_admin
+  const isManagerOrAdmin = role === 'city_admin' || role === 'department_manager' || user?.is_city_admin
 
   return (
     <div style={{
