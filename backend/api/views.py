@@ -477,7 +477,23 @@ class MessageViewSet(viewsets.ModelViewSet):
         return Message.objects.none()
 
     def perform_create(self, serializer):
-        serializer.save(sender=self.request.user)
+        from rest_framework.exceptions import PermissionDenied
+        report = serializer.validated_data.get('report')
+        user = self.request.user
+        
+        # Check if user is an officer (and not the citizen who created it)
+        if user.is_officer and not user.is_city_admin and report.citizen != user:
+            # Department managers can chat on any report in their department
+            if user.is_department_manager:
+                dept = user.officer_profile.department
+                if dept != report.primary_department and not report.shared_with.filter(id=dept.id).exists():
+                    raise PermissionDenied("You can only chat on reports within your department.")
+            else:
+                # Regular officers must be assigned
+                if report.assigned_officer != user.officer_profile:
+                    raise PermissionDenied("You cannot communicate with the citizen before being assigned to this case.")
+                    
+        serializer.save(sender=user)
 
 
 class DepartmentMessageViewSet(viewsets.ModelViewSet):
