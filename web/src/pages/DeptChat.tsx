@@ -76,9 +76,12 @@ export default function DeptChat() {
     }
   }
 
-  const filteredDepts = departments.filter(d =>
-    d.name?.toLowerCase().includes(search.toLowerCase())
+  const myDept = departments.find(d => d.name === user?.department_name)
+  const otherDepts = departments.filter(d => 
+    d.name !== user?.department_name && d.name?.toLowerCase().includes(search.toLowerCase())
   )
+
+  const isManagerOrAdmin = user?.role === 'city_admin' || user?.role === 'department_manager' || user?.is_city_admin
 
   return (
     <div style={{
@@ -102,56 +105,102 @@ export default function DeptChat() {
             </div>
             <div>
               <div style={{ color: '#e2e8f0', fontWeight: 700, fontSize: 15 }}>Department Chat</div>
-              <div style={{ color: '#64748b', fontSize: 11 }}>Inter-department messaging</div>
+              <div style={{ color: '#64748b', fontSize: 11 }}>Internal & Inter-department</div>
             </div>
           </div>
-          <div style={{ position: 'relative' }}>
-            <Search size={14} color="#64748b" style={{ position: 'absolute', left: 10, top: 10 }} />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search departments..."
-              style={{
-                width: '100%', padding: '8px 8px 8px 32px', borderRadius: 8, boxSizing: 'border-box',
-                background: 'rgba(30,41,59,0.6)', border: '1px solid rgba(148,163,184,0.1)',
-                color: '#e2e8f0', fontSize: 13, outline: 'none',
-              }}
-            />
-          </div>
+          {isManagerOrAdmin && (
+            <div style={{ position: 'relative' }}>
+              <Search size={14} color="#64748b" style={{ position: 'absolute', left: 10, top: 10 }} />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search departments..."
+                style={{
+                  width: '100%', padding: '8px 8px 8px 32px', borderRadius: 8, boxSizing: 'border-box',
+                  background: 'rgba(30,41,59,0.6)', border: '1px solid rgba(148,163,184,0.1)',
+                  color: '#e2e8f0', fontSize: 13, outline: 'none',
+                }}
+              />
+            </div>
+          )}
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
           {loading ? (
             <div style={{ padding: 20, color: '#64748b', textAlign: 'center', fontSize: 13 }}>Loading...</div>
-          ) : filteredDepts.map(dept => (
-            <div
-              key={dept.id}
-              onClick={() => setSelectedDept(dept)}
-              style={{
-                padding: '12px 16px', cursor: 'pointer',
-                background: selectedDept?.id === dept.id ? 'linear-gradient(90deg, rgba(99,102,241,0.2), transparent)' : 'transparent',
-                borderLeft: selectedDept?.id === dept.id ? '3px solid #6366f1' : '3px solid transparent',
-                transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 12,
-              }}
-            >
-              <div style={{
-                width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                background: `hsl(${(dept.id * 37) % 360}, 60%, 35%)`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 14, fontWeight: 700, color: 'white',
-              }}>
-                {dept.name?.charAt(0) || '?'}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  color: selectedDept?.id === dept.id ? '#a5b4fc' : '#cbd5e1',
-                  fontSize: 13, fontWeight: 600,
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-                }}>{dept.name}</div>
-                <div style={{ color: '#475569', fontSize: 11, marginTop: 2 }}>Click to open chat</div>
-              </div>
-            </div>
-          ))}
+          ) : (
+            <>
+              {myDept && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ padding: '0 16px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 }}>
+                    My Department
+                  </div>
+                  <div
+                    onClick={() => setSelectedDept(myDept)}
+                    style={{
+                      padding: '12px 16px', cursor: 'pointer',
+                      background: selectedDept?.id === myDept.id ? 'linear-gradient(90deg, rgba(99,102,241,0.2), transparent)' : 'transparent',
+                      borderLeft: selectedDept?.id === myDept.id ? '3px solid #6366f1' : '3px solid transparent',
+                      transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 12,
+                    }}
+                  >
+                    <div style={{
+                      width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                      background: `hsl(${(myDept.id * 37) % 360}, 60%, 35%)`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 14, fontWeight: 700, color: 'white',
+                    }}>
+                      {myDept.name?.charAt(0) || '?'}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        color: selectedDept?.id === myDept.id ? '#a5b4fc' : '#cbd5e1',
+                        fontSize: 13, fontWeight: 600,
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                      }}>{myDept.name}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isManagerOrAdmin && otherDepts.length > 0 && (
+                <div>
+                  <div style={{ padding: '0 16px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 }}>
+                    Other Departments
+                  </div>
+                  {otherDepts.map(dept => (
+                    <div
+                      key={dept.id}
+                      onClick={() => setSelectedDept(dept)}
+                      style={{
+                        padding: '12px 16px', cursor: 'pointer',
+                        background: selectedDept?.id === dept.id ? 'linear-gradient(90deg, rgba(99,102,241,0.2), transparent)' : 'transparent',
+                        borderLeft: selectedDept?.id === dept.id ? '3px solid #6366f1' : '3px solid transparent',
+                        transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 12,
+                      }}
+                    >
+                      <div style={{
+                        width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                        background: `hsl(${(dept.id * 37) % 360}, 60%, 35%)`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 14, fontWeight: 700, color: 'white',
+                      }}>
+                        {dept.name?.charAt(0) || '?'}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          color: selectedDept?.id === dept.id ? '#a5b4fc' : '#cbd5e1',
+                          fontSize: 13, fontWeight: 600,
+                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                        }}>{dept.name}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
         </div>
 
         <div style={{

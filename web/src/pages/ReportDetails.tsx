@@ -569,6 +569,11 @@ export default function ReportDetails() {
                   const data = await res.json()
                   setReport((prev: any) => ({ ...prev, shared_with: [...(prev.shared_with || []), data.department_name] }))
                   setSelectedDept('')
+                  setStatusMsg({ type: 'success', text: 'The report was successfully shared!' })
+                  setTimeout(() => setStatusMsg(null), 3000)
+                } else {
+                  setStatusMsg({ type: 'error', text: 'Failed to share the report.' })
+                  setTimeout(() => setStatusMsg(null), 3000)
                 }
               } finally {
                 setStatusUpdating(false)
