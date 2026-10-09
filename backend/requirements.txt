@@ -9,3 +9,4 @@ fcm-django
 gunicorn
 whitenoise
 dj-database-url
+Pillow==10.3.0

@@ -1,9 +1,43 @@
-import React from 'react'
+import React, { useState, useRef } from 'react'
 import { useAuthStore } from '../store/authStore'
-import { Settings as SettingsIcon, User, Bell, Globe, Shield, Database } from 'lucide-react'
+import { Settings as SettingsIcon, User, Bell, Globe, Shield, Database, Camera } from 'lucide-react'
+
+const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
 export default function Settings() {
-  const { user, departmentName, role } = useAuthStore()
+  const { user, departmentName, role, token } = useAuthStore()
+  const [photoUrl, setPhotoUrl] = useState(user?.profile_photo_url || '')
+  const [uploading, setUploading] = useState(false)
+  const [uploadMsg, setUploadMsg] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setUploadMsg('')
+    const formData = new FormData()
+    formData.append('photo', file)
+    try {
+      const res = await fetch(`${API}/auth/upload-photo/`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setPhotoUrl(data.photo_url || '')
+        setUploadMsg('Photo updated!')
+        setTimeout(() => setUploadMsg(''), 3000)
+      } else {
+        setUploadMsg(data.error || 'Upload failed.')
+      }
+    } catch {
+      setUploadMsg('Network error.')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", maxWidth: 720 }}>
@@ -16,9 +50,45 @@ export default function Settings() {
 
       {/* Profile section */}
       <SettingsCard title="Profile" icon={<User size={18} color="#6366f1" />}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 16 }}>
+          <div style={{ position: 'relative' }}>
+            <div style={{
+              width: 72, height: 72, borderRadius: '50%', overflow: 'hidden',
+              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: '3px solid rgba(99,102,241,0.3)',
+            }}>
+              {photoUrl ? (
+                <img src={photoUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ fontSize: 28, fontWeight: 700, color: 'white' }}>
+                  {(user?.name || 'U').charAt(0).toUpperCase()}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              style={{
+                position: 'absolute', bottom: -2, right: -2,
+                width: 28, height: 28, borderRadius: '50%',
+                background: '#6366f1', border: '2px solid #1e293b',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <Camera size={14} color="white" />
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
+          </div>
+          <div>
+            <div style={{ color: '#e2e8f0', fontWeight: 600, fontSize: 15 }}>{user?.name || 'N/A'}</div>
+            <div style={{ color: '#94a3b8', fontSize: 12 }}>{role?.replace('_', ' ').toUpperCase() || 'OFFICER'}</div>
+            {uploadMsg && <div style={{ color: uploadMsg.includes('updated') ? '#10b981' : '#ef4444', fontSize: 12, marginTop: 4 }}>{uploadMsg}</div>}
+          </div>
+        </div>
         <SettingsRow label="Phone Number" value={user?.phone || 'N/A'} />
-        <SettingsRow label="Name" value={user?.name || 'N/A'} />
-        <SettingsRow label="Role" value={role?.replace('_', ' ').toUpperCase() || 'OFFICER'} />
+        <SettingsRow label="Email" value={user?.email || 'N/A'} />
         <SettingsRow label="Department" value={departmentName || 'Not assigned'} />
       </SettingsCard>
 

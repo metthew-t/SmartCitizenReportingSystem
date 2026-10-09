@@ -184,6 +184,8 @@ class ReportViewSet(viewsets.ModelViewSet):
                 'is_citizen': 'BOOLEAN DEFAULT FALSE',
                 'is_officer': 'BOOLEAN DEFAULT FALSE',
                 'is_department_manager': 'BOOLEAN DEFAULT FALSE',
+                'full_name': "VARCHAR(255) DEFAULT ''",
+                'profile_photo': 'VARCHAR(100) NULL',
             },
         }
         for table, columns in columns_to_add.items():

@@ -296,6 +296,66 @@ class CurrentUserView(generics.RetrieveAPIView):
         return self.request.user
 
 
+class ProfilePhotoUploadView(APIView):
+    """Upload or update profile photo for the logged-in user."""
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        photo = request.FILES.get('photo')
+        if not photo:
+            return Response({'error': 'No photo file provided.'}, status=status.HTTP_400_BAD_REQUEST)
+        user = request.user
+        user.profile_photo = photo
+        user.save()
+        photo_url = request.build_absolute_uri(user.profile_photo.url) if user.profile_photo else None
+        return Response({'message': 'Profile photo updated.', 'photo_url': photo_url}, status=status.HTTP_200_OK)
+
+
+class AdminResetPasswordView(APIView):
+    """
+    Admin or Department Manager can reset a user's password.
+    Body: { "user_id": <int>, "new_password": "..." }
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        requester = request.user
+        user_id = request.data.get('user_id')
+        new_password = request.data.get('new_password', '')
+
+        if not user_id or not new_password:
+            return Response({'error': 'user_id and new_password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if len(new_password) < 6:
+            return Response({'error': 'Password must be at least 6 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            target_user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # City admin / superuser can reset anyone
+        if requester.is_city_admin or requester.is_superuser:
+            target_user.set_password(new_password)
+            target_user.save()
+            return Response({'message': f'Password for {target_user.email or target_user.phone_number} has been reset.'})
+
+        # Department manager can only reset officers in their department
+        if requester.is_department_manager:
+            if not _safe_hasattr(requester, 'officer_profile') or not requester.officer_profile.department:
+                return Response({'error': 'You are not assigned to a department.'}, status=status.HTTP_403_FORBIDDEN)
+            req_dept = requester.officer_profile.department
+            if not _safe_hasattr(target_user, 'officer_profile') or target_user.officer_profile.department != req_dept:
+                return Response({'error': 'You can only reset passwords for officers in your own department.'}, status=status.HTTP_403_FORBIDDEN)
+            if target_user.is_city_admin or target_user.is_department_manager:
+                return Response({'error': 'You cannot reset a manager or admin password.'}, status=status.HTTP_403_FORBIDDEN)
+            target_user.set_password(new_password)
+            target_user.save()
+            return Response({'message': f'Password for {target_user.email or target_user.phone_number} has been reset.'})
+
+        return Response({'error': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+
+
 # ── Admin ─────────────────────────────────────────────────────────────────────
 
 class UserListView(APIView):

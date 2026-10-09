@@ -14,15 +14,19 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     department_name = serializers.SerializerMethodField()
+    profile_photo_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = ('id', 'phone_number', 'email', 'full_name', 'department_name',
                   'is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin',
-                  'date_joined')
+                  'date_joined', 'profile_photo_url')
         read_only_fields = ('is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin')
 
     def get_full_name(self, obj):
+        # Try model field first
+        if hasattr(obj, 'full_name') and obj.full_name:
+            return obj.full_name
         if _safe_hasattr(obj, 'citizen_profile'):
             return obj.citizen_profile.full_name
         if _safe_hasattr(obj, 'officer_profile'):
@@ -32,6 +36,17 @@ class UserSerializer(serializers.ModelSerializer):
     def get_department_name(self, obj):
         if _safe_hasattr(obj, 'officer_profile') and obj.officer_profile.department:
             return obj.officer_profile.department.name
+        return None
+
+    def get_profile_photo_url(self, obj):
+        try:
+            if obj.profile_photo:
+                request = self.context.get('request')
+                if request:
+                    return request.build_absolute_uri(obj.profile_photo.url)
+                return obj.profile_photo.url
+        except Exception:
+            pass
         return None
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):

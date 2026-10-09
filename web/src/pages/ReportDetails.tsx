@@ -30,6 +30,10 @@ export default function ReportDetails() {
   const [selectedDept, setSelectedDept] = React.useState('')
   const [officers, setOfficers] = React.useState<any[]>([])
   const [selectedOfficer, setSelectedOfficer] = React.useState('')
+  const [resolutionNotes, setResolutionNotes] = React.useState('')
+  const [resolutionFile, setResolutionFile] = React.useState<File | null>(null)
+  const [showResolveModal, setShowResolveModal] = React.useState(false)
+  const resolveFileRef = React.useRef<HTMLInputElement>(null)
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -142,11 +146,9 @@ export default function ReportDetails() {
   }
 
   const updateStatus = async (newStatus: string) => {
-    let resolutionNotes = ''
     if (newStatus === 'RESOLVED') {
-      const notes = window.prompt('Please enter resolution notes describing how this was fixed (optional):')
-      if (notes === null) return // user cancelled
-      resolutionNotes = notes
+      setShowResolveModal(true)
+      return
     }
 
     setStatusUpdating(true)
@@ -154,19 +156,59 @@ export default function ReportDetails() {
       const token = useAuthStore.getState().token
       const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/update_status/`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: newStatus, resolution_notes: resolutionNotes })
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
       })
       if (res.ok) {
-        setReport((prev: any) => ({ ...prev, status: newStatus, resolution_notes: resolutionNotes }))
-        setStatusMsg({ type: 'success', text: `Report marked as ${newStatus === 'RESOLVED' ? '✅ Resolved' : '❌ Rejected'} successfully!` })
+        setReport((prev: any) => ({ ...prev, status: newStatus }))
+        setStatusMsg({ type: 'success', text: `Report marked as ❌ Rejected successfully!` })
       } else {
         const errData = await res.json().catch(() => ({}))
         setStatusMsg({ type: 'error', text: `Failed: ${errData.error || errData.detail || res.statusText}` })
       }
+    } catch (err) {
+      setStatusMsg({ type: 'error', text: 'Network error — could not update status.' })
+    } finally {
+      setStatusUpdating(false)
+      setTimeout(() => setStatusMsg(null), 5000)
+    }
+  }
+
+  const submitResolution = async () => {
+    setStatusUpdating(true)
+    try {
+      const token = useAuthStore.getState().token
+      if (resolutionFile) {
+        const formData = new FormData()
+        formData.append('status', 'RESOLVED')
+        formData.append('resolution_notes', resolutionNotes)
+        formData.append('resolution_document', resolutionFile)
+        const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/update_status/`, {
+          method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData,
+        })
+        if (res.ok) {
+          setReport((prev: any) => ({ ...prev, status: 'RESOLVED', resolution_notes: resolutionNotes }))
+          setStatusMsg({ type: 'success', text: '✅ Report resolved with attached document!' })
+        } else {
+          const errData = await res.json().catch(() => ({}))
+          setStatusMsg({ type: 'error', text: `Failed: ${errData.error || errData.detail || 'Error'}` })
+        }
+      } else {
+        const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/update_status/`, {
+          method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'RESOLVED', resolution_notes: resolutionNotes })
+        })
+        if (res.ok) {
+          setReport((prev: any) => ({ ...prev, status: 'RESOLVED', resolution_notes: resolutionNotes }))
+          setStatusMsg({ type: 'success', text: '✅ Report resolved successfully!' })
+        } else {
+          const errData = await res.json().catch(() => ({}))
+          setStatusMsg({ type: 'error', text: `Failed: ${errData.error || errData.detail || 'Error'}` })
+        }
+      }
+      setShowResolveModal(false)
+      setResolutionNotes('')
+      setResolutionFile(null)
     } catch (err) {
       setStatusMsg({ type: 'error', text: 'Network error — could not update status.' })
     } finally {
@@ -784,6 +826,94 @@ export default function ReportDetails() {
           >Send</button>
         </div>
       </div>
+
+      {/* Resolution Modal */}
+      {showResolveModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div style={{
+            background: '#1e293b', border: '1px solid rgba(148,163,184,0.1)',
+            borderRadius: 16, width: '100%', maxWidth: 480, padding: 24,
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)'
+          }}>
+            <h3 style={{ color: '#e2e8f0', margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>
+              ✅ Resolve Report
+            </h3>
+            <p style={{ color: '#94a3b8', fontSize: 13, marginBottom: 16 }}>
+              Describe how this issue was resolved. You can also attach supporting documents.
+            </p>
+
+            {/* Method 1: Write resolution notes */}
+            <label style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6 }}>Resolution Notes</label>
+            <textarea
+              value={resolutionNotes}
+              onChange={e => setResolutionNotes(e.target.value)}
+              placeholder="Describe how the issue was resolved..."
+              rows={4}
+              style={{
+                width: '100%', padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
+                background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)',
+                color: '#e2e8f0', fontSize: 13, outline: 'none', resize: 'vertical', marginBottom: 16
+              }}
+            />
+
+            {/* Method 2: Upload document */}
+            <label style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6 }}>
+              Attach Document (optional)
+            </label>
+            <div
+              onClick={() => resolveFileRef.current?.click()}
+              style={{
+                padding: 16, borderRadius: 10, cursor: 'pointer',
+                border: '2px dashed rgba(148,163,184,0.2)', textAlign: 'center',
+                background: resolutionFile ? 'rgba(16,185,129,0.05)' : 'rgba(15,23,42,0.3)',
+                marginBottom: 20, transition: 'all 0.2s',
+              }}
+            >
+              {resolutionFile ? (
+                <div style={{ color: '#10b981', fontSize: 13, fontWeight: 600 }}>
+                  📄 {resolutionFile.name} ({(resolutionFile.size / 1024).toFixed(1)} KB)
+                  <div style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>Click to change</div>
+                </div>
+              ) : (
+                <div style={{ color: '#64748b', fontSize: 13 }}>
+                  📎 Click to upload PDF, Word, or image file
+                </div>
+              )}
+            </div>
+            <input
+              ref={resolveFileRef}
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+              onChange={e => setResolutionFile(e.target.files?.[0] || null)}
+              style={{ display: 'none' }}
+            />
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                onClick={() => { setShowResolveModal(false); setResolutionNotes(''); setResolutionFile(null); }}
+                style={{
+                  flex: 1, padding: 12, borderRadius: 8, border: '1px solid rgba(148,163,184,0.2)',
+                  background: 'transparent', color: '#94a3b8', fontWeight: 600, cursor: 'pointer'
+                }}
+              >Cancel</button>
+              <button
+                onClick={submitResolution}
+                disabled={statusUpdating}
+                style={{
+                  flex: 1, padding: 12, borderRadius: 8, border: 'none',
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  color: 'white', fontWeight: 600, cursor: statusUpdating ? 'not-allowed' : 'pointer',
+                  opacity: statusUpdating ? 0.6 : 1,
+                }}
+              >{statusUpdating ? 'Submitting...' : 'Submit Resolution'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

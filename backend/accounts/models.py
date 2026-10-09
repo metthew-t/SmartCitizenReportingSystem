@@ -19,10 +19,12 @@ class User(AbstractUser):
     username = None
     phone_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
     email = models.EmailField(unique=True, null=True, blank=True)
+    full_name = models.CharField(max_length=255, blank=True, default='')
     is_citizen = models.BooleanField(default=False)
     is_officer = models.BooleanField(default=False)
     is_department_manager = models.BooleanField(default=False)
     is_city_admin = models.BooleanField(default=False)
+    profile_photo = models.ImageField(upload_to='profiles/', null=True, blank=True)
 
     USERNAME_FIELD = 'phone_number'
     REQUIRED_FIELDS = []

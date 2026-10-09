@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
-import { Trash2, User, Building2, Shield, Search, Plus, X } from 'lucide-react'
+import { Trash2, User, Building2, Shield, Search, Plus, X, KeyRound } from 'lucide-react'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
@@ -38,6 +38,11 @@ export default function AdminUsers() {
     is_manager: false,
     is_city_admin: false,
   })
+
+  // Reset Password modal state
+  const [resetModal, setResetModal] = useState<{show: boolean, userId: number | null, userName: string}>({show: false, userId: null, userName: ''})
+  const [resetPassword, setResetPassword] = useState('')
+  const [resetting, setResetting] = useState(false)
 
   useEffect(() => {
     fetchUsers()
@@ -129,6 +134,33 @@ export default function AdminUsers() {
       alert('Network error')
     } finally {
       setCreating(false)
+    }
+  }
+
+  const handleResetPassword = async () => {
+    if (!resetModal.userId || !resetPassword || resetPassword.length < 6) {
+      alert('Password must be at least 6 characters.')
+      return
+    }
+    setResetting(true)
+    try {
+      const res = await fetch(`${API}/auth/admin-reset-password/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ user_id: resetModal.userId, new_password: resetPassword })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        alert(data.message || 'Password reset successfully!')
+        setResetModal({show: false, userId: null, userName: ''})
+        setResetPassword('')
+      } else {
+        alert(data.error || 'Failed to reset password.')
+      }
+    } catch {
+      alert('Network error.')
+    } finally {
+      setResetting(false)
     }
   }
 
@@ -266,18 +298,32 @@ export default function AdminUsers() {
                       {new Date(user.date_joined).toLocaleDateString()}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                      <button 
-                        onClick={() => handleDeleteUser(user.id)}
-                        title="Delete User"
-                        style={{
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          color: '#ef4444', padding: 6, borderRadius: 6,
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                        <button 
+                          onClick={() => setResetModal({show: true, userId: user.id, userName: user.full_name || user.email || 'User'})}
+                          title="Reset Password"
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: '#f59e0b', padding: 6, borderRadius: 6,
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,158,11,0.1)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <KeyRound size={16} />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteUser(user.id)}
+                          title="Delete User"
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: '#ef4444', padding: 6, borderRadius: 6,
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -386,6 +432,55 @@ export default function AdminUsers() {
                 {creating ? 'Creating...' : 'Create Account'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Password Modal */}
+      {resetModal.show && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div style={{
+            background: '#1e293b', border: '1px solid rgba(148,163,184,0.1)',
+            borderRadius: 16, width: '100%', maxWidth: 380, padding: 24,
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ color: '#e2e8f0', margin: 0, fontSize: 16, fontWeight: 700 }}>
+                <KeyRound size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
+                Reset Password
+              </h3>
+              <button onClick={() => { setResetModal({show: false, userId: null, userName: ''}); setResetPassword(''); }} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><X size={20} /></button>
+            </div>
+            <p style={{ color: '#94a3b8', fontSize: 13, marginBottom: 16 }}>
+              Set a new password for <strong style={{ color: '#e2e8f0' }}>{resetModal.userName}</strong>
+            </p>
+            <input
+              type="password"
+              placeholder="New password (min 6 chars)"
+              value={resetPassword}
+              onChange={e => setResetPassword(e.target.value)}
+              style={{
+                width: '100%', padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
+                background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)',
+                color: '#e2e8f0', fontSize: 13, outline: 'none', marginBottom: 16
+              }}
+            />
+            <button
+              onClick={handleResetPassword}
+              disabled={resetting || resetPassword.length < 6}
+              style={{
+                width: '100%', padding: 12, background: '#f59e0b', color: '#1e293b',
+                border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 14,
+                cursor: resetting || resetPassword.length < 6 ? 'not-allowed' : 'pointer',
+                opacity: resetting || resetPassword.length < 6 ? 0.6 : 1,
+              }}
+            >
+              {resetting ? 'Resetting...' : 'Reset Password'}
+            </button>
           </div>
         </div>
       )}

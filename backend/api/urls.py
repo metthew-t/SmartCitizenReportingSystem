@@ -4,6 +4,7 @@ from accounts.views import (
     CustomTokenObtainPairView, RegisterView, OfficerRegisterView,
     CurrentUserView, UserListView, StatsView, ChangePasswordView, DeleteAccountView,
     SendOTPView, VerifyOTPView, ResetPasswordView,
+    ProfilePhotoUploadView, AdminResetPasswordView,
 )
 from api.analytics_views import (
     AnalyticsSummaryView, AnalyticsByDepartmentView, AnalyticsByStatusView, ReportGeoJSONView,
@@ -34,6 +35,8 @@ urlpatterns = [
     path('auth/me/', CurrentUserView.as_view(), name='current_user'),
     path('auth/change-password/', ChangePasswordView.as_view(), name='change_password'),
     path('auth/delete-account/', DeleteAccountView.as_view(), name='delete_account'),
+    path('auth/upload-photo/', ProfilePhotoUploadView.as_view(), name='upload_photo'),
+    path('auth/admin-reset-password/', AdminResetPasswordView.as_view(), name='admin_reset_password'),
     # Admin
     path('users/', UserListView.as_view(), name='user_list'),
     path('users/<int:pk>/', UserListView.as_view(), name='user_detail'),
