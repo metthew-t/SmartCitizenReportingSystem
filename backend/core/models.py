@@ -15,6 +15,8 @@ class CitizenProfile(models.Model):
     national_id = models.CharField(max_length=50, blank=True, null=True)
     full_name = models.CharField(max_length=255)
     preferred_language = models.CharField(max_length=10, choices=[('om', 'Afaan Oromo'), ('am', 'Amharic'), ('en', 'English')], default='om')
+    points = models.IntegerField(default=0)
+    civic_level = models.CharField(max_length=50, default='Beginner')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -79,6 +81,12 @@ class Report(models.Model):
     
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='SUBMITTED')
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='MEDIUM')
+    
+    # AI Triage Features
+    ai_confidence_score = models.FloatField(null=True, blank=True)
+    ai_suggested_department = models.ForeignKey('Department', on_delete=models.SET_NULL, null=True, related_name='ai_suggested_reports')
+    ai_summary = models.TextField(blank=True, null=True)
+    is_public = models.BooleanField(default=True) # For Transparency Dashboard
     
     primary_department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, related_name='primary_reports')
     shared_with = models.ManyToManyField(Department, related_name='shared_reports', blank=True)
