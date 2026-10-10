@@ -11,6 +11,7 @@ import AdminUsers from './pages/AdminUsers'
 import DeptChat from './pages/DeptChat'
 import { useAuthStore } from './store/authStore'
 import { Building2, LogIn } from 'lucide-react'
+import PublicDashboard from './pages/PublicDashboard'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
@@ -150,6 +151,14 @@ function Login() {
         <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 24 }}>
           Built for Adama City Administration — All 33 Departments
         </p>
+
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <button onClick={() => navigate('/public')} style={{
+            background: 'none', border: 'none', color: '#38bdf8', fontSize: 14, cursor: 'pointer', fontWeight: 600, textDecoration: 'underline'
+          }}>
+            View Public Transparency Dashboard
+          </button>
+        </div>
       </div>
 
       <style>{`
@@ -193,6 +202,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/public" element={<PublicDashboard />} />
         <Route element={
           <ProtectedRoute>
             <DashboardLayout />
