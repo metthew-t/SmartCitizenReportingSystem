@@ -37,6 +37,10 @@ interface Report {
   kuta_magaalaa: string
   kebele: string
   iddoo_addaa: string
+  ai_confidence_score?: number
+  ai_suggested_department_name?: string
+  ai_summary?: string
+  is_public?: boolean
 }
 
 export default function Reports() {
@@ -50,6 +54,7 @@ export default function Reports() {
 
   const [allReports, setAllReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   const fetchReports = async (showLoading = false) => {
     if (showLoading) setLoading(true)
@@ -58,6 +63,7 @@ export default function Reports() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
+        setFetchError(null)
         const data = await response.json()
         const list = Array.isArray(data) ? data : (data.results || [])
         const mapped = list.map((item: any) => ({
@@ -78,12 +84,22 @@ export default function Reports() {
           kuta_magaalaa: item.kuta_magaalaa || '',
           kebele: item.kebele || '',
           iddoo_addaa: item.iddoo_addaa || '',
+          ai_confidence_score: item.ai_confidence_score,
+          ai_suggested_department_name: item.ai_suggested_department_name,
+          ai_summary: item.ai_summary,
+          is_public: item.is_public ?? true,
         }))
         
         setAllReports(mapped.sort((a: Report, b: Report) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()))
+      } else {
+        const errText = response.status === 401 
+          ? 'Authentication expired. Please log in again.' 
+          : `Server error (${response.status}) fetching reports. Auto-reconnecting...`;
+        setFetchError(errText);
       }
     } catch (err) {
       console.error("Failed to fetch reports", err)
+      setFetchError('Network error connecting to reports server. Reconnecting...');
     } finally {
       setLoading(false)
     }
@@ -203,6 +219,22 @@ export default function Reports() {
         )}
       </div>
 
+      {fetchError && (
+        <div style={{
+          marginBottom: 16, padding: '12px 18px', borderRadius: 12,
+          background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#fca5a5', fontSize: 13
+        }}>
+          <span>⚠️ {fetchError}</span>
+          <button onClick={() => fetchReports(true)} style={{
+            background: 'rgba(239, 68, 68, 0.25)', border: 'none', color: 'white',
+            borderRadius: 8, padding: '6px 14px', fontSize: 12, cursor: 'pointer', fontWeight: 600
+          }}>
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div style={{
         background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
@@ -239,7 +271,14 @@ export default function Reports() {
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     onClick={() => setSelectedReport(report)}
                   >
-                    <td style={{ ...tdStyle, color: '#a5b4fc', fontWeight: 700 }}>{report.case_number}</td>
+                    <td style={{ ...tdStyle, color: '#a5b4fc', fontWeight: 700 }}>
+                      <div>{report.case_number}</div>
+                      {report.ai_confidence_score ? (
+                        <div style={{ fontSize: 10, color: '#38bdf8', fontWeight: 600, marginTop: 2 }}>
+                          🤖 AI {Math.round(report.ai_confidence_score * 100)}%
+                        </div>
+                      ) : null}
+                    </td>
                     <td style={{ ...tdStyle, maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {report.description}
                     </td>

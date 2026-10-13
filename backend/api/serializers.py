@@ -72,6 +72,7 @@ class ReportSerializer(serializers.ModelSerializer):
     citizen_name = serializers.SerializerMethodField()
     citizen_phone = serializers.SerializerMethodField()
     assigned_officer_name = serializers.SerializerMethodField()
+    ai_suggested_department_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Report
@@ -81,9 +82,16 @@ class ReportSerializer(serializers.ModelSerializer):
             'description', 'latitude', 'longitude', 'status', 'priority', 
             'primary_department', 'department_name', 'shared_with', 'assigned_officer', 'assigned_officer_name',
             'created_at', 'updated_at', 'resolved_at', 'closed_at', 'media',
-            'aanaa', 'kuta_magaalaa', 'kebele', 'iddoo_addaa', 'resolution_notes'
+            'aanaa', 'kuta_magaalaa', 'kebele', 'iddoo_addaa', 'resolution_notes',
+            'ai_confidence_score', 'ai_suggested_department', 'ai_suggested_department_name', 'ai_summary', 'is_public'
         ]
         read_only_fields = ['case_number', 'status', 'citizen']
+
+    def get_ai_suggested_department_name(self, obj):
+        try:
+            return obj.ai_suggested_department.name if obj.ai_suggested_department else None
+        except Exception:
+            return None
 
     def get_department_name(self, obj):
         try:

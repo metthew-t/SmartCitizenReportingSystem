@@ -403,8 +403,25 @@ class UserListView(APIView):
 class StatsView(APIView):
     """Real-time dashboard statistics."""
     permission_classes = (IsAuthenticated,)
-
     def get(self, request):
+        try:
+            return self._calculate_stats(request)
+        except Exception:
+            try:
+                from django.db import connection
+                with connection.cursor() as cursor:
+                    cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS ai_confidence_score DOUBLE PRECISION NULL;')
+                    cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS ai_suggested_department_id INTEGER NULL;')
+                    cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS ai_summary TEXT NULL;')
+                    cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT TRUE;')
+                    cursor.execute('ALTER TABLE core_citizenprofile ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0;')
+                    cursor.execute("ALTER TABLE core_citizenprofile ADD COLUMN IF NOT EXISTS civic_level VARCHAR(50) DEFAULT 'Beginner';")
+                return self._calculate_stats(request)
+            except Exception as e:
+                import traceback
+                return Response({'error': str(e), 'traceback': traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _calculate_stats(self, request):
         from core.models import Report, Department
         from django.db.models import Count, Q
         from django.utils import timezone
