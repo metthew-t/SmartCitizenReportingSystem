@@ -291,6 +291,46 @@ class CurrentUserView(generics.RetrieveAPIView):
     def get_object(self):
         return self.request.user
 
+    def patch(self, request, *args, **kwargs):
+        user = request.user
+        data = request.data
+
+        # Only City Admin can edit their email
+        if 'email' in data:
+            new_email = (data.get('email') or '').strip().lower()
+            if new_email and new_email != (user.email or '').lower():
+                if not (user.is_city_admin or user.is_superuser):
+                    return Response(
+                        {'error': 'Officers and Department Managers cannot change their own email. Please contact City Admin.'},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+                if User.objects.filter(email__iexact=new_email).exclude(id=user.id).exists():
+                    return Response({'error': 'A user with this email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+                user.email = new_email
+
+        if 'phone_number' in data:
+            new_phone = (data.get('phone_number') or '').strip()
+            if new_phone:
+                if User.objects.filter(phone_number=new_phone).exclude(id=user.id).exists():
+                    return Response({'error': 'A user with this phone number already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+                user.phone_number = new_phone
+            else:
+                user.phone_number = None
+
+        if 'full_name' in data:
+            name = (data.get('full_name') or '').strip()
+            if name:
+                user.full_name = name
+                if _safe_hasattr(user, 'officer_profile'):
+                    user.officer_profile.full_name = name
+                    user.officer_profile.save()
+                elif _safe_hasattr(user, 'citizen_profile'):
+                    user.citizen_profile.full_name = name
+                    user.citizen_profile.save()
+
+        user.save()
+        return Response(UserSerializer(user).data)
+
 
 class ProfilePhotoUploadView(APIView):
     """Upload or update profile photo for the logged-in user."""
@@ -394,6 +434,57 @@ class UserListView(APIView):
             return Response({'status': 'User deleted'}, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    def patch(self, request, pk=None):
+        caller = request.user
+        if not (caller.is_city_admin or caller.is_superuser or caller.is_department_manager):
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+
+        user_id = pk or request.data.get('user_id')
+        if not user_id:
+            return Response({'error': 'user_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            target_user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Department manager can only edit officers in their own department
+        if caller.is_department_manager and not (caller.is_city_admin or caller.is_superuser):
+            dept = caller.officer_profile.department if _safe_hasattr(caller, 'officer_profile') else None
+            if not target_user.is_officer or not _safe_hasattr(target_user, 'officer_profile') or target_user.officer_profile.department != dept:
+                return Response({'error': 'You can only edit officers in your department'}, status=status.HTTP_403_FORBIDDEN)
+
+        data = request.data
+        if 'email' in data:
+            new_email = (data.get('email') or '').strip().lower()
+            if new_email and new_email != (target_user.email or '').lower():
+                if User.objects.filter(email__iexact=new_email).exclude(id=target_user.id).exists():
+                    return Response({'error': 'A user with this email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+                target_user.email = new_email
+
+        if 'phone_number' in data:
+            new_phone = (data.get('phone_number') or '').strip()
+            if new_phone:
+                if User.objects.filter(phone_number=new_phone).exclude(id=target_user.id).exists():
+                    return Response({'error': 'A user with this phone number already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+                target_user.phone_number = new_phone
+            else:
+                target_user.phone_number = None
+
+        if 'full_name' in data:
+            name = (data.get('full_name') or '').strip()
+            if name:
+                target_user.full_name = name
+                if _safe_hasattr(target_user, 'officer_profile'):
+                    target_user.officer_profile.full_name = name
+                    target_user.officer_profile.save()
+                elif _safe_hasattr(target_user, 'citizen_profile'):
+                    target_user.citizen_profile.full_name = name
+                    target_user.citizen_profile.save()
+
+        target_user.save()
+        return Response(UserSerializer(target_user).data)
 
 
 class StatsView(APIView):

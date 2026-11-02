@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
-import { Trash2, User, Building2, Shield, Search, Plus, X, KeyRound } from 'lucide-react'
+import { Trash2, User, Building2, Shield, Search, Plus, X, KeyRound, Edit2, Phone, Mail } from 'lucide-react'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
@@ -32,12 +32,18 @@ export default function AdminUsers() {
   const [creating, setCreating] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
+    phone_number: '',
     password: '',
     full_name: '',
     department_name: '',
     is_manager: false,
     is_city_admin: false,
   })
+
+  // Edit User modal state
+  const [editModal, setEditModal] = useState<{ show: boolean, user: UserData | null }>({ show: false, user: null })
+  const [editFormData, setEditFormData] = useState({ full_name: '', email: '', phone_number: '' })
+  const [updatingUser, setUpdatingUser] = useState(false)
 
   // Reset Password modal state
   const [resetModal, setResetModal] = useState<{show: boolean, userId: number | null, userName: string}>({show: false, userId: null, userName: ''})
@@ -126,7 +132,7 @@ export default function AdminUsers() {
         alert('User created successfully!')
         setShowModal(false)
         fetchUsers() // Refresh list
-        setFormData({ email: '', password: '', full_name: '', department_name: '', is_manager: false, is_city_admin: false })
+        setFormData({ email: '', phone_number: '', password: '', full_name: '', department_name: '', is_manager: false, is_city_admin: false })
       } else {
         alert('Error: ' + JSON.stringify(data))
       }
@@ -134,6 +140,49 @@ export default function AdminUsers() {
       alert('Network error')
     } finally {
       setCreating(false)
+    }
+  }
+
+  const openEditModal = (u: UserData) => {
+    setEditModal({ show: true, user: u })
+    setEditFormData({
+      full_name: u.full_name || '',
+      email: u.email || '',
+      phone_number: u.phone_number || '',
+    })
+  }
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editModal.user) return
+    setUpdatingUser(true)
+
+    try {
+      const res = await fetch(`${API}/users/${editModal.user.id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          full_name: editFormData.full_name,
+          email: editFormData.email,
+          phone_number: editFormData.phone_number,
+        })
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        alert('User details updated successfully!')
+        setEditModal({ show: false, user: null })
+        setUsers(users.map(u => u.id === data.id ? { ...u, ...data } : u))
+      } else {
+        alert('Failed to update: ' + (data.error || JSON.stringify(data)))
+      }
+    } catch {
+      alert('Network error updating user.')
+    } finally {
+      setUpdatingUser(false)
     }
   }
 
@@ -281,7 +330,19 @@ export default function AdminUsers() {
                       {user.full_name || 'N/A'}
                     </td>
                     <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 13 }}>
-                      {user.email || user.phone_number || '-'}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {user.email && (
+                          <span style={{ color: '#e2e8f0', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Mail size={11} color="#6366f1" /> {user.email}
+                          </span>
+                        )}
+                        {user.phone_number && (
+                          <span style={{ color: '#94a3b8', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Phone size={10} color="#10b981" /> {user.phone_number}
+                          </span>
+                        )}
+                        {!user.email && !user.phone_number && '-'}
+                      </div>
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -299,6 +360,18 @@ export default function AdminUsers() {
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                        <button 
+                          onClick={() => openEditModal(user)}
+                          title="Edit User Details"
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: '#3b82f6', padding: 6, borderRadius: 6,
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(59,130,246,0.1)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <Edit2 size={16} />
+                        </button>
                         <button 
                           onClick={() => setResetModal({show: true, userId: user.id, userName: user.full_name || user.email || 'User'})}
                           title="Reset Password"
@@ -371,6 +444,17 @@ export default function AdminUsers() {
                   type="email" required
                   value={formData.email}
                   onChange={e => setFormData({...formData, email: e.target.value})}
+                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Phone Number</label>
+                <input 
+                  type="text"
+                  placeholder="09xxxxxxxx (optional)"
+                  value={formData.phone_number}
+                  onChange={e => setFormData({...formData, phone_number: e.target.value})}
                   style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none' }}
                 />
               </div>
@@ -481,6 +565,90 @@ export default function AdminUsers() {
             >
               {resetting ? 'Resetting...' : 'Reset Password'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {editModal.show && editModal.user && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div style={{
+            background: '#1e293b', border: '1px solid rgba(148,163,184,0.1)',
+            borderRadius: 16, width: '100%', maxWidth: 420, padding: 24,
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ margin: 0, color: '#e2e8f0', fontSize: 18 }}>
+                Edit {editModal.user.full_name || 'User'}
+              </h3>
+              <button onClick={() => setEditModal({ show: false, user: null })} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateUser} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Full Name</label>
+                <input 
+                  type="text" required
+                  value={editFormData.full_name}
+                  onChange={e => setEditFormData({...editFormData, full_name: e.target.value})}
+                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <label style={{ color: '#94a3b8', fontSize: 12 }}>Email Address</label>
+                  <span style={{ fontSize: 10, color: '#10b981', fontWeight: 600 }}>Editable</span>
+                </div>
+                <input 
+                  type="email" required
+                  value={editFormData.email}
+                  onChange={e => setEditFormData({...editFormData, email: e.target.value})}
+                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <label style={{ color: '#94a3b8', fontSize: 12 }}>Phone Number</label>
+                  <span style={{ fontSize: 10, color: '#10b981', fontWeight: 600 }}>Editable</span>
+                </div>
+                <input 
+                  type="text"
+                  placeholder="09xxxxxxxx"
+                  value={editFormData.phone_number}
+                  onChange={e => setEditFormData({...editFormData, phone_number: e.target.value})}
+                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
+                <button 
+                  type="button" 
+                  onClick={() => setEditModal({ show: false, user: null })}
+                  style={{ padding: '8px 16px', background: 'transparent', border: '1px solid rgba(148,163,184,0.2)', color: '#94a3b8', borderRadius: 8, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={updatingUser}
+                  style={{
+                    padding: '8px 18px', background: '#3b82f6', border: 'none', color: 'white',
+                    borderRadius: 8, fontWeight: 600, cursor: updatingUser ? 'not-allowed' : 'pointer',
+                    opacity: updatingUser ? 0.6 : 1,
+                  }}
+                >
+                  {updatingUser ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

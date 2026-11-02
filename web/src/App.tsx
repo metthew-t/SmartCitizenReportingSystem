@@ -65,8 +65,10 @@ function Login() {
         const me = meRes.ok ? await meRes.json() : null
         login(data.access, {
           id: me?.id || null,
-          phone: phone,
-          name: me?.full_name || phone,
+          phone: me?.phone_number || (phone.includes('@') ? '' : phone),
+          email: me?.email || (phone.includes('@') ? phone : ''),
+          name: me?.full_name || me?.email || me?.phone_number || 'User',
+          profile_photo_url: me?.profile_photo_url || null,
           department_name: me?.department_name || null,
           is_city_admin: me?.is_city_admin || false,
         }, me?.department_name || (me?.is_city_admin ? 'City Administration' : null), me?.is_city_admin ? 'city_admin' : (me?.is_department_manager ? 'department_manager' : 'officer'))

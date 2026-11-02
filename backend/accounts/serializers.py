@@ -108,6 +108,7 @@ class RegisterSerializer(serializers.Serializer):
 
 class OfficerRegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
+    phone_number = serializers.CharField(max_length=20, required=False, allow_blank=True, default='')
     password = serializers.CharField(write_only=True, min_length=4)
     full_name = serializers.CharField(max_length=255)
     department_name = serializers.CharField(max_length=255, required=False, allow_blank=True, default='')
@@ -118,6 +119,14 @@ class OfficerRegisterSerializer(serializers.Serializer):
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError('A user with this email already exists.')
         return value
+
+    def validate_phone_number(self, value):
+        if value and value.strip():
+            clean = value.strip()
+            if User.objects.filter(phone_number=clean).exists():
+                raise serializers.ValidationError('A user with this phone number already exists.')
+            return clean
+        return ''
 
     def validate_department_name(self, value):
         from core.models import Department
@@ -133,9 +142,10 @@ class OfficerRegisterSerializer(serializers.Serializer):
         is_city_admin = validated_data.get('is_city_admin', False) or dept_name in ['City Administration', 'All Departments', 'Bulchiinsa Magaalaa']
         dept = Department.objects.filter(name__iexact=dept_name).first() if dept_name else None
         is_manager = validated_data.get('is_manager', False)
+        phone = validated_data.get('phone_number', '').strip() or None
 
         user = User.objects.create_user(
-            phone_number=None,
+            phone_number=phone,
             email=validated_data['email'],
             password=validated_data['password'],
             is_officer=True,
