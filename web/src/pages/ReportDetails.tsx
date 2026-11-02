@@ -38,6 +38,23 @@ export default function ReportDetails() {
   const [officerNote, setOfficerNote] = React.useState('')
   const [officerSelectedStatus, setOfficerSelectedStatus] = React.useState('')
 
+  // Mark this report as viewed in localStorage and notify top bar
+  React.useEffect(() => {
+    if (id) {
+      try {
+        const userId = useAuthStore.getState().user?.id || 'default'
+        const key = `viewed_cases_${userId}`
+        const current: number[] = JSON.parse(localStorage.getItem(key) || '[]')
+        const numId = Number(id)
+        if (!current.includes(numId)) {
+          current.push(numId)
+          localStorage.setItem(key, JSON.stringify(current))
+          window.dispatchEvent(new Event('cases_viewed_updated'))
+        }
+      } catch (_) {}
+    }
+  }, [id])
+
   React.useEffect(() => {
     const fetchData = async () => {
       setLoading(true)

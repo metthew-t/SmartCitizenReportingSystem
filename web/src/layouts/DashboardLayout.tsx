@@ -26,8 +26,68 @@ export default function DashboardLayout() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [showNotifications, setShowNotifications] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
-  const [lastSeenCount, setLastSeenCount] = useState(0)
   const notifRef = useRef<HTMLDivElement>(null)
+
+  const getStorageKey = () => `viewed_cases_${user?.id || 'default'}`
+
+  // Persistent record of viewed case IDs
+  const [viewedIds, setViewedIds] = useState<number[]>(() => {
+    try {
+      const key = `viewed_cases_${useAuthStore.getState().user?.id || 'default'}`
+      return JSON.parse(localStorage.getItem(key) || '[]')
+    } catch {
+      return []
+    }
+  })
+
+  // Listen to custom event when cases are viewed anywhere (e.g. in ReportDetails)
+  useEffect(() => {
+    const handleUpdate = () => {
+      try {
+        const key = getStorageKey()
+        const stored = JSON.parse(localStorage.getItem(key) || '[]')
+        setViewedIds(stored)
+      } catch {}
+    }
+    window.addEventListener('cases_viewed_updated', handleUpdate)
+    window.addEventListener('storage', handleUpdate)
+    return () => {
+      window.removeEventListener('cases_viewed_updated', handleUpdate)
+      window.removeEventListener('storage', handleUpdate)
+    }
+  }, [user?.id])
+
+  // Recalculate unread count: strictly reports that have NOT been viewed
+  useEffect(() => {
+    const unread = notifications.filter(n => !viewedIds.includes(n.id))
+    setUnreadCount(unread.length)
+  }, [notifications, viewedIds])
+
+  const markAsViewed = (id: number) => {
+    try {
+      const key = getStorageKey()
+      const current: number[] = JSON.parse(localStorage.getItem(key) || '[]')
+      if (!current.includes(id)) {
+        current.push(id)
+        localStorage.setItem(key, JSON.stringify(current))
+        setViewedIds([...current])
+        window.dispatchEvent(new Event('cases_viewed_updated'))
+      }
+    } catch {}
+  }
+
+  const markAllAsViewed = () => {
+    try {
+      const key = getStorageKey()
+      const current: number[] = JSON.parse(localStorage.getItem(key) || '[]')
+      const allIds = notifications.map(n => n.id)
+      const merged = Array.from(new Set([...current, ...allIds]))
+      localStorage.setItem(key, JSON.stringify(merged))
+      setViewedIds(merged)
+      setUnreadCount(0)
+      window.dispatchEvent(new Event('cases_viewed_updated'))
+    } catch {}
+  }
 
   // Fetch notifications (recent reports)
   useEffect(() => {
@@ -52,10 +112,6 @@ export default function DashboardLayout() {
               type: 'report' as const,
             }))
           setNotifications(sorted)
-          // Calculate unread as new items since last seen
-          if (sorted.length > lastSeenCount) {
-            setUnreadCount(sorted.length - lastSeenCount)
-          }
         }
       } catch (err) {
         console.error('Failed to fetch notifications', err)
@@ -64,7 +120,7 @@ export default function DashboardLayout() {
     fetchNotifications()
     const interval = setInterval(fetchNotifications, 15000)
     return () => clearInterval(interval)
-  }, [token, lastSeenCount])
+  }, [token])
 
   // Close notification dropdown on outside click
   useEffect(() => {
@@ -84,10 +140,6 @@ export default function DashboardLayout() {
 
   const handleBellClick = () => {
     setShowNotifications(!showNotifications)
-    if (!showNotifications) {
-      setLastSeenCount(notifications.length)
-      setUnreadCount(0)
-    }
   }
 
   const baseNavItems = [
@@ -357,14 +409,36 @@ export default function DashboardLayout() {
                   }}>
                     <div>
                       <h3 style={{ color: '#e2e8f0', fontSize: 15, fontWeight: 700, margin: 0 }}>Notifications</h3>
-                      <p style={{ color: '#64748b', fontSize: 11, margin: '2px 0 0' }}>Recent reports & updates</p>
+                      <p style={{ color: '#64748b', fontSize: 11, margin: '2px 0 0' }}>
+                        {unreadCount > 0 ? `${unreadCount} new case${unreadCount > 1 ? 's' : ''}` : 'All cases viewed'}
+                      </p>
                     </div>
-                    <span style={{
-                      padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                      background: 'rgba(99,102,241,0.15)', color: '#a5b4fc',
-                    }}>
-                      {notifications.length} items
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            markAllAsViewed()
+                          }}
+                          style={{
+                            background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)',
+                            color: '#a5b4fc', fontSize: 11, fontWeight: 600, padding: '4px 10px',
+                            borderRadius: 8, cursor: 'pointer', transition: 'all 0.2s',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.25)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(99,102,241,0.15)'}
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                      <span style={{
+                        padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                        background: unreadCount > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(148,163,184,0.1)',
+                        color: unreadCount > 0 ? '#ef4444' : '#94a3b8',
+                      }}>
+                        {unreadCount > 0 ? `${unreadCount} new` : `${notifications.length} total`}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Notification Items */}
@@ -373,60 +447,81 @@ export default function DashboardLayout() {
                       <div style={{ padding: 40, textAlign: 'center', color: '#64748b', fontSize: 13 }}>
                         No notifications yet
                       </div>
-                    ) : notifications.map((notif) => (
-                      <div
-                        key={notif.id}
-                        onClick={() => {
-                          setShowNotifications(false)
-                          navigate(`/reports/${notif.id}`)
-                        }}
-                        style={{
-                          padding: '14px 20px', cursor: 'pointer',
-                          borderBottom: '1px solid rgba(148,163,184,0.06)',
-                          transition: 'background 0.2s',
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.05)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                      >
-                        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                          <div style={{
-                            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                            background: `${PRIORITY_COLORS[notif.priority] || '#6366f1'}15`,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          }}>
-                            {notif.priority === 'CRITICAL' ? (
-                              <AlertTriangle size={16} color="#ef4444" />
-                            ) : (
-                              <FileText size={16} color={PRIORITY_COLORS[notif.priority] || '#6366f1'} />
-                            )}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                              <span style={{ color: '#a5b4fc', fontSize: 12, fontWeight: 700 }}>
-                                {notif.case_number}
-                              </span>
-                              <span style={{
-                                padding: '2px 8px', borderRadius: 6, fontSize: 9, fontWeight: 600,
-                                background: `${PRIORITY_COLORS[notif.priority]}20`,
-                                color: PRIORITY_COLORS[notif.priority],
-                              }}>
-                                {notif.priority}
-                              </span>
-                            </div>
+                    ) : notifications.map((notif) => {
+                      const isUnread = !viewedIds.includes(notif.id)
+                      return (
+                        <div
+                          key={notif.id}
+                          onClick={() => {
+                            markAsViewed(notif.id)
+                            setShowNotifications(false)
+                            navigate(`/reports/${notif.id}`)
+                          }}
+                          style={{
+                            padding: '14px 20px', cursor: 'pointer',
+                            borderBottom: '1px solid rgba(148,163,184,0.06)',
+                            background: isUnread ? 'rgba(99,102,241,0.08)' : 'transparent',
+                            transition: 'background 0.2s',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = isUnread ? 'rgba(99,102,241,0.14)' : 'rgba(99,102,241,0.05)'}
+                          onMouseLeave={e => e.currentTarget.style.background = isUnread ? 'rgba(99,102,241,0.08)' : 'transparent'}
+                        >
+                          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                             <div style={{
-                              color: '#cbd5e1', fontSize: 12, marginTop: 4,
-                              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                              width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                              background: `${PRIORITY_COLORS[notif.priority] || '#6366f1'}15`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
-                              {notif.description}
+                              {notif.priority === 'CRITICAL' ? (
+                                <AlertTriangle size={16} color="#ef4444" />
+                              ) : (
+                                <FileText size={16} color={PRIORITY_COLORS[notif.priority] || '#6366f1'} />
+                              )}
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, color: '#64748b', fontSize: 10 }}>
-                              <Clock size={10} />
-                              {timeAgo(notif.created_at)}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <span style={{ color: isUnread ? '#c7d2fe' : '#94a3b8', fontSize: 12, fontWeight: isUnread ? 800 : 600 }}>
+                                    {notif.case_number}
+                                  </span>
+                                  {isUnread && (
+                                    <span style={{
+                                      padding: '1px 6px', borderRadius: 8, fontSize: 9, fontWeight: 700,
+                                      background: '#3b82f6', color: 'white',
+                                    }}>
+                                      NEW
+                                    </span>
+                                  )}
+                                </div>
+                                <span style={{
+                                  padding: '2px 8px', borderRadius: 6, fontSize: 9, fontWeight: 600,
+                                  background: `${PRIORITY_COLORS[notif.priority]}20`,
+                                  color: PRIORITY_COLORS[notif.priority],
+                                }}>
+                                  {notif.priority}
+                                </span>
+                              </div>
+                              <div style={{
+                                color: isUnread ? '#f1f5f9' : '#64748b', fontSize: 12, marginTop: 4,
+                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                fontWeight: isUnread ? 600 : 400,
+                              }}>
+                                {notif.description}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, color: '#64748b', fontSize: 10 }}>
+                                <Clock size={10} />
+                                {timeAgo(notif.created_at)}
+                                {isUnread ? (
+                                  <span style={{ color: '#60a5fa', marginLeft: 6, fontWeight: 600 }}>• Unread</span>
+                                ) : (
+                                  <span style={{ color: '#475569', marginLeft: 6 }}>• Viewed</span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
 
                   {/* Footer */}
