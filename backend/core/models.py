@@ -164,3 +164,19 @@ class Feedback(models.Model):
 
     def __str__(self):
         return f"Feedback for {self.report.case_number} - {self.rating} Stars"
+
+class ReportStatusHistory(models.Model):
+    """Immutable log of every status change on a report."""
+    report = models.ForeignKey(Report, on_delete=models.CASCADE, related_name='status_history')
+    old_status = models.CharField(max_length=30, blank=True, null=True)
+    new_status = models.CharField(max_length=30)
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    changed_by_name = models.CharField(max_length=255, blank=True, null=True)
+    note = models.TextField(blank=True, null=True)
+    changed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['changed_at']
+
+    def __str__(self):
+        return f"{self.report.case_number}: {self.old_status} -> {self.new_status}"

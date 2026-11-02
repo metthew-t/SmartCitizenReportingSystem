@@ -60,12 +60,25 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
   final _feedbackController = TextEditingController();
   bool _feedbackSubmitted = false;
 
+  // Status history
+  List<Map<String, dynamic>> _statusHistory = [];
+
+  // Officer status update
+  String _selectedStatus = '';
+  final _statusNoteController = TextEditingController();
+  bool _isUpdatingStatus = false;
+
+  // Whether current user is assigned officer for this report
+  bool _isAssignedOfficer = false;
+  String _assignedOfficerName = '';
+
   @override
   void initState() {
     super.initState();
     _loadUserRole();
     _fetchReportDetails();
     _fetchMessages();
+    _fetchStatusHistory();
   }
 
   @override
@@ -73,6 +86,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
     _chatController.dispose();
     _deptChatController.dispose();
     _feedbackController.dispose();
+    _statusNoteController.dispose();
     super.dispose();
   }
 
@@ -126,6 +140,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
           // department_name for primary is returned separately. We fetch dept
           // names from the all-departments endpoint and cross-reference.
           final rawShared = data['shared_with'] as List<dynamic>? ?? [];
+          final assignedOfficer = data['assigned_officer'];
           setState(() {
             _description = data['description'] ?? '';
             _status = data['status'] ?? 'SUBMITTED';
@@ -136,6 +151,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
             _citizenName = data['citizen_name'] ?? 'Citizen';
             _createdAt = DateTime.tryParse(data['created_at'] ?? '') ?? DateTime.now();
             _isLoadingReport = false;
+            _assignedOfficerName = data['assigned_officer_name'] ?? '';
+            _isAssignedOfficer = assignedOfficer != null;
             // shared_with comes as list of dept IDs; resolve names later
             _sharedWithNames = rawShared.map((e) => e.toString()).toList();
           });
@@ -247,6 +264,72 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
     } catch (e) {
       debugPrint('Error fetching dept messages: $e');
       if (mounted) setState(() => _isLoadingDeptMessages = false);
+    }
+  }
+
+  Future<void> _fetchStatusHistory() async {
+    try {
+      final headers = await _authHeaders();
+      final res = await http.get(
+        Uri.parse('$_baseUrl/reports/${widget.reportId}/status_history/'),
+        headers: headers,
+      );
+      if (res.statusCode == 200 && mounted) {
+        final decoded = jsonDecode(res.body);
+        final List<dynamic> data = decoded is List ? decoded : (decoded['results'] ?? []);
+        setState(() {
+          _statusHistory = data.map((item) => Map<String, dynamic>.from(item)).toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching status history: $e');
+    }
+  }
+
+  Future<void> _updateStatus(String newStatus, String note) async {
+    if (newStatus.isEmpty) return;
+    setState(() => _isUpdatingStatus = true);
+    try {
+      final headers = await _authHeaders();
+      final res = await http.post(
+        Uri.parse('$_baseUrl/reports/${widget.reportId}/update_status/'),
+        headers: headers,
+        body: jsonEncode({
+          'status': newStatus,
+          'note': note,
+        }),
+      );
+      if (res.statusCode == 200 && mounted) {
+        setState(() {
+          _status = newStatus;
+          _isUpdatingStatus = false;
+          _statusNoteController.clear();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Status updated to ${newStatus.replaceAll('_', ' ')}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _fetchStatusHistory();
+      } else {
+        if (mounted) {
+          setState(() => _isUpdatingStatus = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to update status: ${res.body}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUpdatingStatus = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Network error: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -747,6 +830,185 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
 
                 // ── Progress timeline ────────────────────────────────────
                 _DetailSection(title: 'Report Progress', icon: Icons.timeline, child: _StatusWorkflow(currentStatus: _status)),
+
+                // ── Officer Status Update Panel ──
+                if (_canShareOrViewDeptChannel) ...[
+                  const SizedBox(height: 24),
+                  _DetailSection(
+                    title: 'Update Case Status',
+                    icon: Icons.edit_note,
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue[200]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            'Select New Status:',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              'UNDER_INVESTIGATION',
+                              'IN_PROGRESS',
+                              'RESOLVED',
+                              'CLOSED',
+                              'REJECTED',
+                            ].map((st) {
+                              final isSelected = _selectedStatus == st;
+                              return ChoiceChip(
+                                label: Text(
+                                  st.replaceAll('_', ' '),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                    color: isSelected ? Colors.white : Colors.black87,
+                                  ),
+                                ),
+                                selected: isSelected,
+                                selectedColor: Colors.blue[700],
+                                onSelected: (sel) {
+                                  setState(() {
+                                    _selectedStatus = sel ? st : '';
+                                  });
+                                },
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _statusNoteController,
+                            decoration: const InputDecoration(
+                              hintText: 'Status update note / reason (optional)...',
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            ),
+                            maxLines: 2,
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            icon: _isUpdatingStatus
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Icon(Icons.check, size: 18),
+                            label: const Text('Save Status Update'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue[700],
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: _isUpdatingStatus || _selectedStatus.isEmpty
+                                ? null
+                                : () => _updateStatus(_selectedStatus, _statusNoteController.text.trim()),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+
+                // ── Status Updates & History Timeline ──
+                if (_statusHistory.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  _DetailSection(
+                    title: 'Case Update History',
+                    icon: Icons.history,
+                    child: Column(
+                      children: _statusHistory.map((item) {
+                        final newSt = item['new_status'] ?? '';
+                        final oldSt = item['old_status'] ?? '';
+                        final changedBy = item['changed_by_name'] ?? 'Officer';
+                        final note = item['note'] ?? '';
+                        final dateStr = item['changed_at'] ?? '';
+                        final dt = DateTime.tryParse(dateStr);
+                        final timeFormatted = dt != null ? '${_formatDate(dt)} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}' : '';
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: _statusColor(newSt).withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      newSt.replaceAll('_', ' '),
+                                      style: TextStyle(
+                                        color: _statusColor(newSt),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                                  if (oldSt.isNotEmpty) ...[
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'from ${oldSt.replaceAll('_', ' ')}',
+                                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                                    ),
+                                  ],
+                                  const Spacer(),
+                                  Text(
+                                    timeFormatted,
+                                    style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(Icons.person_outline, size: 13, color: Colors.grey[600]),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Updated by $changedBy',
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.grey[700]),
+                                  ),
+                                ],
+                              ),
+                              if (note.isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: Colors.grey[300]!),
+                                  ),
+                                  child: Text(
+                                    note,
+                                    style: const TextStyle(fontSize: 12, color: Colors.black87),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

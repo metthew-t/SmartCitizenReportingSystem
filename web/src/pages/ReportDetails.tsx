@@ -34,6 +34,9 @@ export default function ReportDetails() {
   const [resolutionFile, setResolutionFile] = React.useState<File | null>(null)
   const [showResolveModal, setShowResolveModal] = React.useState(false)
   const resolveFileRef = React.useRef<HTMLInputElement>(null)
+  const [statusHistory, setStatusHistory] = React.useState<any[]>([])
+  const [officerNote, setOfficerNote] = React.useState('')
+  const [officerSelectedStatus, setOfficerSelectedStatus] = React.useState('')
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -91,6 +94,11 @@ export default function ReportDetails() {
           const msgData = await msgRes.json()
           setMessages(Array.isArray(msgData) ? msgData : (msgData.results || []))
         }
+
+        const histRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/status_history/`, { headers })
+        if (histRes.ok) {
+          setStatusHistory(await histRes.json())
+        }
       } catch (err) {
         console.error("Failed to fetch report details", err)
       } finally {
@@ -145,7 +153,7 @@ export default function ReportDetails() {
     }
   }
 
-  const updateStatus = async (newStatus: string) => {
+  const updateStatus = async (newStatus: string, note?: string) => {
     if (newStatus === 'RESOLVED') {
       setShowResolveModal(true)
       return
@@ -157,11 +165,16 @@ export default function ReportDetails() {
       const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/update_status/`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ status: newStatus, note: note || '' })
       })
       if (res.ok) {
         setReport((prev: any) => ({ ...prev, status: newStatus }))
-        setStatusMsg({ type: 'success', text: `Report marked as ❌ Rejected successfully!` })
+        setStatusMsg({ type: 'success', text: `✅ Status updated to ${STATUS_LABELS[newStatus] || newStatus}` })
+        // Refresh status history
+        const histRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/status_history/`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (histRes.ok) setStatusHistory(await histRes.json())
       } else {
         const errData = await res.json().catch(() => ({}))
         setStatusMsg({ type: 'error', text: `Failed: ${errData.error || errData.detail || res.statusText}` })
@@ -209,6 +222,14 @@ export default function ReportDetails() {
       setShowResolveModal(false)
       setResolutionNotes('')
       setResolutionFile(null)
+      // Refresh status history after resolving
+      try {
+        const token2 = useAuthStore.getState().token
+        const histRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/status_history/`, {
+          headers: { 'Authorization': `Bearer ${token2}` }
+        })
+        if (histRes.ok) setStatusHistory(await histRes.json())
+      } catch (_) {}
     } catch (err) {
       setStatusMsg({ type: 'error', text: 'Network error — could not update status.' })
     } finally {
@@ -642,6 +663,117 @@ export default function ReportDetails() {
           fontWeight: 600, fontSize: 14,
         }}>
           {statusMsg.text}
+        </div>
+      )}
+
+      {/* Officer Update Status Panel — shown to assigned officer, managers, admins */}
+      {(useAuthStore.getState().role === 'officer' || useAuthStore.getState().role === 'department_manager' || useAuthStore.getState().role === 'city_admin') && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(30,41,59,0.8), rgba(59,130,246,0.06))',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(59,130,246,0.2)', borderRadius: 16,
+          padding: 24, marginBottom: 20,
+        }}>
+          <h3 style={{ color: '#e2e8f0', fontSize: 15, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            🔄 Update Case Status
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {(['RECEIVED', 'UNDER_INVESTIGATION', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REJECTED'] as string[]).map(s => (
+                <button
+                  key={s}
+                  disabled={statusUpdating || report.status === s}
+                  onClick={() => {
+                    if (s === 'RESOLVED') { setShowResolveModal(true); return; }
+                    updateStatus(s, officerNote);
+                  }}
+                  style={{
+                    padding: '8px 16px', borderRadius: 8, cursor: report.status === s ? 'default' : 'pointer',
+                    background: report.status === s
+                      ? `${STATUS_COLORS[s]}40`
+                      : `${STATUS_COLORS[s]}20`,
+                    color: STATUS_COLORS[s],
+                    fontWeight: 700, fontSize: 12,
+                    border: `1px solid ${STATUS_COLORS[s]}${report.status === s ? '80' : '40'}`,
+                    opacity: statusUpdating ? 0.5 : 1,
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {report.status === s ? '● ' : ''}{STATUS_LABELS[s]}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={officerNote}
+              onChange={e => setOfficerNote(e.target.value)}
+              placeholder="Add a note about this status update (optional)..."
+              rows={2}
+              style={{
+                width: '100%', padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
+                background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)',
+                color: '#e2e8f0', fontSize: 13, outline: 'none', resize: 'vertical',
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Status History Timeline */}
+      {statusHistory.length > 0 && (
+        <div style={{
+          background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16,
+          padding: 24, marginBottom: 20,
+        }}>
+          <h3 style={{ color: '#e2e8f0', fontSize: 15, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            📋 Case Update History
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {statusHistory.map((h, idx) => (
+              <div key={h.id} style={{ display: 'flex', gap: 14, alignItems: 'flex-start', paddingBottom: idx < statusHistory.length - 1 ? 16 : 0 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                    background: `${STATUS_COLORS[h.new_status] || '#6366f1'}20`,
+                    border: `2px solid ${STATUS_COLORS[h.new_status] || '#6366f1'}60`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 14,
+                  }}>
+                    {h.new_status === 'RESOLVED' ? '✅' : h.new_status === 'CLOSED' ? '🔒' : h.new_status === 'REJECTED' ? '❌' : h.new_status === 'IN_PROGRESS' ? '⚙️' : h.new_status === 'UNDER_INVESTIGATION' ? '🔍' : h.new_status === 'ASSIGNED' ? '👤' : '📬'}
+                  </div>
+                  {idx < statusHistory.length - 1 && (
+                    <div style={{ width: 2, flex: 1, minHeight: 16, background: 'rgba(148,163,184,0.15)', margin: '4px 0' }} />
+                  )}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ color: STATUS_COLORS[h.new_status] || '#e2e8f0', fontWeight: 700, fontSize: 13 }}>
+                      {STATUS_LABELS[h.new_status] || h.new_status}
+                    </span>
+                    {h.old_status && (
+                      <span style={{ color: '#64748b', fontSize: 11 }}>
+                        (from {STATUS_LABELS[h.old_status] || h.old_status})
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: 11, marginTop: 2 }}>
+                    by <span style={{ color: '#cbd5e1', fontWeight: 600 }}>{h.changed_by_name}</span>
+                    {' · '}
+                    {new Date(h.changed_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                  {h.note && (
+                    <div style={{
+                      marginTop: 6, padding: '8px 12px', borderRadius: 8,
+                      background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.15)',
+                      color: '#cbd5e1', fontSize: 13, lineHeight: 1.5,
+                    }}>
+                      {h.note}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

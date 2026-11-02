@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from core.models import Report, ReportCategory, Department, ReportMedia, Message, DepartmentMessage
+from core.models import Report, ReportCategory, Department, ReportMedia, Message, DepartmentMessage, ReportStatusHistory
 
 def _safe_hasattr(obj, attr):
     try:
@@ -22,6 +22,11 @@ class ReportMediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReportMedia
         fields = '__all__'
+
+class ReportStatusHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReportStatusHistory
+        fields = ['id', 'old_status', 'new_status', 'changed_by', 'changed_by_name', 'note', 'changed_at']
 
 class MessageSerializer(serializers.ModelSerializer):
     sender_name = serializers.SerializerMethodField()
@@ -65,6 +70,7 @@ class DepartmentMessageSerializer(serializers.ModelSerializer):
 
 class ReportSerializer(serializers.ModelSerializer):
     media = ReportMediaSerializer(many=True, read_only=True)
+    status_history = ReportStatusHistorySerializer(many=True, read_only=True)
     department_name = serializers.SerializerMethodField()
     category_name = serializers.SerializerMethodField()
     latitude = serializers.SerializerMethodField()
@@ -81,7 +87,7 @@ class ReportSerializer(serializers.ModelSerializer):
             'is_anonymous', 'category', 'category_name', 
             'description', 'latitude', 'longitude', 'status', 'priority', 
             'primary_department', 'department_name', 'shared_with', 'assigned_officer', 'assigned_officer_name',
-            'created_at', 'updated_at', 'resolved_at', 'closed_at', 'media',
+            'created_at', 'updated_at', 'resolved_at', 'closed_at', 'media', 'status_history',
             'aanaa', 'kuta_magaalaa', 'kebele', 'iddoo_addaa', 'resolution_notes',
             'ai_confidence_score', 'ai_suggested_department', 'ai_suggested_department_name', 'ai_summary', 'is_public'
         ]

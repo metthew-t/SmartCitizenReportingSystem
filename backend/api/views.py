@@ -50,7 +50,7 @@ class ReportViewSet(viewsets.ModelViewSet):
             'primary_department', 'category', 'citizen',
             'assigned_officer', 'assigned_officer__user',
             'ai_suggested_department',
-        ).prefetch_related('media', 'shared_with')
+        ).prefetch_related('media', 'shared_with', 'status_history')
 
         if user.is_city_admin or user.is_superuser:
             return base_qs.order_by('-created_at')
@@ -85,8 +85,28 @@ class ReportViewSet(viewsets.ModelViewSet):
                     cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS resolution_notes TEXT NULL;')
                     cursor.execute('ALTER TABLE core_citizenprofile ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0;')
                     cursor.execute("ALTER TABLE core_citizenprofile ADD COLUMN IF NOT EXISTS civic_level VARCHAR(50) DEFAULT 'Beginner';")
+                    cursor.execute("""CREATE TABLE IF NOT EXISTS core_reportstatushistory (
+                        id SERIAL PRIMARY KEY,
+                        old_status VARCHAR(30) NULL,
+                        new_status VARCHAR(30) NOT NULL,
+                        changed_by_name VARCHAR(255) NULL,
+                        note TEXT NULL,
+                        changed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                        report_id INTEGER NOT NULL,
+                        changed_by_id INTEGER NULL
+                    );""")
                     cursor.execute('ALTER TABLE accounts_user ADD COLUMN IF NOT EXISTS profile_photo VARCHAR(100) NULL;')
                     cursor.execute('ALTER TABLE accounts_user ADD COLUMN IF NOT EXISTS email VARCHAR(254) UNIQUE NULL;')
+                    cursor.execute("""CREATE TABLE IF NOT EXISTS core_reportstatushistory (
+                        id SERIAL PRIMARY KEY,
+                        old_status VARCHAR(30) NULL,
+                        new_status VARCHAR(30) NOT NULL,
+                        changed_by_name VARCHAR(255) NULL,
+                        note TEXT NULL,
+                        changed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                        report_id INTEGER NOT NULL,
+                        changed_by_id INTEGER NULL
+                    );""")
                 return super().list(request, *args, **kwargs)
             except Exception as e2:
                 import traceback
@@ -105,6 +125,16 @@ class ReportViewSet(viewsets.ModelViewSet):
                     cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT TRUE;')
                     cursor.execute('ALTER TABLE core_citizenprofile ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0;')
                     cursor.execute("ALTER TABLE core_citizenprofile ADD COLUMN IF NOT EXISTS civic_level VARCHAR(50) DEFAULT 'Beginner';")
+                    cursor.execute("""CREATE TABLE IF NOT EXISTS core_reportstatushistory (
+                        id SERIAL PRIMARY KEY,
+                        old_status VARCHAR(30) NULL,
+                        new_status VARCHAR(30) NOT NULL,
+                        changed_by_name VARCHAR(255) NULL,
+                        note TEXT NULL,
+                        changed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                        report_id INTEGER NOT NULL,
+                        changed_by_id INTEGER NULL
+                    );""")
                 return super().retrieve(request, *args, **kwargs)
             except Exception as e2:
                 import traceback
@@ -341,6 +371,16 @@ class ReportViewSet(viewsets.ModelViewSet):
                 department_id INTEGER NOT NULL,
                 sender_id INTEGER NOT NULL
             )""",
+            """CREATE TABLE IF NOT EXISTS core_reportstatushistory (
+                id SERIAL PRIMARY KEY,
+                old_status VARCHAR(30) NULL,
+                new_status VARCHAR(30) NOT NULL,
+                changed_by_name VARCHAR(255) NULL,
+                note TEXT NULL,
+                changed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                report_id INTEGER NOT NULL,
+                changed_by_id INTEGER NULL
+            )""",
         ]
         for sql in tables_to_create:
             table_name = sql.split('IF NOT EXISTS ')[1].split(' ')[0] if 'IF NOT EXISTS' in sql else 'unknown'
@@ -416,16 +456,39 @@ class ReportViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='update_status')
     def update_status(self, request, pk=None):
         report = self.get_object()
+        user = request.user
         new_status = request.data.get('status')
-        resolution_notes = request.data.get('resolution_notes')
-        
+        note = request.data.get('note', '') or request.data.get('resolution_notes', '')
+
         if new_status not in dict(Report.STATUS_CHOICES):
             return Response({'error': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
+        # ── Permission check ──────────────────────────────────────────────────
+        # City admins and superusers: full access
+        # Department managers: can update reports in their department
+        # Officers: can only update reports assigned to them
+        is_admin = user.is_city_admin or user.is_superuser
+        is_manager = user.is_department_manager and _safe_hasattr(user, 'officer_profile')
+        is_assigned_officer = (
+            user.is_officer
+            and _safe_hasattr(user, 'officer_profile')
+            and report.assigned_officer is not None
+            and report.assigned_officer == user.officer_profile
+        )
+
+        if not (is_admin or is_manager or is_assigned_officer):
+            return Response(
+                {'error': 'Only the assigned officer, department manager, or city admin can update this report status.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        old_status = report.status
+        resolution_notes = note if note else request.data.get('resolution_notes')
+
         report.status = new_status
-        if resolution_notes is not None:
+        if resolution_notes:
             report.resolution_notes = resolution_notes
-            
+
         resolution_doc = request.FILES.get('resolution_document')
         if resolution_doc:
             from core.models import ReportMedia
@@ -445,15 +508,68 @@ class ReportViewSet(viewsets.ModelViewSet):
             )
 
         report.save()
-        
-        # Fire notification
-        from core.push_service import notify_status_changed
+
+        # ── Record status history ─────────────────────────────────────────────
+        from core.models import ReportStatusHistory, OfficerProfile
+        changed_by_name = None
+        if _safe_hasattr(user, 'officer_profile'):
+            changed_by_name = user.officer_profile.full_name
+        elif _safe_hasattr(user, 'citizen_profile'):
+            changed_by_name = user.citizen_profile.full_name
+        else:
+            changed_by_name = user.full_name or user.phone_number
+
+        ReportStatusHistory.objects.create(
+            report=report,
+            old_status=old_status,
+            new_status=new_status,
+            changed_by=user,
+            changed_by_name=changed_by_name,
+            note=resolution_notes or '',
+        )
+
+        # ── Notify citizen + all admins & managers ────────────────────────────
+        from core.push_service import notify_status_changed, send_push_notification
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
         try:
             notify_status_changed(report)
         except Exception as ne:
-            print(f"[Notification] Warning: {ne}")
-        
-        return Response({'status': 'status updated'})
+            print(f"[Notification] citizen notify warning: {ne}")
+
+        # Notify all city admins
+        try:
+            admins = User.objects.filter(is_city_admin=True)
+            for admin in admins:
+                if admin != user and admin != report.citizen:
+                    send_push_notification(
+                        admin,
+                        title=f'Status Updated: {report.case_number}',
+                        body=f'{changed_by_name} changed status to "{new_status}".',
+                        data={'type': 'STATUS_CHANGED', 'report_id': report.id},
+                    )
+        except Exception as ne:
+            print(f"[Notification] admin notify warning: {ne}")
+
+        # Notify department managers of the primary department
+        try:
+            if report.primary_department:
+                managers = OfficerProfile.objects.filter(
+                    department=report.primary_department, is_manager=True
+                ).select_related('user')
+                for mgr in managers:
+                    if mgr.user and mgr.user != user:
+                        send_push_notification(
+                            mgr.user,
+                            title=f'Status Updated: {report.case_number}',
+                            body=f'{changed_by_name} changed status to "{new_status}".',
+                            data={'type': 'STATUS_CHANGED', 'report_id': report.id},
+                        )
+        except Exception as ne:
+            print(f"[Notification] manager notify warning: {ne}")
+
+        return Response({'status': 'status updated', 'new_status': new_status})
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny], url_path='public_reports')
     def public_reports(self, request):
@@ -514,6 +630,25 @@ class ReportViewSet(viewsets.ModelViewSet):
         report.status = 'ASSIGNED'
         report.save()
         return Response({'status': 'assigned', 'officer_name': officer.full_name})
+
+    @action(detail=True, methods=['get'], url_path='status_history')
+    def status_history(self, request, pk=None):
+        """Returns the full status-change history for a report."""
+        report = self.get_object()
+        from core.models import ReportStatusHistory
+        history = ReportStatusHistory.objects.filter(report=report).order_by('changed_at')
+        data = [
+            {
+                'id': h.id,
+                'old_status': h.old_status,
+                'new_status': h.new_status,
+                'changed_by_name': h.changed_by_name or 'System',
+                'note': h.note or '',
+                'changed_at': h.changed_at.isoformat(),
+            }
+            for h in history
+        ]
+        return Response(data)
 
     @action(detail=True, methods=['post'], url_path='share_report')
     def share_report(self, request, pk=None):
