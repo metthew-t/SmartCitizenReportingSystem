@@ -25,4 +25,4 @@ COPY . .
 CMD python manage.py makemigrations accounts core api && \
     python manage.py migrate && \
     python manage.py collectstatic --no-input && \
-    gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000}
+    gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --threads 2 --timeout 120 --keep-alive 5

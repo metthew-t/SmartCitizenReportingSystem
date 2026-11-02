@@ -123,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen>
           'phone_number': _phoneController.text.trim(),
           'password': _passwordController.text,
         }),
-      );
+      ).timeout(const Duration(seconds: 30));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         await _saveTokens(data['access'], data['refresh']);
@@ -270,7 +270,7 @@ class _LoginScreenState extends State<LoginScreen>
         Uri.parse('$_base/auth/send-otp/'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'phone_number': phone, 'is_forgot_password': true}),
-      );
+      ).timeout(const Duration(seconds: 30));
       if (res.statusCode == 200) {
         setState(() {
           _otpPhone = phone;
@@ -315,7 +315,7 @@ class _LoginScreenState extends State<LoginScreen>
           'phone_number': _otpPhone,
           'new_password': newPass,
         }),
-      );
+      ).timeout(const Duration(seconds: 30));
       if (res.statusCode == 200) {
         _showSuccess('Password reset successfully! Please login.');
         setState(() {

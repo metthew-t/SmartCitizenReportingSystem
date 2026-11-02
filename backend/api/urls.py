@@ -11,7 +11,7 @@ from api.analytics_views import (
     SLAOverviewView, DepartmentPerformanceView, AuditLogView
 )
 from rest_framework.routers import DefaultRouter
-from api.views import ReportViewSet, DepartmentViewSet, ReportCategoryViewSet, MessageViewSet, DepartmentMessageViewSet
+from api.views import ReportViewSet, DepartmentViewSet, ReportCategoryViewSet, MessageViewSet, DepartmentMessageViewSet, PingView
 from api.notification_views import NotificationViewSet, DeviceTokenViewSet
 
 router = DefaultRouter()
@@ -49,4 +49,5 @@ urlpatterns = [
     path('analytics/sla-overview/', SLAOverviewView.as_view(), name='analytics_sla'),
     path('analytics/performance/', DepartmentPerformanceView.as_view(), name='analytics_performance'),
     path('analytics/audit-logs/', AuditLogView.as_view(), name='analytics_audit_logs'),
+    path('ping/', PingView.as_view(), name='ping'),
 ] + router.urls

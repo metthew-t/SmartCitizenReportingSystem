@@ -12,9 +12,19 @@ def _safe_hasattr(obj, attr):
     except Exception:
         return False
 
+from rest_framework.views import APIView
+
+
+class PingView(APIView):
+    """Lightweight health-check / keep-alive endpoint — zero database overhead."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        return Response({'status': 'ok'})
+
 
 class DepartmentViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Department.objects.all()
+    queryset = Department.objects.prefetch_related('officers').all()
     serializer_class = DepartmentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -36,18 +46,24 @@ class ReportViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        base_qs = Report.objects.select_related(
+            'primary_department', 'category', 'citizen',
+            'assigned_officer', 'assigned_officer__user',
+            'ai_suggested_department',
+        ).prefetch_related('media', 'shared_with')
+
         if user.is_city_admin or user.is_superuser:
-            return Report.objects.all().order_by('-created_at')
+            return base_qs.order_by('-created_at')
         elif (user.is_department_manager or user.is_officer) and _safe_hasattr(user, 'officer_profile'):
             if user.officer_profile.department:
-                return Report.objects.filter(
+                return base_qs.filter(
                     Q(primary_department=user.officer_profile.department) |
                     Q(shared_with=user.officer_profile.department) |
                     Q(assigned_officer=user.officer_profile)
                 ).distinct().order_by('-created_at')
-            return Report.objects.all().order_by('-created_at')
+            return base_qs.order_by('-created_at')
         else:
-            return Report.objects.filter(citizen=user).order_by('-created_at')
+            return base_qs.filter(citizen=user).order_by('-created_at')
 
     def list(self, request, *args, **kwargs):
         try:

@@ -81,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final response = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/reports/'),
         headers: {'Authorization': 'Bearer $token'},
-      );
+      ).timeout(const Duration(seconds: 30));
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         final List data = decoded is List ? decoded : (decoded['results'] as List? ?? []);

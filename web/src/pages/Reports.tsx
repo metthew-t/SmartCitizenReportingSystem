@@ -107,10 +107,10 @@ export default function Reports() {
 
   useEffect(() => {
     fetchReports(true)
-    // Auto-poll every 10 seconds for new incoming mobile reports
+    // Auto-poll every 30 seconds for new incoming mobile reports
     const interval = setInterval(() => {
       fetchReports(false)
-    }, 10000)
+    }, 30000)
     return () => clearInterval(interval)
   }, [token])
 

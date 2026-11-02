@@ -16,18 +16,19 @@ def _safe_hasattr(obj, attr):
 
 def _scoped_reports(user):
     """Return a Report queryset scoped to what the requesting user is allowed to see."""
+    base_qs = Report.objects.select_related('primary_department', 'category')
     if user.is_city_admin or user.is_superuser:
-        return Report.objects.all()
+        return base_qs.all()
     elif (user.is_department_manager or user.is_officer) and _safe_hasattr(user, 'officer_profile'):
         if user.officer_profile.department:
-            return Report.objects.filter(
+            return base_qs.filter(
                 Q(primary_department=user.officer_profile.department) |
                 Q(shared_with=user.officer_profile.department) |
                 Q(assigned_officer=user.officer_profile)
             ).distinct()
-        return Report.objects.all()
+        return base_qs.all()
     else:
-        return Report.objects.filter(citizen=user)
+        return base_qs.filter(citizen=user)
 
 
 class AnalyticsSummaryView(APIView):

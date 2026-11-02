@@ -12,6 +12,7 @@ import DeptChat from './pages/DeptChat'
 import { useAuthStore } from './store/authStore'
 import { Building2, LogIn } from 'lucide-react'
 import PublicDashboard from './pages/PublicDashboard'
+import { startKeepAlive } from './keepAlive'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
@@ -32,6 +33,9 @@ const DEPT_NAMES = [
   'Waajjira Qonnaa', 'Waajjira Maallaqaa', 'Waajjira Carraa Hojii Uumuu fi Ogummaa',
   'Waajjira Barnoota'
 ]
+
+// Start background keep-alive pings to prevent Render cold starts
+startKeepAlive()
 
 function Login() {
   const [phone, setPhone] = useState('')

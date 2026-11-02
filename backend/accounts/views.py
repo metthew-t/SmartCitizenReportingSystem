@@ -464,7 +464,7 @@ class StatsView(APIView):
         all_priorities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
         priority_distribution = {p: priority_counts.get(p, 0) for p in all_priorities}
 
-        recent = reports.order_by('-created_at')[:5]
+        recent = reports.select_related('primary_department').order_by('-created_at')[:5]
         recent_list = [{
             'id': r.id,
             'case_number': r.case_number,
