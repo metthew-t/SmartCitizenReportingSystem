@@ -6,9 +6,10 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/api_config.dart';
 import 'home_screen.dart';
 
-const String _base = 'https://smartcitizenreportingsystem.onrender.com/api/v1';
+String get _base => ApiConfig.baseUrl;
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -127,6 +128,8 @@ class _LoginScreenState extends State<LoginScreen>
         final data = jsonDecode(res.body);
         await _saveTokens(data['access'], data['refresh']);
         if (mounted) _goHome();
+      } else if (res.statusCode >= 500) {
+        _showError(_safeDecodeError(res));
       } else {
         _showError('Invalid phone number or password');
       }
@@ -160,7 +163,7 @@ class _LoginScreenState extends State<LoginScreen>
         _startResendTimer();
         _showSuccess('OTP sent to $phone');
       } else {
-        final body = _safeDecodeError(res.body);
+        final body = _safeDecodeError(res);
         _showError(body);
       }
     } catch (_) {
@@ -243,7 +246,7 @@ class _LoginScreenState extends State<LoginScreen>
           _goHome();
         }
       } else {
-        final body = _safeDecodeError(res.body);
+        final body = _safeDecodeError(res);
         _showError(body);
       }
     } catch (_) {
@@ -276,7 +279,7 @@ class _LoginScreenState extends State<LoginScreen>
         _startResendTimer();
         _showSuccess('Reset code sent to $phone');
       } else {
-        final body = _safeDecodeError(res.body);
+        final body = _safeDecodeError(res);
         _showError(body);
       }
     } catch (_) {
@@ -323,7 +326,7 @@ class _LoginScreenState extends State<LoginScreen>
           _confirmPasswordController.clear();
         });
       } else {
-        final body = _safeDecodeError(res.body);
+        final body = _safeDecodeError(res);
         _showError(body);
       }
     } catch (_) {
@@ -402,15 +405,42 @@ class _LoginScreenState extends State<LoginScreen>
     } catch (_) {}
   }
 
-  String _safeDecodeError(String body) {
+  String _safeDecodeError(dynamic resOrBody, [int? statusCode]) {
+    String body = '';
+    int code = statusCode ?? 0;
+    if (resOrBody is http.Response) {
+      body = resOrBody.body;
+      code = resOrBody.statusCode;
+    } else if (resOrBody is String) {
+      body = resOrBody;
+    }
+
+    // 1. Detect server suspension / availability issues
+    if (code == 503 || body.toLowerCase().contains('suspended')) {
+      if (body.toLowerCase().contains('suspended')) {
+        return 'Backend service is suspended on Render. Please resume it in the Render dashboard.';
+      }
+      return 'Service temporarily unavailable (503). Server may be offline or suspended.';
+    }
+    if (code == 502 || code == 504) {
+      return 'Server is waking up or temporarily unreachable. Please retry in 30 seconds.';
+    }
+
+    // 2. Try parsing JSON error structure
     try {
       final decoded = jsonDecode(body);
-      if (decoded is Map) {
+      if (decoded is Map && decoded.isNotEmpty) {
         final val = decoded['error'] ?? decoded['detail'] ?? decoded.values.first;
-        return val is List ? val.first.toString() : val.toString();
+        if (val is List && val.isNotEmpty) return val.first.toString();
+        if (val != null) return val.toString();
       }
     } catch (_) {}
-    return 'Something went wrong. Please try again.';
+
+    // 3. Fallback message with status code
+    if (code >= 500) {
+      return 'Server error ($code). Please try again later.';
+    }
+    return 'Something went wrong${code > 0 ? ' ($code)' : ''}. Please try again.';
   }
 
   void _showError(String msg) {

@@ -5,8 +5,9 @@ import 'package:printing/printing.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_config.dart';
 
-const String _baseUrl = 'https://smartcitizenreportingsystem.onrender.com/api/v1';
+String get _baseUrl => ApiConfig.baseUrl;
 
 class ReportDetailsScreen extends StatefulWidget {
   final String reportId;

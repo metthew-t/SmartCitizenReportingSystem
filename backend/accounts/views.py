@@ -44,13 +44,13 @@ class SendOTPView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        from core.sms_service import send_otp_sms, _normalise_e164
-        normalised = _normalise_e164(phone_number)
+        from core.sms_service import send_otp_sms, get_phone_variants
+        variants = get_phone_variants(phone_number)
         
         # Check if user already exists for registration
         is_forgot_password = request.data.get('is_forgot_password', False)
         
-        user_exists = User.objects.filter(phone_number__in=[phone_number, normalised]).exists()
+        user_exists = User.objects.filter(phone_number__in=variants).exists()
         
         if not is_forgot_password and user_exists:
             return Response(
@@ -60,7 +60,7 @@ class SendOTPView(APIView):
         
         if is_forgot_password and not user_exists:
             return Response(
-                {'error': 'Phone number not found.'},
+                {'error': 'Phone number not found in our records.'},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -171,27 +171,26 @@ class ResetPasswordView(APIView):
         if len(new_password) < 6:
             return Response({'error': 'New password must be at least 6 characters.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        from core.sms_service import is_phone_verified, consume_phone_verified, _normalise_e164
-        normalised = _normalise_e164(phone_number)
+        from core.sms_service import is_phone_verified, consume_phone_verified, get_phone_variants
+        variants = get_phone_variants(phone_number)
         
-        if not is_phone_verified(phone_number) and not is_phone_verified(normalised):
+        if not is_phone_verified(phone_number):
             return Response(
                 {'error': 'Phone number not verified. Please verify your phone with OTP first.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
         try:
-            # Get the user by phone number or normalised phone number
-            user = User.objects.filter(phone_number__in=[phone_number, normalised]).first()
+            # Get the user by phone number or any of its standard variants
+            user = User.objects.filter(phone_number__in=variants).first()
             if not user:
-                return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'error': 'User not found in our records.'}, status=status.HTTP_404_NOT_FOUND)
                 
             user.set_password(new_password)
             user.save()
             
             # Consume the verified flag so it can't be reused
             consume_phone_verified(phone_number)
-            consume_phone_verified(normalised)
             
             return Response({'message': 'Password reset successfully.'}, status=status.HTTP_200_OK)
         except Exception as e:
@@ -218,10 +217,8 @@ class RegisterView(APIView):
         phone_number = request.data.get('phone_number', '').strip()
 
         # Enforce OTP verification before account creation
-        from core.sms_service import is_phone_verified, consume_phone_verified, _normalise_e164
-        normalised = _normalise_e164(phone_number)
-        # Check both the raw input and the normalised form
-        if not is_phone_verified(phone_number) and not is_phone_verified(normalised):
+        from core.sms_service import is_phone_verified, consume_phone_verified
+        if not is_phone_verified(phone_number):
             return Response(
                 {'error': 'Phone number not verified. Please verify your phone with OTP first.'},
                 status=status.HTTP_403_FORBIDDEN,
@@ -232,7 +229,6 @@ class RegisterView(APIView):
             user = serializer.save()
             # Consume the verified flag so it can't be reused
             consume_phone_verified(phone_number)
-            consume_phone_verified(normalised)
 
             refresh = RefreshToken.for_user(user)
 

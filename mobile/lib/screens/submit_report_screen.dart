@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'home_screen.dart';
+import '../services/api_config.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -356,7 +357,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
           : _descriptionController.text.trim();
 
       final response = await http.post(
-        Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/reports/'),
+        Uri.parse('${ApiConfig.baseUrl}/reports/'),
         headers: headers,
         body: jsonEncode({
           'description': fullDescription,
@@ -392,7 +393,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
       // Upload image if selected
       if (_selectedImage != null) {
         try {
-          final uri = Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/reports/$realId/upload_media/');
+          final uri = Uri.parse('${ApiConfig.baseUrl}/reports/$realId/upload_media/');
           final req = http.MultipartRequest('POST', uri);
           req.headers['Authorization'] = 'Bearer $token';
           req.files.add(await http.MultipartFile.fromPath('file', _selectedImage!.path));

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:easy_localization/easy_localization.dart';
+import '../services/api_config.dart';
 import 'submit_report_screen.dart';
 import 'report_details_screen.dart';
 import 'profile_screen.dart';
@@ -78,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/reports/'),
+        Uri.parse('${ApiConfig.baseUrl}/reports/'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {

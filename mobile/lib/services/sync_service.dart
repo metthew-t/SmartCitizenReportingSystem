@@ -1,10 +1,10 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'api_config.dart';
 import 'database_helper.dart';
 
 class SyncService {
-  // TODO: Replace with your actual Render backend URL once deployed (e.g., https://adama-backend.onrender.com)
-  final String apiUrl = 'https://smartcitizenreportingsystem.onrender.com/api/v1/reports/'; // Production API
+  String get apiUrl => '${ApiConfig.baseUrl}/reports/';
 
   Future<void> syncPendingReports() async {
     final dbHelper = DatabaseHelper();

@@ -82,6 +82,36 @@ def send_sms(phone_number: str, message: str) -> dict:
         return {'success': False, 'error': str(e), 'message': ''}
 
 
+def get_phone_variants(phone: str) -> list:
+    """
+    Return all standard representations of an Ethiopian phone number.
+    e.g., input "0911223344" -> ["0911223344", "+251911223344", "251911223344", "911223344"]
+    """
+    clean = str(phone).strip().replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+    variants = set()
+    if clean:
+        variants.add(clean)
+        suffix = None
+        if clean.startswith('+251'):
+            suffix = clean[4:]
+        elif clean.startswith('00251'):
+            suffix = clean[5:]
+        elif clean.startswith('251') and len(clean) >= 12:
+            suffix = clean[3:]
+        elif clean.startswith('0') and len(clean) >= 10:
+            suffix = clean[1:]
+        elif (clean.startswith('9') or clean.startswith('7')) and len(clean) == 9:
+            suffix = clean
+
+        if suffix:
+            variants.add(f'+251{suffix}')
+            variants.add(f'251{suffix}')
+            variants.add(f'0{suffix}')
+            variants.add(suffix)
+
+    return list(variants)
+
+
 def _normalise_e164(phone: str) -> str:
     """
     Convert common Ethiopian formats to E.164.
@@ -89,7 +119,7 @@ def _normalise_e164(phone: str) -> str:
       2519xxxxxxx → +2519xxxxxxx
       +251...     → unchanged
     """
-    phone = phone.strip().replace(' ', '').replace('-', '')
+    phone = phone.strip().replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
     if phone.startswith('+'):
         return phone
     if phone.startswith('00'):
@@ -98,6 +128,8 @@ def _normalise_e164(phone: str) -> str:
         return '+251' + phone[1:]
     if phone.startswith('251'):
         return '+' + phone
+    if (phone.startswith('9') or phone.startswith('7')) and len(phone) == 9:
+        return '+251' + phone
     return phone
 
 
@@ -110,42 +142,55 @@ def generate_otp(length: int = 6) -> str:
 
 def store_otp(phone_number: str, otp: str) -> None:
     """
-    Store the OTP in Django's cache.
+    Store the OTP in Django's cache for all variants of this phone number.
     TTL = OTP_EXPIRY_MINUTES * 60 (default 10 minutes).
     Key is prefixed so it never clashes with other cache entries.
     """
     expiry_seconds = getattr(settings, 'OTP_EXPIRY_MINUTES', 10) * 60
-    cache.set(f'{OTP_CACHE_PREFIX}{phone_number}', otp, timeout=expiry_seconds)
-    # Clear any previous verified flag for this number
-    cache.delete(f'{OTP_VERIFIED_PREFIX}{phone_number}')
+    for variant in get_phone_variants(phone_number):
+        cache.set(f'{OTP_CACHE_PREFIX}{variant}', otp, timeout=expiry_seconds)
+        cache.delete(f'{OTP_VERIFIED_PREFIX}{variant}')
 
 
 def verify_otp(phone_number: str, otp: str) -> bool:
     """
-    Check the supplied OTP against the stored one.
+    Check the supplied OTP against the stored one across all phone variants.
     On success, deletes the OTP and writes a short-lived verified flag
     so the registration endpoint can confirm verification happened.
     Returns True if correct, False otherwise.
     """
-    stored = cache.get(f'{OTP_CACHE_PREFIX}{phone_number}')
+    variants = get_phone_variants(phone_number)
+    stored = None
+    for variant in variants:
+        val = cache.get(f'{OTP_CACHE_PREFIX}{variant}')
+        if val is not None:
+            stored = val
+            break
+
     if stored is None:
         return False  # Expired or never sent
     if stored != otp.strip():
         return False
-    # Correct — consume the OTP and mark phone as verified for 15 minutes
-    cache.delete(f'{OTP_CACHE_PREFIX}{phone_number}')
-    cache.set(f'{OTP_VERIFIED_PREFIX}{phone_number}', True, timeout=15 * 60)
+
+    # Correct — consume the OTP and mark phone as verified for 15 minutes across all variants
+    for variant in variants:
+        cache.delete(f'{OTP_CACHE_PREFIX}{variant}')
+        cache.set(f'{OTP_VERIFIED_PREFIX}{variant}', True, timeout=15 * 60)
     return True
 
 
 def is_phone_verified(phone_number: str) -> bool:
-    """Return True if this phone passed OTP verification recently."""
-    return bool(cache.get(f'{OTP_VERIFIED_PREFIX}{phone_number}'))
+    """Return True if any variant of this phone passed OTP verification recently."""
+    for variant in get_phone_variants(phone_number):
+        if bool(cache.get(f'{OTP_VERIFIED_PREFIX}{variant}')):
+            return True
+    return False
 
 
 def consume_phone_verified(phone_number: str) -> None:
-    """Remove the verified flag after successful registration."""
-    cache.delete(f'{OTP_VERIFIED_PREFIX}{phone_number}')
+    """Remove the verified flag after successful registration or password reset."""
+    for variant in get_phone_variants(phone_number):
+        cache.delete(f'{OTP_VERIFIED_PREFIX}{variant}')
 
 
 # ── OTP send helper ───────────────────────────────────────────────────────────
@@ -165,8 +210,17 @@ def send_otp_sms(phone_number: str) -> dict:
     )
     result = send_sms(phone_number, message)
     if not result['success']:
+        # If in DEBUG mode, allow developer to proceed by printing the OTP to console
+        if getattr(settings, 'DEBUG', False):
+            print(f'\n========================================')
+            print(f'[DEV MODE] SMS send failed or skipped: {result.get("error")}')
+            print(f'[DEV MODE] OTP for {phone_number} is: {otp}')
+            print(f'========================================\n')
+            return {'success': True, 'message': f'Dev mode OTP generated: {otp}', 'error': None}
+
         # Remove stored OTP so the user can retry
-        cache.delete(f'{OTP_CACHE_PREFIX}{phone_number}')
+        for variant in get_phone_variants(phone_number):
+            cache.delete(f'{OTP_CACHE_PREFIX}{variant}')
     return result
 
 

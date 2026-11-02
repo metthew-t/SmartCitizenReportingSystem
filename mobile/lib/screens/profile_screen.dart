@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../services/api_config.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -38,7 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/auth/me/'),
+        Uri.parse('${ApiConfig.baseUrl}/auth/me/'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
@@ -156,7 +157,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 final token = prefs.getString('auth_token');
                 try {
                   final response = await http.post(
-                    Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/auth/change-password/'),
+                    Uri.parse('${ApiConfig.baseUrl}/auth/change-password/'),
                     headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
                     body: jsonEncode({'old_password': oldPwController.text, 'new_password': newPwController.text}),
                   );
@@ -215,7 +216,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 final token = prefs.getString('auth_token');
                 try {
                   final response = await http.delete(
-                    Uri.parse('https://smartcitizenreportingsystem.onrender.com/api/v1/auth/delete-account/'),
+                    Uri.parse('${ApiConfig.baseUrl}/auth/delete-account/'),
                     headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
                     body: jsonEncode({'password': pwController.text}),
                   );
