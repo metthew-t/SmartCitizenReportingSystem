@@ -31,9 +31,11 @@ export default function Settings() {
         })
         if (res.ok) {
           const data = await res.json()
-          const freshName = data.full_name || data.email || data.phone_number || 'User'
-          const freshPhone = data.phone_number || ''
-          const freshEmail = data.email || ''
+          const rawPhone = data.phone_number || ''
+          const rawEmail = data.email || ''
+          const freshPhone = rawPhone.includes('@') ? '' : rawPhone
+          const freshEmail = rawEmail || (rawPhone.includes('@') ? rawPhone : '')
+          const freshName = data.full_name || freshEmail || freshPhone || 'User'
           setProfileForm({
             fullName: freshName,
             phone: freshPhone,
@@ -143,10 +145,12 @@ export default function Settings() {
           !isEditingProfile ? (
             <button
               onClick={() => {
+                const cleanPhone = user?.phone && !user.phone.includes('@') ? user.phone : ''
+                const cleanEmail = user?.email || (user?.phone?.includes('@') ? user.phone : '')
                 setProfileForm({
                   fullName: user?.name || '',
-                  phone: user?.phone || '',
-                  email: user?.email || '',
+                  phone: cleanPhone,
+                  email: cleanEmail,
                 })
                 setIsEditingProfile(true)
               }}
@@ -216,8 +220,8 @@ export default function Settings() {
         {!isEditingProfile ? (
           <div>
             <SettingsRow label="Full Name" value={user?.name || 'N/A'} />
-            <SettingsRow label="Phone Number" value={user?.phone || 'Not provided'} />
-            <SettingsRow label="Email" value={user?.email || 'Not provided'} />
+            <SettingsRow label="Phone Number" value={user?.phone && !user.phone.includes('@') ? user.phone : 'Not provided'} />
+            <SettingsRow label="Email" value={user?.email || (user?.phone?.includes('@') ? user.phone : 'Not provided')} />
             <SettingsRow label="Department" value={departmentName || 'Not assigned'} />
           </div>
         ) : (

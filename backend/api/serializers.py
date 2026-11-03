@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from core.models import Report, ReportCategory, Department, ReportMedia, Message, DepartmentMessage, ReportStatusHistory
+from core.models import Report, ReportCategory, Department, ReportMedia, Message, DepartmentMessage, ReportStatusHistory, OfficialReport
 
 def _safe_hasattr(obj, attr):
     try:
@@ -152,3 +152,28 @@ class ReportSerializer(serializers.ModelSerializer):
             return ""
         except Exception:
             return ""
+
+
+class OfficialReportSerializer(serializers.ModelSerializer):
+    department_name = serializers.CharField(source='department.name', read_only=True)
+    linked_case_number = serializers.CharField(source='linked_citizen_report.case_number', read_only=True, default=None)
+    linked_report_title = serializers.CharField(source='linked_citizen_report.title', read_only=True, default=None)
+
+    class Meta:
+        model = OfficialReport
+        fields = [
+            'id', 'reference_number', 'title', 'report_type', 'level',
+            'sender', 'sender_name', 'sender_role',
+            'department', 'department_name',
+            'linked_citizen_report', 'linked_case_number', 'linked_report_title',
+            'priority', 'status',
+            'executive_summary', 'findings', 'recommendations', 'attachment_url',
+            'reviewer', 'reviewer_name', 'reviewer_feedback', 'reviewed_at',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'reference_number', 'sender', 'sender_name', 'sender_role',
+            'department_name', 'linked_case_number', 'linked_report_title',
+            'reviewer', 'reviewer_name', 'reviewed_at', 'created_at', 'updated_at'
+        ]
+

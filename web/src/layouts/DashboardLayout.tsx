@@ -3,7 +3,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import {
   LayoutDashboard, FileText, Map, Users, Settings, LogOut,
-  Bell, Menu, X, Building2, ShieldCheck, Clock, AlertTriangle, MessageSquare
+  Bell, Menu, X, Building2, ShieldCheck, Clock, AlertTriangle, MessageSquare, ScrollText
 } from 'lucide-react'
 
 interface Notification {
@@ -145,6 +145,7 @@ export default function DashboardLayout() {
   const baseNavItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/reports', label: 'Reports', icon: FileText },
+    { path: '/official-reports', label: 'Official Reports', icon: ScrollText },
     { path: '/map', label: 'GIS Map', icon: Map },
   ]
 

@@ -11,7 +11,7 @@ from api.analytics_views import (
     SLAOverviewView, DepartmentPerformanceView, AuditLogView
 )
 from rest_framework.routers import DefaultRouter
-from api.views import ReportViewSet, DepartmentViewSet, ReportCategoryViewSet, MessageViewSet, DepartmentMessageViewSet, PingView
+from api.views import ReportViewSet, DepartmentViewSet, ReportCategoryViewSet, MessageViewSet, DepartmentMessageViewSet, PingView, OfficialReportViewSet
 from api.notification_views import NotificationViewSet, DeviceTokenViewSet
 
 router = DefaultRouter()
@@ -22,6 +22,7 @@ router.register(r'notifications', NotificationViewSet, basename='notification')
 router.register(r'device-tokens', DeviceTokenViewSet, basename='device-token')
 router.register(r'messages', MessageViewSet, basename='message')
 router.register(r'dept-messages', DepartmentMessageViewSet, basename='dept-message')
+router.register(r'official-reports', OfficialReportViewSet, basename='official-report')
 
 urlpatterns = [
     # Auth Endpoints

@@ -1,8 +1,8 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from core.models import Report, Department, ReportCategory, Message, DepartmentMessage
-from .serializers import ReportSerializer, DepartmentSerializer, ReportCategorySerializer, MessageSerializer, DepartmentMessageSerializer
+from core.models import Report, Department, ReportCategory, Message, DepartmentMessage, OfficialReport
+from .serializers import ReportSerializer, DepartmentSerializer, ReportCategorySerializer, MessageSerializer, DepartmentMessageSerializer, OfficialReportSerializer
 from django.db.models import Q
 import uuid
 
@@ -231,6 +231,7 @@ class ReportViewSet(viewsets.ModelViewSet):
                 cursor.execute('ALTER TABLE core_report DROP COLUMN IF EXISTS location;')
                 cursor.execute('ALTER TABLE accounts_user ADD COLUMN IF NOT EXISTS email VARCHAR(254) UNIQUE NULL;')
                 cursor.execute('ALTER TABLE accounts_user ALTER COLUMN phone_number DROP NOT NULL;')
+                cursor.execute("UPDATE accounts_user SET email = phone_number, phone_number = NULL WHERE phone_number LIKE '%@%' AND (email IS NULL OR email = '');")
             results['schema_fixes'] = 'applied'
         except Exception as e:
             results['schema_fixes'] = f'error: {e}'
@@ -380,6 +381,30 @@ class ReportViewSet(viewsets.ModelViewSet):
                 changed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 report_id INTEGER NOT NULL,
                 changed_by_id INTEGER NULL
+            )""",
+            """CREATE TABLE IF NOT EXISTS core_officialreport (
+                id SERIAL PRIMARY KEY,
+                reference_number VARCHAR(60) UNIQUE NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                report_type VARCHAR(40) NOT NULL,
+                level VARCHAR(30) NOT NULL,
+                sender_name VARCHAR(255) NULL,
+                sender_role VARCHAR(50) NULL,
+                priority VARCHAR(20) DEFAULT 'ROUTINE',
+                status VARCHAR(30) DEFAULT 'SUBMITTED',
+                executive_summary TEXT NOT NULL,
+                findings TEXT NOT NULL,
+                recommendations TEXT NULL,
+                attachment_url VARCHAR(1000) NULL,
+                reviewer_name VARCHAR(255) NULL,
+                reviewer_feedback TEXT NULL,
+                reviewed_at TIMESTAMP WITH TIME ZONE NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                department_id INTEGER NOT NULL,
+                linked_citizen_report_id INTEGER NULL,
+                reviewer_id INTEGER NULL,
+                sender_id INTEGER NOT NULL
             )""",
         ]
         for sql in tables_to_create:
@@ -767,4 +792,191 @@ class DepartmentMessageViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(sender=self.request.user)
+
+
+class OfficialReportViewSet(viewsets.ModelViewSet):
+    """
+    Formal internal government reports hierarchy:
+    - Officer to Department Manager: field investigations, daily/weekly activity, resource needs
+    - Department Manager to City Admin: departmental operations briefs, major escalations, policy requests
+    """
+    serializer_class = OfficialReportSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _ensure_table(self):
+        from django.db import connection
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS core_officialreport (
+                    id SERIAL PRIMARY KEY,
+                    reference_number VARCHAR(60) UNIQUE NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    report_type VARCHAR(40) NOT NULL,
+                    level VARCHAR(30) NOT NULL,
+                    sender_name VARCHAR(255) NULL,
+                    sender_role VARCHAR(50) NULL,
+                    priority VARCHAR(20) DEFAULT 'ROUTINE',
+                    status VARCHAR(30) DEFAULT 'SUBMITTED',
+                    executive_summary TEXT NOT NULL,
+                    findings TEXT NOT NULL,
+                    recommendations TEXT NULL,
+                    attachment_url VARCHAR(1000) NULL,
+                    reviewer_name VARCHAR(255) NULL,
+                    reviewer_feedback TEXT NULL,
+                    reviewed_at TIMESTAMP WITH TIME ZONE NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    department_id INTEGER NOT NULL,
+                    linked_citizen_report_id INTEGER NULL,
+                    reviewer_id INTEGER NULL,
+                    sender_id INTEGER NOT NULL
+                );
+                """)
+        except Exception:
+            pass
+
+    def get_queryset(self):
+        self._ensure_table()
+        user = self.request.user
+        if not user.is_authenticated:
+            return OfficialReport.objects.none()
+
+        level_filter = self.request.query_params.get('level')
+        status_filter = self.request.query_params.get('status')
+        dept_filter = self.request.query_params.get('department')
+
+        if user.is_city_admin or user.is_superuser:
+            qs = OfficialReport.objects.select_related('department', 'linked_citizen_report', 'sender', 'reviewer').all()
+        elif user.is_department_manager:
+            dept = user.officer_profile.department if _safe_hasattr(user, 'officer_profile') else None
+            if dept:
+                qs = OfficialReport.objects.select_related('department', 'linked_citizen_report', 'sender', 'reviewer').filter(
+                    Q(department=dept) | Q(sender=user)
+                )
+            else:
+                qs = OfficialReport.objects.select_related('department', 'linked_citizen_report', 'sender', 'reviewer').filter(sender=user)
+        elif user.is_officer:
+            qs = OfficialReport.objects.select_related('department', 'linked_citizen_report', 'sender', 'reviewer').filter(sender=user)
+        else:
+            return OfficialReport.objects.none()
+
+        if level_filter:
+            qs = qs.filter(level=level_filter)
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        if dept_filter:
+            qs = qs.filter(department_id=dept_filter)
+
+        return qs.order_by('-created_at')
+
+    def perform_create(self, serializer):
+        from rest_framework.exceptions import PermissionDenied, ValidationError
+        from datetime import datetime
+        self._ensure_table()
+        user = self.request.user
+
+        if not (user.is_officer or user.is_department_manager or user.is_city_admin or user.is_superuser):
+            raise PermissionDenied("Only government personnel can file official reports.")
+
+        # Determine level & department
+        dept = None
+        sender_role = 'Officer'
+        if user.is_city_admin or user.is_superuser:
+            sender_role = 'City Admin'
+            dept_id = self.request.data.get('department')
+            if dept_id:
+                dept = Department.objects.filter(id=dept_id).first()
+            if not dept:
+                dept = Department.objects.first()
+            level = self.request.data.get('level', 'MANAGER_TO_ADMIN')
+        elif user.is_department_manager:
+            sender_role = 'Department Manager'
+            level = 'MANAGER_TO_ADMIN'
+            dept = user.officer_profile.department if _safe_hasattr(user, 'officer_profile') else None
+        else:
+            sender_role = 'Field Officer'
+            level = 'OFFICER_TO_MANAGER'
+            dept = user.officer_profile.department if _safe_hasattr(user, 'officer_profile') else None
+
+        if not dept:
+            raise ValidationError({'department': 'You must be assigned to an active department to submit an official report.'})
+
+        # Generate standard official reference number: ADM-{OFF|EXEC}-{YYYY}-{RANDOM}
+        prefix = 'OFF' if level == 'OFFICER_TO_MANAGER' else 'EXEC'
+        year = datetime.now().year
+        ref_num = f"ADM-{prefix}-{year}-{uuid.uuid4().hex[:6].upper()}"
+
+        sender_name = user.full_name or (user.officer_profile.full_name if _safe_hasattr(user, 'officer_profile') else '') or user.email or user.phone_number
+
+        serializer.save(
+            sender=user,
+            sender_name=sender_name,
+            sender_role=sender_role,
+            department=dept,
+            level=level,
+            reference_number=ref_num,
+            status=self.request.data.get('status', 'SUBMITTED')
+        )
+
+    @action(detail=True, methods=['post'], url_path='review')
+    def review(self, request, pk=None):
+        from django.utils import timezone
+        from rest_framework.exceptions import PermissionDenied
+        self._ensure_table()
+        official_report = self.get_object()
+        user = request.user
+
+        # Permission check:
+        # Officer cannot review reports.
+        # Department Manager can review reports submitted to their department (level='OFFICER_TO_MANAGER').
+        # City Admin can review all reports (especially level='MANAGER_TO_ADMIN').
+        if user.is_officer and not user.is_department_manager and not user.is_city_admin and not user.is_superuser:
+            raise PermissionDenied("Officers cannot review official government reports.")
+
+        if user.is_department_manager and not (user.is_city_admin or user.is_superuser):
+            dept = user.officer_profile.department if _safe_hasattr(user, 'officer_profile') else None
+            if official_report.department != dept or official_report.level != 'OFFICER_TO_MANAGER':
+                raise PermissionDenied("You can only review officer reports submitted within your department.")
+
+        new_status = request.data.get('status')
+        feedback = request.data.get('feedback', '')
+
+        valid_statuses = ['UNDER_REVIEW', 'APPROVED', 'REVISION_REQUESTED', 'REJECTED', 'DIRECTIVE_ISSUED']
+        if new_status not in valid_statuses:
+            return Response(
+                {'error': f"Invalid status. Must be one of: {', '.join(valid_statuses)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        reviewer_name = user.full_name or (user.officer_profile.full_name if _safe_hasattr(user, 'officer_profile') else '') or user.email or user.phone_number
+
+        official_report.status = new_status
+        official_report.reviewer = user
+        official_report.reviewer_name = reviewer_name
+        official_report.reviewer_feedback = feedback
+        official_report.reviewed_at = timezone.now()
+        official_report.save()
+
+        # Send official notification to the sender
+        try:
+            from core.models import Notification
+            status_labels = {
+                'APPROVED': 'Approved / Endorsed',
+                'REVISION_REQUESTED': 'Revision Requested',
+                'REJECTED': 'Rejected',
+                'DIRECTIVE_ISSUED': 'Directive Issued',
+                'UNDER_REVIEW': 'Marked Under Review',
+            }
+            Notification.objects.create(
+                user=official_report.sender,
+                title=f"Official Report {status_labels.get(new_status, new_status)}",
+                message=f"Report [{official_report.reference_number}] '{official_report.title}' has been {status_labels.get(new_status, new_status).lower()} by {reviewer_name}.",
+                notification_type='OFFICIAL_REPORT'
+            )
+        except Exception:
+            pass
+
+        return Response(OfficialReportSerializer(official_report).data)
+
 

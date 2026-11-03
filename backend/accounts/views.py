@@ -289,7 +289,17 @@ class CurrentUserView(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get_object(self):
-        return self.request.user
+        user = self.request.user
+        # Auto-heal legacy accounts where email was stored in phone_number
+        if user.phone_number and '@' in user.phone_number:
+            if not user.email:
+                user.email = user.phone_number
+            user.phone_number = None
+            try:
+                user.save(update_fields=['email', 'phone_number'])
+            except Exception:
+                pass
+        return user
 
     def patch(self, request, *args, **kwargs):
         user = request.user

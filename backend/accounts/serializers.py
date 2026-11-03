@@ -23,6 +23,17 @@ class UserSerializer(serializers.ModelSerializer):
                   'date_joined', 'profile_photo_url')
         read_only_fields = ('is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin')
 
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # Self-heal legacy records where email address was stored in phone_number field
+        phone = ret.get('phone_number')
+        email = ret.get('email')
+        if phone and '@' in str(phone):
+            if not email:
+                ret['email'] = phone
+            ret['phone_number'] = None
+        return ret
+
     def get_full_name(self, obj):
         # Try model field first
         if hasattr(obj, 'full_name') and obj.full_name:

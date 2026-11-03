@@ -9,6 +9,7 @@ import Settings from './pages/Settings'
 import ReportDetails from './pages/ReportDetails'
 import AdminUsers from './pages/AdminUsers'
 import DeptChat from './pages/DeptChat'
+import OfficialReports from './pages/OfficialReports'
 import { useAuthStore } from './store/authStore'
 import { Building2, LogIn } from 'lucide-react'
 import PublicDashboard from './pages/PublicDashboard'
@@ -63,11 +64,17 @@ function Login() {
           headers: { 'Authorization': `Bearer ${data.access}` }
         })
         const me = meRes.ok ? await meRes.json() : null
+        const rawPhone = me?.phone_number || ''
+        const rawEmail = me?.email || ''
+        const cleanPhone = rawPhone.includes('@') ? '' : (rawPhone || (phone.includes('@') ? '' : phone))
+        const cleanEmail = rawEmail || (rawPhone.includes('@') ? rawPhone : (phone.includes('@') ? phone : ''))
+        const cleanName = me?.full_name || cleanEmail || cleanPhone || 'User'
+
         login(data.access, {
           id: me?.id || null,
-          phone: me?.phone_number || (phone.includes('@') ? '' : phone),
-          email: me?.email || (phone.includes('@') ? phone : ''),
-          name: me?.full_name || me?.email || me?.phone_number || 'User',
+          phone: cleanPhone,
+          email: cleanEmail,
+          name: cleanName,
           profile_photo_url: me?.profile_photo_url || null,
           department_name: me?.department_name || null,
           is_city_admin: me?.is_city_admin || false,
@@ -217,6 +224,7 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/reports/:id" element={<ReportDetails />} />
+          <Route path="/official-reports" element={<OfficialReports />} />
           <Route path="/departments" element={<Departments />} />
           <Route path="/map" element={<MapView />} />
           <Route path="/users" element={<AdminUsers />} />

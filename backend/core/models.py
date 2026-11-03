@@ -180,3 +180,73 @@ class ReportStatusHistory(models.Model):
 
     def __str__(self):
         return f"{self.report.case_number}: {self.old_status} -> {self.new_status}"
+
+class OfficialReport(models.Model):
+    """
+    Formal internal government reports hierarchy:
+    1. Officer -> Department Manager (Work reports, incident investigations, field reports)
+    2. Department Manager -> City Admin (Executive departmental reports, policy requests, monthly briefs)
+    """
+    LEVEL_CHOICES = [
+        ('OFFICER_TO_MANAGER', 'Officer to Department Manager'),
+        ('MANAGER_TO_ADMIN', 'Department Manager to City Admin'),
+    ]
+
+    REPORT_TYPE_CHOICES = [
+        ('FIELD_INVESTIGATION', 'Field Investigation & Case Finding'),
+        ('WEEKLY_ACTIVITY', 'Weekly Departmental Activity Report'),
+        ('MONTHLY_SUMMARY', 'Monthly Operations & Performance Report'),
+        ('INCIDENT_ESCALATION', 'Urgent Incident / Emergency Escalation'),
+        ('RESOURCE_REQUEST', 'Resource, Equipment & Budget Request'),
+        ('POLICY_RECOMMENDATION', 'Administrative & Policy Recommendation'),
+    ]
+
+    STATUS_CHOICES = [
+        ('DRAFT', 'Draft'),
+        ('SUBMITTED', 'Submitted for Review'),
+        ('UNDER_REVIEW', 'Under Official Review'),
+        ('APPROVED', 'Approved / Endorsed'),
+        ('REVISION_REQUESTED', 'Revision Requested'),
+        ('REJECTED', 'Rejected'),
+        ('DIRECTIVE_ISSUED', 'Executive Directive Issued'),
+    ]
+
+    PRIORITY_CHOICES = [
+        ('ROUTINE', 'Routine'),
+        ('PRIORITY', 'Priority'),
+        ('URGENT', 'Urgent'),
+        ('CRITICAL', 'Critical / Immediate Action'),
+    ]
+
+    reference_number = models.CharField(max_length=60, unique=True)
+    title = models.CharField(max_length=255)
+    report_type = models.CharField(max_length=40, choices=REPORT_TYPE_CHOICES, default='FIELD_INVESTIGATION')
+    level = models.CharField(max_length=30, choices=LEVEL_CHOICES, default='OFFICER_TO_MANAGER')
+
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='submitted_official_reports')
+    sender_name = models.CharField(max_length=255, blank=True)
+    sender_role = models.CharField(max_length=50, blank=True)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='official_reports')
+
+    linked_citizen_report = models.ForeignKey(Report, on_delete=models.SET_NULL, null=True, blank=True, related_name='official_reports')
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='ROUTINE')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='SUBMITTED')
+
+    executive_summary = models.TextField(help_text="Brief executive overview")
+    findings = models.TextField(help_text="Detailed investigation/activity findings")
+    recommendations = models.TextField(blank=True, null=True, help_text="Proposed official actions or directives")
+    attachment_url = models.URLField(max_length=1000, blank=True, null=True)
+
+    reviewer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_official_reports')
+    reviewer_name = models.CharField(max_length=255, blank=True, null=True)
+    reviewer_feedback = models.TextField(blank=True, null=True, help_text="Official remarks, feedback, or executive directive")
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.reference_number}] {self.title} ({self.status})"
