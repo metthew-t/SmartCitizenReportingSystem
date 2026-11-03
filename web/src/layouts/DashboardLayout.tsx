@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { useLanguageStore } from '../store/languageStore'
 import {
   LayoutDashboard, FileText, Map, Users, Settings, LogOut,
   Bell, Menu, X, Building2, ShieldCheck, Clock, AlertTriangle, MessageSquare, ScrollText
@@ -20,6 +21,7 @@ const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
 export default function DashboardLayout() {
   const { logout, departmentName, user, role, token } = useAuthStore()
+  const { t } = useLanguageStore()
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -143,24 +145,24 @@ export default function DashboardLayout() {
   }
 
   const baseNavItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/reports', label: 'Reports', icon: FileText },
-    { path: '/official-reports', label: 'Official Reports', icon: ScrollText },
-    { path: '/map', label: 'GIS Map', icon: Map },
+    { path: '/dashboard', label: t('dashboard'), icon: LayoutDashboard },
+    { path: '/reports', label: t('reports'), icon: FileText },
+    { path: '/official-reports', label: t('official_reports'), icon: ScrollText },
+    { path: '/map', label: t('gis_map'), icon: Map },
   ]
 
   // Add role-specific navigation
   const navItems = [...baseNavItems]
   if (role === 'city_admin' || role === 'department_manager') {
-    navItems.push({ path: '/departments', label: 'Departments', icon: Building2 })
+    navItems.push({ path: '/departments', label: t('departments'), icon: Building2 })
   }
   if (role !== 'city_admin') {
-    navItems.push({ path: '/dept-chat', label: 'Dept Chat', icon: MessageSquare })
+    navItems.push({ path: '/dept-chat', label: t('dept_chat'), icon: MessageSquare })
   }
   if (role === 'city_admin' || role === 'department_manager') {
-    navItems.push({ path: '/users', label: 'User Management', icon: Users })
+    navItems.push({ path: '/users', label: t('user_management'), icon: Users })
   }
-  navItems.push({ path: '/settings', label: 'Settings', icon: Settings })
+  navItems.push({ path: '/settings', label: t('settings'), icon: Settings })
 
   const isActive = (path: string) => location.pathname === path
 
@@ -331,7 +333,7 @@ export default function DashboardLayout() {
             onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
           >
             <LogOut size={16} />
-            {!sidebarCollapsed && <span style={{ fontSize: 13, fontWeight: 600 }}>Sign Out</span>}
+            {!sidebarCollapsed && <span style={{ fontSize: 13, fontWeight: 600 }}>{t('sign_out')}</span>}
           </button>
         </div>
       </aside>

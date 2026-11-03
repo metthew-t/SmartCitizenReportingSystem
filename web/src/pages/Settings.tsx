@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '../store/authStore'
+import { useLanguageStore, Language } from '../store/languageStore'
 import { Settings as SettingsIcon, User, Bell, Globe, Shield, Database, Camera, Edit2, Check, X, Lock } from 'lucide-react'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
 export default function Settings() {
   const { user, departmentName, role, token, updateUser } = useAuthStore()
+  const { language, setLanguage, t } = useLanguageStore()
   const [photoUrl, setPhotoUrl] = useState(user?.profile_photo_url || '')
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState('')
+  const [langMsg, setLangMsg] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Profile edit state
@@ -131,15 +134,15 @@ export default function Settings() {
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", maxWidth: 720 }}>
       <h2 style={{ color: '#e2e8f0', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>
-        Settings
+        {t('settings_title')}
       </h2>
       <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 24px' }}>
-        Manage your account and dashboard preferences
+        {t('settings_subtitle')}
       </p>
 
       {/* Profile section */}
       <SettingsCard
-        title="Profile"
+        title={t('profile')}
         icon={<User size={18} color="#6366f1" />}
         action={
           !isEditingProfile ? (
@@ -163,7 +166,7 @@ export default function Settings() {
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.25)'}
               onMouseLeave={e => e.currentTarget.style.background = 'rgba(99,102,241,0.15)'}
             >
-              <Edit2 size={13} /> Edit Profile
+              <Edit2 size={13} /> {t('edit_profile')}
             </button>
           ) : null
         }
@@ -219,15 +222,15 @@ export default function Settings() {
 
         {!isEditingProfile ? (
           <div>
-            <SettingsRow label="Full Name" value={user?.name || 'N/A'} />
-            <SettingsRow label="Phone Number" value={user?.phone && !user.phone.includes('@') ? user.phone : 'Not provided'} />
-            <SettingsRow label="Email" value={user?.email || (user?.phone?.includes('@') ? user.phone : 'Not provided')} />
-            <SettingsRow label="Department" value={departmentName || 'Not assigned'} />
+            <SettingsRow label={t('full_name')} value={user?.name || 'N/A'} />
+            <SettingsRow label={t('phone_number')} value={user?.phone && !user.phone.includes('@') ? user.phone : t('not_provided')} />
+            <SettingsRow label={t('email')} value={user?.email || (user?.phone?.includes('@') ? user.phone : t('not_provided'))} />
+            <SettingsRow label={t('department')} value={departmentName || t('not_assigned')} />
           </div>
         ) : (
           <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Full Name</label>
+              <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>{t('full_name')}</label>
               <input
                 type="text"
                 value={profileForm.fullName}
@@ -238,8 +241,8 @@ export default function Settings() {
 
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <label style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Phone Number</label>
-                <span style={{ fontSize: 10, color: '#10b981', fontWeight: 600 }}>Editable</span>
+                <label style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>{t('phone_number')}</label>
+                <span style={{ fontSize: 10, color: '#10b981', fontWeight: 600 }}>{t('editable')}</span>
               </div>
               <input
                 type="text"
@@ -286,7 +289,7 @@ export default function Settings() {
                   background: 'transparent', color: '#94a3b8', fontSize: 13, cursor: 'pointer',
                 }}
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 type="submit"
@@ -299,7 +302,7 @@ export default function Settings() {
                   opacity: savingProfile ? 0.6 : 1,
                 }}
               >
-                <Check size={14} /> {savingProfile ? 'Saving...' : 'Save Profile'}
+                <Check size={14} /> {savingProfile ? t('saving') : t('save_changes')}
               </button>
             </div>
           </form>
@@ -307,39 +310,79 @@ export default function Settings() {
       </SettingsCard>
 
       {/* Notifications */}
-      <SettingsCard title="Notifications" icon={<Bell size={18} color="#f59e0b" />}>
-        <SettingsToggle label="Push Notifications" defaultValue={true} />
-        <SettingsToggle label="Email Notifications" defaultValue={false} />
-        <SettingsToggle label="Critical Alert Sound" defaultValue={true} />
+      <SettingsCard title={t('notifications')} icon={<Bell size={18} color="#f59e0b" />}>
+        <SettingsToggle label={t('push_notifications')} defaultValue={true} />
+        <SettingsToggle label={t('email_notifications')} defaultValue={false} />
+        <SettingsToggle label={t('critical_alert_sound')} defaultValue={true} />
       </SettingsCard>
 
       {/* Language */}
-      <SettingsCard title="Language" icon={<Globe size={18} color="#10b981" />}>
-        <div style={{ display: 'flex', gap: 8 }}>
+      <SettingsCard title={t('language')} icon={<Globe size={18} color="#10b981" />}>
+        {langMsg && (
+          <div style={{
+            padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 13, fontWeight: 600,
+            background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981',
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <Check size={16} /> {langMsg}
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {[
-            { code: 'om', name: 'Afaan Oromo', flag: '🟢' },
-            { code: 'am', name: 'Amharic', flag: '🟡' },
-            { code: 'en', name: 'English', flag: '🔵' },
-          ].map(lang => (
-            <button
-              key={lang.code}
-              style={{
-                flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer',
-                background: lang.code === 'en' ? 'rgba(99,102,241,0.15)' : 'rgba(15,23,42,0.4)',
-                border: `1px solid ${lang.code === 'en' ? 'rgba(99,102,241,0.3)' : 'rgba(148,163,184,0.1)'}`,
-                color: '#e2e8f0', textAlign: 'center',
-              }}
-            >
-              <span style={{ fontSize: 18 }}>{lang.flag}</span>
-              <div style={{ fontSize: 12, marginTop: 4 }}>{lang.name}</div>
-            </button>
-          ))}
+            { code: 'om' as Language, name: 'Afaan Oromo', localName: 'Afaan Oromoo', flag: '🌳' },
+            { code: 'am' as Language, name: 'Amharic', localName: 'አማርኛ', flag: '🇪🇹' },
+            { code: 'en' as Language, name: 'English', localName: 'English (US)', flag: '🌐' },
+          ].map(lang => {
+            const isSelected = language === lang.code
+            return (
+              <button
+                key={lang.code}
+                type="button"
+                onClick={() => {
+                  setLanguage(lang.code)
+                  setLangMsg(
+                    lang.code === 'om'
+                      ? 'Afaan gara Afaan Oromootti jijjiirameera'
+                      : lang.code === 'am'
+                        ? 'ቋንቋ ወደ አማርኛ ተቀይሯል'
+                        : 'Language updated to English'
+                  )
+                  setTimeout(() => setLangMsg(''), 3500)
+                }}
+                style={{
+                  flex: '1 1 180px', padding: '14px', borderRadius: 12, cursor: 'pointer',
+                  background: isSelected ? 'rgba(99,102,241,0.2)' : 'rgba(15,23,42,0.5)',
+                  border: isSelected ? '2px solid #6366f1' : '1px solid rgba(148,163,184,0.15)',
+                  color: isSelected ? '#ffffff' : '#94a3b8', textAlign: 'center',
+                  transition: 'all 0.2s', position: 'relative',
+                  boxShadow: isSelected ? '0 0 16px rgba(99,102,241,0.25)' : 'none',
+                }}
+              >
+                {isSelected && (
+                  <span style={{
+                    position: 'absolute', top: 8, right: 8,
+                    background: '#6366f1', color: 'white', borderRadius: '50%',
+                    width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Check size={11} strokeWidth={3} />
+                  </span>
+                )}
+                <span style={{ fontSize: 22 }}>{lang.flag}</span>
+                <div style={{ fontSize: 13, fontWeight: 700, marginTop: 6, color: isSelected ? '#ffffff' : '#e2e8f0' }}>
+                  {lang.name}
+                </div>
+                <div style={{ fontSize: 11, color: isSelected ? '#a5b4fc' : '#64748b', marginTop: 2 }}>
+                  {lang.localName}
+                </div>
+              </button>
+            )
+          })}
         </div>
       </SettingsCard>
 
       {/* System info */}
-      <SettingsCard title="System Info" icon={<Database size={18} color="#64748b" />}>
-        <SettingsRow label="Version" value="1.0.0" />
+      <SettingsCard title={t('system_info')} icon={<Database size={18} color="#64748b" />}>
+        <SettingsRow label={t('version')} value="1.0.0" />
       </SettingsCard>
     </div>
   )

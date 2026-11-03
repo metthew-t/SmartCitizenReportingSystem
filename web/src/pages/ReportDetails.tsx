@@ -614,8 +614,8 @@ export default function ReportDetails() {
         )}
       </div>
 
-      {/* Share Department */}
-      {(useAuthStore.getState().role === 'city_admin' || useAuthStore.getState().role === 'department_manager') && departments.length > 0 && (
+      {/* Share Department: Exclusively for Department Managers for inter-departmental collaboration */}
+      {useAuthStore.getState().role === 'department_manager' && departments.length > 0 && (
         <div style={{
           background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
           border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16,
