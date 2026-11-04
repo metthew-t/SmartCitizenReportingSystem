@@ -25,7 +25,15 @@ export default function DeptChat() {
         })
         if (res.ok) {
           const data = await res.json()
-          setDepartments(Array.isArray(data) ? data : data.results || [])
+          const list = Array.isArray(data) ? data : data.results || []
+          setDepartments(list)
+          if (list.length > 0) {
+            setSelectedDept((prev: any) => {
+              if (prev) return prev
+              const mine = list.find((d: any) => d.name === user?.department_name)
+              return mine || list[0]
+            })
+          }
         }
       } finally {
         setLoading(false)
@@ -78,10 +86,12 @@ export default function DeptChat() {
 
   const myDept = departments.find(d => d.name === user?.department_name)
   const otherDepts = departments.filter(d => 
-    d.name !== user?.department_name && d.name?.toLowerCase().includes(search.toLowerCase())
+    (!myDept || d.id !== myDept.id) && d.name?.toLowerCase().includes(search.toLowerCase())
   )
 
-  const isManagerOrAdmin = role === 'city_admin' || role === 'department_manager' || user?.is_city_admin
+  // Only officers are restricted to their own department.
+  // Department managers, city admins, super admins, and mayors can chat with all departments!
+  const isManagerOrAdmin = role !== 'officer'
 
   return (
     <div style={{
@@ -166,7 +176,7 @@ export default function DeptChat() {
               {isManagerOrAdmin && otherDepts.length > 0 && (
                 <div>
                   <div style={{ padding: '0 16px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 }}>
-                    Other Departments
+                    {myDept ? 'Other Departments' : 'All Departments'}
                   </div>
                   {otherDepts.map(dept => (
                     <div

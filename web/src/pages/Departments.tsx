@@ -74,11 +74,11 @@ export default function Departments() {
     return departmentStats.filter(d => d.name.toLowerCase().includes(q))
   }, [searchQuery, departmentStats])
 
-  if (role !== 'city_admin') {
+  if (role !== 'city_admin' && role !== 'super_admin') {
     return (
       <div style={{ textAlign: 'center', padding: 60, color: '#ef4444' }}>
         <h2>Access Denied</h2>
-        <p>You must be a City Admin to view the aggregate departments page.</p>
+        <p>You must be an Administrator to view the aggregate departments page.</p>
       </div>
     )
   }
