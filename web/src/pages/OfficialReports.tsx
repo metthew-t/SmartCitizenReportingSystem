@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import {
   ScrollText, Plus, Search, Filter, CheckCircle2, Clock,
   AlertTriangle, FileText, Send, Building2, User, Eye,
   ArrowRight, ShieldCheck, X, Printer, AlertCircle, FileCheck, Check,
-  CornerDownRight, RefreshCw, Bookmark, Download, FileSpreadsheet
+  CornerDownRight, RefreshCw, Bookmark, Download, FileSpreadsheet, ShieldAlert
 } from 'lucide-react'
 import { exportToWord, exportToExcel, exportAllReportsToExcel } from '../utils/reportExporter'
 import { logAuditEvent } from '../utils/auditLogger'
@@ -82,6 +83,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 }
 
 export default function OfficialReports() {
+  const navigate = useNavigate()
   const { token, user, role, departmentName } = useAuthStore()
 
   const [reports, setReports] = useState<OfficialReport[]>([])
@@ -112,12 +114,15 @@ export default function OfficialReports() {
 
   // Citizen cases for linking
   const [citizenCases, setCitizenCases] = useState<CitizenCaseOption[]>([])
+  // Municipal departments for filing / targeting
+  const [departments, setDepartments] = useState<{ id: number; name: string }[]>([])
 
   // Create form state
   const [createForm, setCreateForm] = useState({
     title: '',
     report_type: 'FIELD_INVESTIGATION',
     priority: 'ROUTINE',
+    department: '',
     linked_citizen_report: '',
     executive_summary: '',
     findings: '',
@@ -174,9 +179,25 @@ export default function OfficialReports() {
     } catch {}
   }
 
+  // Fetch municipal departments
+  const fetchDepartments = async () => {
+    if (!token) return
+    try {
+      const res = await fetch(`${API}/departments/`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const items = Array.isArray(data) ? data : (data.results || [])
+        setDepartments(items.map((d: any) => ({ id: d.id, name: d.name })))
+      }
+    } catch {}
+  }
+
   useEffect(() => {
     fetchReports()
     fetchCitizenCases()
+    fetchDepartments()
   }, [token])
 
   // Create report submission
@@ -201,6 +222,10 @@ export default function OfficialReports() {
         attachment_url: createForm.attachment_url.trim() || null,
       }
 
+      if (createForm.department) {
+        payload.department = parseInt(createForm.department)
+      }
+
       if (createForm.linked_citizen_report) {
         payload.linked_citizen_report = parseInt(createForm.linked_citizen_report)
       }
@@ -220,6 +245,7 @@ export default function OfficialReports() {
           title: '',
           report_type: 'FIELD_INVESTIGATION',
           priority: 'ROUTINE',
+          department: '',
           linked_citizen_report: '',
           executive_summary: '',
           findings: '',
@@ -318,9 +344,49 @@ export default function OfficialReports() {
   // Check if current user can review the selected report
   const canReviewSelected = () => {
     if (!selectedReport) return false
-    if (role === 'city_admin' || role === 'super_admin') return true
+    if (role === 'city_admin') return true
     if (role === 'department_manager' && selectedReport.level === 'OFFICER_TO_MANAGER') return true
     return false
+  }
+
+  // Super Admin view: Informative redirection to Audit Logs
+  if (role === 'super_admin') {
+    return (
+      <div style={{
+        fontFamily: "'Inter', sans-serif",
+        padding: '60px 20px',
+        textAlign: 'center',
+        color: '#e2e8f0',
+        maxWidth: 620,
+        margin: '0 auto',
+      }}>
+        <div style={{
+          width: 64, height: 64, borderRadius: 16,
+          background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px'
+        }}>
+          <ShieldAlert size={32} color="#f59e0b" />
+        </div>
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#f8fafc', marginBottom: 10 }}>
+          Civil Staff Administrative Channel
+        </h2>
+        <p style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.6, marginBottom: 24 }}>
+          Official Administrative Reports (field investigations, departmental briefs, and resource requests) are filed and reviewed directly by Field Officers, Department Managers, and the City Administration.
+          <br /><br />
+          As <strong>Super Admin</strong>, you manage the complete system forensic <strong>Audit Logs</strong> which record every report submission, review, and directive issued across all departments.
+        </p>
+        <button
+          onClick={() => navigate('/audit-logs')}
+          style={{
+            background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: 'white',
+            border: 'none', padding: '10px 22px', borderRadius: 10, fontSize: 14, fontWeight: 600,
+            cursor: 'pointer', boxShadow: '0 4px 14px rgba(99,102,241,0.35)'
+          }}
+        >
+          View System Audit Logs
+        </button>
+      </div>
+    )
   }
 
   return (
@@ -362,20 +428,24 @@ export default function OfficialReports() {
 
           <button
             onClick={() => {
-              exportAllReportsToExcel(reports)
+              const listToExport = displayedReports.length > 0 ? displayedReports : reports
+              if (listToExport.length === 0) return
+              exportAllReportsToExcel(listToExport)
               logAuditEvent({
                 action: 'OFFICIAL_REPORTS_BATCH_EXPORT',
                 entity_type: 'OFFICIAL_REPORT',
                 entity_id: 'ALL',
-                changes: { count: reports.length, format: 'CSV_EXCEL' }
+                changes: { count: listToExport.length, format: 'CSV_EXCEL' }
               })
             }}
-            title="Export all official reports to Excel / CSV"
+            disabled={reports.length === 0}
+            title="Export official reports to Excel / CSV"
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)',
               color: '#34d399', padding: '9px 14px', borderRadius: 10, fontSize: 13,
-              fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
+              fontWeight: 600, cursor: reports.length === 0 ? 'not-allowed' : 'pointer',
+              opacity: reports.length === 0 ? 0.6 : 1, transition: 'all 0.2s',
             }}
           >
             <FileSpreadsheet size={15} /> Export Registry (Excel)
@@ -518,7 +588,7 @@ export default function OfficialReports() {
           </>
         )}
 
-        {(role === 'city_admin' || role === 'super_admin') && (
+        {role === 'city_admin' && (
           <>
             <button
               onClick={() => setActiveTab('manager_reports')}
@@ -723,7 +793,29 @@ export default function OfficialReports() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      exportToExcel(report)
+                      logAuditEvent({
+                        action: 'OFFICIAL_REPORT_EXPORT_EXCEL',
+                        entity_type: 'OFFICIAL_REPORT',
+                        entity_id: report.reference_number,
+                        changes: { title: report.title, format: 'EXCEL_CSV' }
+                      })
+                    }}
+                    title="Export this report directly to Excel (.csv)"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)',
+                      color: '#34d399', padding: '9px 13px', borderRadius: 10,
+                      fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
+                    }}
+                  >
+                    <FileSpreadsheet size={15} /> Excel
+                  </button>
+
                   <button
                     onClick={() => {
                       setSelectedReport(report)
@@ -1133,7 +1225,7 @@ export default function OfficialReports() {
                         ✓ Approve / Endorse
                       </button>
 
-                      {(role === 'city_admin' || role === 'super_admin') && (
+                      {role === 'city_admin' && (
                         <button
                           type="button"
                           onClick={() => setReviewStatus('DIRECTIVE_ISSUED')}
@@ -1361,6 +1453,28 @@ export default function OfficialReports() {
                   }}
                 />
               </div>
+
+              {role === 'city_admin' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', fontWeight: 600, marginBottom: 4 }}>
+                    Department / Sector (Optional)
+                  </label>
+                  <select
+                    value={createForm.department}
+                    onChange={e => setCreateForm({ ...createForm, department: e.target.value })}
+                    style={{
+                      width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.6)',
+                      border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8,
+                      color: '#e2e8f0', fontSize: 13, outline: 'none',
+                    }}
+                  >
+                    <option value="">-- General Municipal Administration (Default) --</option>
+                    {departments.map(d => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', fontWeight: 600, marginBottom: 4 }}>

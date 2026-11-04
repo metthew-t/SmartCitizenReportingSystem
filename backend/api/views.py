@@ -1007,10 +1007,22 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
             sender_role = 'Department Manager'
             level = 'MANAGER_TO_ADMIN'
             dept = user.officer_profile.department if _safe_hasattr(user, 'officer_profile') else None
+            if not dept:
+                dept_id = self.request.data.get('department')
+                if dept_id:
+                    dept = Department.objects.filter(id=dept_id).first()
+                if not dept:
+                    dept = Department.objects.first()
         else:
             sender_role = 'Field Officer'
             level = 'OFFICER_TO_MANAGER'
             dept = user.officer_profile.department if _safe_hasattr(user, 'officer_profile') else None
+            if not dept:
+                dept_id = self.request.data.get('department')
+                if dept_id:
+                    dept = Department.objects.filter(id=dept_id).first()
+                if not dept:
+                    dept = Department.objects.first()
 
         if not dept:
             raise ValidationError({'department': 'You must be assigned to an active department to submit an official report.'})

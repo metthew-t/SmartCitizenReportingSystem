@@ -294,7 +294,7 @@ export default function DashboardLayout() {
     const baseNavItems = [
       { path: '/dashboard', label: t('dashboard'), icon: LayoutDashboard },
       { path: '/reports', label: t('reports'), icon: FileText },
-      { path: '/official-reports', label: t('official_reports'), icon: ScrollText },
+      ...(role !== 'super_admin' ? [{ path: '/official-reports', label: t('official_reports'), icon: ScrollText }] : []),
       { path: '/map', label: t('gis_map'), icon: Map },
     ]
     navItems = [...baseNavItems]

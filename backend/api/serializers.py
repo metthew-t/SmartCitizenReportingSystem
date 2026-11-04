@@ -176,6 +176,11 @@ class OfficialReportSerializer(serializers.ModelSerializer):
             'department_name', 'linked_case_number', 'linked_report_title',
             'reviewer', 'reviewer_name', 'reviewed_at', 'created_at', 'updated_at'
         ]
+        extra_kwargs = {
+            'department': {'required': False, 'allow_null': True},
+            'level': {'required': False},
+            'status': {'required': False},
+        }
 
 
 class MayorDirectiveSerializer(serializers.ModelSerializer):
