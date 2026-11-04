@@ -21,7 +21,9 @@ const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
 export default function DashboardLayout() {
   const { logout, departmentName, user, role, token } = useAuthStore()
-  const { t } = useLanguageStore()
+  const { t, language } = useLanguageStore()
+  // Subscribe to language state so sidebar nav labels re-render on language change
+  void language
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -184,61 +186,87 @@ export default function DashboardLayout() {
     },
     department_manager: {
       id: 'department_manager',
-      appBg: 'radial-gradient(ellipse at 50% -15%, #0c1c38 0%, #061022 45%, #020712 100%)',
-      sidebarBg: 'linear-gradient(180deg, #09172e 0%, #040a17 100%)',
-      headerBg: 'rgba(6, 16, 34, 0.88)',
-      borderColor: 'rgba(59, 130, 246, 0.22)',
-      brandGradient: 'linear-gradient(135deg, rgba(59,130,246,0.35), rgba(29,78,216,0.35))',
-      brandShadow: '0 0 25px rgba(59,130,246,0.3)',
-      brandIconColor: '#93c5fd',
-      brandSubtitle: 'Municipal Sector Command',
-      badgeBg: 'rgba(59,130,246,0.08)',
-      badgeBorder: 'rgba(59,130,246,0.28)',
-      badgeColor: '#93c5fd',
-      navText: '#94a3b8',
-      activeNavBg: 'linear-gradient(90deg, rgba(59,130,246,0.22) 0%, rgba(59,130,246,0.02) 100%)',
-      activeNavText: '#93c5fd',
-      activeNavBorder: '3px solid #3b82f6',
-      activeNavGlow: 'inset 0 0 15px rgba(59,130,246,0.1)',
-      hoverNavBg: 'rgba(59,130,246,0.08)',
-      hoverNavText: '#dbeafe',
-      accentColor: '#3b82f6',
-      profileAvatarBg: 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)',
-      profileAvatarShadow: '0 0 20px rgba(59,130,246,0.4)',
+      // Professional warm off-white — ISO 9241 compliant government standard
+      appBg: '#F0F2F5',
+      sidebarBg: 'linear-gradient(180deg, #1B2A4A 0%, #0F1E35 100%)',
+      headerBg: '#FFFFFF',
+      borderColor: 'rgba(26, 54, 93, 0.12)',
+      brandGradient: 'linear-gradient(135deg, #1A365D, #2A4A7F)',
+      brandShadow: '0 4px 12px rgba(26,54,93,0.4)',
+      brandIconColor: '#90CDF4',
+      brandSubtitle: 'Municipal Sector Director',
+      badgeBg: 'rgba(144,205,244,0.12)',
+      badgeBorder: 'rgba(144,205,244,0.4)',
+      badgeColor: '#90CDF4',
+      navText: '#A0AEC0',
+      activeNavBg: 'linear-gradient(90deg, rgba(144,205,244,0.18) 0%, rgba(144,205,244,0.02) 100%)',
+      activeNavText: '#90CDF4',
+      activeNavBorder: '3px solid #63B3ED',
+      activeNavGlow: 'none',
+      hoverNavBg: 'rgba(255,255,255,0.07)',
+      hoverNavText: '#E2E8F0',
+      accentColor: '#2B6CB0',
+      profileAvatarBg: 'linear-gradient(135deg, #2B6CB0 0%, #1A365D 100%)',
+      profileAvatarShadow: '0 2px 8px rgba(43,108,176,0.4)',
       roleTitle: 'Sector Director',
-      notifBtnBg: 'rgba(59,130,246,0.12)',
-      notifBtnBorder: 'rgba(59,130,246,0.25)',
-      notifBtnColor: '#93c5fd',
-      dropdownBg: '#09162c',
+      notifBtnBg: 'rgba(43,108,176,0.08)',
+      notifBtnBorder: 'rgba(43,108,176,0.2)',
+      notifBtnColor: '#2B6CB0',
+      dropdownBg: '#FFFFFF',
+      // Light-side extras
+      isLight: true,
+      mainTextColor: '#1A202C',
+      subTextColor: '#4A5568',
+      cardBg: '#FFFFFF',
+      cardBorder: 'rgba(26,54,93,0.1)',
+      cardShadow: '0 2px 12px rgba(26,54,93,0.08)',
+      sectionHeaderColor: '#1A365D',
+      tableHeaderBg: '#EBF4FF',
+      tableRowHover: '#EBF4FF',
+      badgeSolidBg: '#2B6CB0',
+      badgeSolidText: '#FFFFFF',
     },
     officer: {
       id: 'officer',
-      appBg: 'radial-gradient(ellipse at 50% -15%, #08211b 0%, #051310 45%, #020706 100%)',
-      sidebarBg: 'linear-gradient(180deg, #061914 0%, #030a08 100%)',
-      headerBg: 'rgba(5, 17, 14, 0.88)',
-      borderColor: 'rgba(16, 185, 129, 0.22)',
-      brandGradient: 'linear-gradient(135deg, rgba(16,185,129,0.35), rgba(4,120,87,0.35))',
-      brandShadow: '0 0 25px rgba(16,185,129,0.3)',
-      brandIconColor: '#6ee7b7',
+      // Professional warm off-white — field operational standard
+      appBg: '#F0F2F5',
+      sidebarBg: 'linear-gradient(180deg, #1A3A2A 0%, #0D2318 100%)',
+      headerBg: '#FFFFFF',
+      borderColor: 'rgba(21, 128, 61, 0.12)',
+      brandGradient: 'linear-gradient(135deg, #14532D, #166534)',
+      brandShadow: '0 4px 12px rgba(20,83,45,0.4)',
+      brandIconColor: '#86EFAC',
       brandSubtitle: 'Field Operations & Dispatch',
-      badgeBg: 'rgba(16,185,129,0.08)',
-      badgeBorder: 'rgba(16,185,129,0.28)',
-      badgeColor: '#6ee7b7',
-      navText: '#94a3b8',
-      activeNavBg: 'linear-gradient(90deg, rgba(16,185,129,0.22) 0%, rgba(16,185,129,0.02) 100%)',
-      activeNavText: '#6ee7b7',
-      activeNavBorder: '3px solid #10b981',
-      activeNavGlow: 'inset 0 0 15px rgba(16,185,129,0.1)',
-      hoverNavBg: 'rgba(16,185,129,0.08)',
-      hoverNavText: '#d1fae5',
-      accentColor: '#10b981',
-      profileAvatarBg: 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
-      profileAvatarShadow: '0 0 20px rgba(16,185,129,0.4)',
+      badgeBg: 'rgba(134,239,172,0.12)',
+      badgeBorder: 'rgba(134,239,172,0.4)',
+      badgeColor: '#86EFAC',
+      navText: '#A0AEC0',
+      activeNavBg: 'linear-gradient(90deg, rgba(134,239,172,0.18) 0%, rgba(134,239,172,0.02) 100%)',
+      activeNavText: '#86EFAC',
+      activeNavBorder: '3px solid #4ADE80',
+      activeNavGlow: 'none',
+      hoverNavBg: 'rgba(255,255,255,0.07)',
+      hoverNavText: '#E2E8F0',
+      accentColor: '#16A34A',
+      profileAvatarBg: 'linear-gradient(135deg, #16A34A 0%, #14532D 100%)',
+      profileAvatarShadow: '0 2px 8px rgba(22,163,74,0.4)',
       roleTitle: 'Field Officer',
-      notifBtnBg: 'rgba(16,185,129,0.12)',
-      notifBtnBorder: 'rgba(16,185,129,0.25)',
-      notifBtnColor: '#6ee7b7',
-      dropdownBg: '#081714',
+      notifBtnBg: 'rgba(22,163,74,0.08)',
+      notifBtnBorder: 'rgba(22,163,74,0.2)',
+      notifBtnColor: '#16A34A',
+      dropdownBg: '#FFFFFF',
+      // Light-side extras
+      isLight: true,
+      mainTextColor: '#1A202C',
+      subTextColor: '#4A5568',
+      cardBg: '#FFFFFF',
+      cardBorder: 'rgba(21,128,61,0.1)',
+      cardShadow: '0 2px 12px rgba(21,128,61,0.08)',
+      sectionHeaderColor: '#14532D',
+      tableHeaderBg: '#F0FDF4',
+      tableRowHover: '#F0FDF4',
+      badgeSolidBg: '#16A34A',
+      badgeSolidText: '#FFFFFF',
     },
     default: {
       id: 'default',
@@ -283,7 +311,7 @@ export default function DashboardLayout() {
   let navItems: { path: string; label: string; icon: any }[] = []
 
   if (role === 'mayor') {
-    // For Mayor: ONLY Mayor Command Center and Settings for account management
+    // Mayor: ONLY Mayor Command Center and Settings
     navItems = [
       { path: '/mayor', label: t('mayor_command_center') || 'Mayor Command Center', icon: Crown },
       { path: '/settings', label: t('settings') || 'Settings', icon: Settings },
@@ -296,13 +324,11 @@ export default function DashboardLayout() {
       { path: '/map', label: t('gis_map'), icon: Map },
     ]
     navItems = [...baseNavItems]
-    if (role === 'super_admin') {
-      navItems.splice(1, 0, { path: '/mayor', label: t('mayor_command_center'), icon: Crown })
-    }
+    // Mayor Command Center: ONLY for mayor (already handled above). NOT for super_admin or city_admin.
     if (role === 'super_admin' || role === 'city_admin' || role === 'department_manager') {
       navItems.push({ path: '/departments', label: t('departments'), icon: Building2 })
     }
-    if (role === 'officer' || role === 'department_manager' || role === 'super_admin') {
+    if (role === 'officer' || role === 'department_manager' || role === 'super_admin' || role === 'city_admin') {
       navItems.push({ path: '/dept-chat', label: t('dept_chat'), icon: MessageSquare })
     }
     if (role === 'super_admin' || role === 'city_admin' || role === 'department_manager') {
@@ -332,7 +358,7 @@ export default function DashboardLayout() {
       display: 'flex', height: '100vh',
       background: theme.appBg,
       fontFamily: "'Inter', 'Segoe UI', sans-serif",
-      color: '#e2e8f0',
+      color: (theme as any).isLight ? '#1A202C' : '#e2e8f0',
     }}>
       {/* Sidebar */}
       <aside style={{
@@ -369,7 +395,7 @@ export default function DashboardLayout() {
                   <div style={{ color: 'white', fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: -0.3 }}>
                     Adama Smart
                   </div>
-                  <div style={{ color: '#94a3b8', fontSize: 10, fontWeight: 500 }}>
+                  <div style={{ color: (theme as any).isLight ? '#6B7280' : '#94a3b8', fontSize: 10, fontWeight: 500 }}>
                     {theme.brandSubtitle}
                   </div>
                 </div>
@@ -474,10 +500,10 @@ export default function DashboardLayout() {
                 {user?.name?.charAt(0)?.toUpperCase() || 'A'}
               </div>
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ color: (theme as any).isLight ? '#1A202C' : '#e2e8f0', fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {user?.name || 'Loading...'}
                 </div>
-                <div style={{ color: '#94a3b8', fontSize: 11, fontWeight: 600 }}>
+                <div style={{ color: (theme as any).isLight ? '#4A5568' : '#94a3b8', fontSize: 11, fontWeight: 600 }}>
                   {theme.roleTitle}
                 </div>
               </div>
@@ -522,7 +548,7 @@ export default function DashboardLayout() {
                 display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
                 background: theme.accentColor, boxShadow: `0 0 8px ${theme.accentColor}`
               }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', letterSpacing: 0.5 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: (theme as any).isLight ? '#374151' : '#94a3b8', letterSpacing: 0.5 }}>
                 {theme.brandSubtitle.toUpperCase()}
               </span>
             </div>
@@ -584,8 +610,8 @@ export default function DashboardLayout() {
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   }}>
                     <div>
-                      <h3 style={{ color: '#e2e8f0', fontSize: 15, fontWeight: 700, margin: 0 }}>Notifications</h3>
-                      <p style={{ color: '#64748b', fontSize: 11, margin: '2px 0 0' }}>
+                      <h3 style={{ color: (theme as any).isLight ? '#1A202C' : '#e2e8f0', fontSize: 15, fontWeight: 700, margin: 0 }}>Notifications</h3>
+                      <p style={{ color: (theme as any).isLight ? '#6B7280' : '#64748b', fontSize: 11, margin: '2px 0 0' }}>
                         {unreadCount > 0 ? `${unreadCount} new case${unreadCount > 1 ? 's' : ''}` : 'All cases viewed'}
                       </p>
                     </div>
@@ -609,8 +635,8 @@ export default function DashboardLayout() {
                       )}
                       <span style={{
                         padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                        background: unreadCount > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(148,163,184,0.1)',
-                        color: unreadCount > 0 ? '#ef4444' : '#94a3b8',
+                        background: unreadCount > 0 ? 'rgba(239,68,68,0.15)' : ((theme as any).isLight ? 'rgba(0,0,0,0.06)' : 'rgba(148,163,184,0.1)'),
+                        color: unreadCount > 0 ? '#ef4444' : ((theme as any).isLight ? '#6B7280' : '#94a3b8'),
                       }}>
                         {unreadCount > 0 ? `${unreadCount} new` : `${notifications.length} total`}
                       </span>
@@ -620,7 +646,7 @@ export default function DashboardLayout() {
                   {/* Notification Items */}
                   <div style={{ maxHeight: 370, overflowY: 'auto' }}>
                     {notifications.length === 0 ? (
-                      <div style={{ padding: 40, textAlign: 'center', color: '#64748b', fontSize: 13 }}>
+                      <div style={{ padding: 40, textAlign: 'center', color: (theme as any).isLight ? '#6B7280' : '#64748b', fontSize: 13 }}>
                         No notifications yet
                       </div>
                     ) : notifications.map((notif) => {
@@ -635,11 +661,11 @@ export default function DashboardLayout() {
                           }}
                           style={{
                             padding: '14px 20px', cursor: 'pointer',
-                            borderBottom: '1px solid rgba(148,163,184,0.06)',
+                            borderBottom: (theme as any).isLight ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(148,163,184,0.06)',
                             background: isUnread ? `${theme.accentColor}12` : 'transparent',
                             transition: 'background 0.2s',
                           }}
-                          onMouseEnter={e => e.currentTarget.style.background = isUnread ? `${theme.accentColor}20` : 'rgba(255,255,255,0.03)'}
+                          onMouseEnter={e => e.currentTarget.style.background = isUnread ? `${theme.accentColor}20` : ((theme as any).isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.03)')}
                           onMouseLeave={e => e.currentTarget.style.background = isUnread ? `${theme.accentColor}12` : 'transparent'}
                         >
                           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
@@ -657,7 +683,7 @@ export default function DashboardLayout() {
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                  <span style={{ color: isUnread ? '#ffffff' : '#94a3b8', fontSize: 12, fontWeight: isUnread ? 800 : 600 }}>
+                                  <span style={{ color: isUnread ? ((theme as any).isLight ? '#1A202C' : '#ffffff') : ((theme as any).isLight ? '#6B7280' : '#94a3b8'), fontSize: 12, fontWeight: isUnread ? 800 : 600 }}>
                                     {notif.case_number}
                                   </span>
                                   {isUnread && (
@@ -678,19 +704,19 @@ export default function DashboardLayout() {
                                 </span>
                               </div>
                               <div style={{
-                                color: isUnread ? '#f1f5f9' : '#94a3b8', fontSize: 12, marginTop: 4,
+                                color: isUnread ? ((theme as any).isLight ? '#374151' : '#f1f5f9') : ((theme as any).isLight ? '#6B7280' : '#94a3b8'), fontSize: 12, marginTop: 4,
                                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                                 fontWeight: isUnread ? 600 : 400,
                               }}>
                                 {notif.description}
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, color: '#64748b', fontSize: 10 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, color: (theme as any).isLight ? '#9CA3AF' : '#64748b', fontSize: 10 }}>
                                 <Clock size={10} />
                                 {timeAgo(notif.created_at)}
                                 {isUnread ? (
                                   <span style={{ color: theme.activeNavText, marginLeft: 6, fontWeight: 600 }}>• Unread</span>
                                 ) : (
-                                  <span style={{ color: '#475569', marginLeft: 6 }}>• Viewed</span>
+                                  <span style={{ color: (theme as any).isLight ? '#9CA3AF' : '#475569', marginLeft: 6 }}>• Viewed</span>
                                 )}
                               </div>
                             </div>

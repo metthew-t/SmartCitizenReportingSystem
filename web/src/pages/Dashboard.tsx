@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
-import { Activity, CheckCircle, AlertTriangle, Clock, TrendingUp, BarChart3, ArrowUpRight } from 'lucide-react'
+import { Activity, CheckCircle, AlertTriangle, Clock, TrendingUp, BarChart3 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
@@ -28,7 +28,73 @@ interface Stats {
   recent_reports: { id: number; case_number: string; description: string; status: string; priority: string; department_name: string; created_at: string }[]
 }
 
-function MiniBarChart({ data, color }: { data: { label: string; value: number }[]; color: string }) {
+// Theme helpers
+interface DashTheme {
+  isLight: boolean
+  accent: string
+  textPrimary: string
+  textSecondary: string
+  cardBg: string
+  cardBorder: string
+  cardShadow: string
+  innerCardBg: string
+  innerCardBorder: string
+  progressBg: string
+  viewAllColor: string
+  sectionHeaderColor: string
+}
+
+function getTheme(role: string | null | undefined): DashTheme {
+  if (role === 'department_manager') {
+    return {
+      isLight: true,
+      accent: '#2B6CB0',
+      textPrimary: '#1A202C',
+      textSecondary: '#4A5568',
+      cardBg: '#FFFFFF',
+      cardBorder: 'rgba(26,54,93,0.12)',
+      cardShadow: '0 2px 12px rgba(26,54,93,0.08)',
+      innerCardBg: '#F7FAFF',
+      innerCardBorder: 'rgba(43,108,176,0.12)',
+      progressBg: 'rgba(43,108,176,0.08)',
+      viewAllColor: '#2B6CB0',
+      sectionHeaderColor: '#1A365D',
+    }
+  }
+  if (role === 'officer') {
+    return {
+      isLight: true,
+      accent: '#16A34A',
+      textPrimary: '#1A202C',
+      textSecondary: '#4A5568',
+      cardBg: '#FFFFFF',
+      cardBorder: 'rgba(21,128,61,0.12)',
+      cardShadow: '0 2px 12px rgba(21,128,61,0.08)',
+      innerCardBg: '#F7FFF9',
+      innerCardBorder: 'rgba(22,163,74,0.12)',
+      progressBg: 'rgba(22,163,74,0.08)',
+      viewAllColor: '#16A34A',
+      sectionHeaderColor: '#14532D',
+    }
+  }
+  // Dark theme for all other roles
+  return {
+    isLight: false,
+    accent: '#6366f1',
+    textPrimary: '#e2e8f0',
+    textSecondary: '#94a3b8',
+    cardBg: 'rgba(30,41,59,0.6)',
+    cardBorder: 'rgba(148,163,184,0.08)',
+    cardShadow: '0 4px 20px rgba(0,0,0,0.3)',
+    innerCardBg: 'rgba(15,23,42,0.4)',
+    innerCardBorder: 'rgba(148,163,184,0.06)',
+    progressBg: 'rgba(148,163,184,0.1)',
+    viewAllColor: '#818cf8',
+    sectionHeaderColor: '#e2e8f0',
+  }
+}
+
+function MiniBarChart({ data, color, theme }: { data: { label: string; value: number }[]; color: string; theme: DashTheme }) {
   const max = Math.max(...data.map(d => d.value), 1)
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 60 }}>
@@ -40,31 +106,54 @@ function MiniBarChart({ data, color }: { data: { label: string; value: number }[
             background: color, borderRadius: '4px 4px 0 0',
             opacity: 0.7 + (d.value / max) * 0.3, transition: 'height 0.5s ease',
           }} />
-          <span style={{ fontSize: 9, color: '#64748b', marginTop: 4 }}>{d.label}</span>
+          <span style={{ fontSize: 9, color: theme.textSecondary, marginTop: 4 }}>{d.label}</span>
         </div>
       ))}
     </div>
   )
 }
 
-function ProgressBar({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
+function ProgressBar({ label, value, total, color, theme }: { label: string; value: number; total: number; color: string; theme: DashTheme }) {
   const pct = total > 0 ? (value / total) * 100 : 0
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: 12, color: '#94a3b8' }}>{label}</span>
-        <span style={{ fontSize: 12, color: '#e2e8f0', fontWeight: 600 }}>{value}</span>
+        <span style={{ fontSize: 12, color: theme.textSecondary }}>{label}</span>
+        <span style={{ fontSize: 12, color: theme.textPrimary, fontWeight: 600 }}>{value}</span>
       </div>
-      <div style={{ height: 6, background: 'rgba(148,163,184,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+      <div style={{ height: 6, background: theme.progressBg, borderRadius: 3, overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 3, transition: 'width 0.8s ease' }} />
       </div>
     </div>
   )
 }
 
-function StatCard({ title, value, icon: Icon, color }: {
-  title: string; value: string | number; icon: any; color: string
+function StatCard({ title, value, icon: Icon, color, theme }: {
+  title: string; value: string | number; icon: any; color: string; theme: DashTheme
 }) {
+  if (theme.isLight) {
+    return (
+      <div style={{
+        background: '#FFFFFF',
+        border: `1px solid ${color}25`,
+        boxShadow: `0 2px 12px ${color}12`,
+        borderRadius: 16, padding: 20,
+        display: 'flex', alignItems: 'center', gap: 16, transition: 'all 0.3s',
+        borderLeft: `4px solid ${color}`,
+      }}>
+        <div style={{
+          width: 48, height: 48, borderRadius: 14, background: `${color}12`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        }}>
+          <Icon size={22} color={color} />
+        </div>
+        <div>
+          <p style={{ color: '#6B7280', fontSize: 12, margin: '0 0 4px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{title}</p>
+          <p style={{ color: '#1A202C', fontSize: 26, fontWeight: 800, margin: 0 }}>{value}</p>
+        </div>
+      </div>
+    )
+  }
   return (
     <div style={{
       background: `linear-gradient(135deg, rgba(30,41,59,0.9) 0%, ${color}10 100%)`,
@@ -87,10 +176,11 @@ function StatCard({ title, value, icon: Icon, color }: {
 }
 
 export default function Dashboard() {
-  const { departmentName, token } = useAuthStore()
+  const { departmentName, token, role } = useAuthStore()
   const navigate = useNavigate()
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
+  const theme = getTheme(role)
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -114,7 +204,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#64748b' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: theme.textSecondary }}>
         Loading dashboard...
       </div>
     )
@@ -128,48 +218,55 @@ export default function Dashboard() {
   return (
     <div style={{ fontFamily: "'Inter', sans-serif" }}>
       <div style={{ marginBottom: 24 }}>
-        <h2 style={{ color: '#e2e8f0', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>
+        <h2 style={{ color: theme.sectionHeaderColor, fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>
           {departmentName ? `${departmentName} Dashboard` : 'Dashboard'}
         </h2>
-        <p style={{ color: '#64748b', fontSize: 13, margin: 0 }}>
+        <p style={{ color: theme.textSecondary, fontSize: 13, margin: 0 }}>
           Real-time overview of citizen reports
         </p>
       </div>
 
       {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
-        <StatCard title="Total Reports" value={total} icon={Activity} color="#6366f1" />
-        <StatCard title="Resolved" value={resolved} icon={CheckCircle} color="#10b981" />
-        <StatCard title="Pending" value={pending} icon={Clock} color="#f59e0b" />
-        <StatCard title="Critical" value={critical} icon={AlertTriangle} color="#ef4444" />
+        <StatCard title="Total Reports" value={total} icon={Activity} color="#6366f1" theme={theme} />
+        <StatCard title="Resolved" value={resolved} icon={CheckCircle} color="#10b981" theme={theme} />
+        <StatCard title="Pending" value={pending} icon={Clock} color="#f59e0b" theme={theme} />
+        <StatCard title="Critical" value={critical} icon={AlertTriangle} color="#ef4444" theme={theme} />
       </div>
 
       {/* Charts row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginBottom: 24 }}>
         {/* Weekly trend */}
         <div style={{
-          background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16, padding: 20,
+          background: theme.cardBg,
+          backdropFilter: theme.isLight ? 'none' : 'blur(12px)',
+          border: `1px solid ${theme.cardBorder}`,
+          borderRadius: 16, padding: 20,
+          boxShadow: theme.cardShadow,
         }}>
-          <h3 style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 600, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <TrendingUp size={16} color="#6366f1" /> Weekly Report Trend
+          <h3 style={{ color: theme.sectionHeaderColor, fontSize: 14, fontWeight: 600, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <TrendingUp size={16} color={theme.accent} /> Weekly Report Trend
           </h3>
           <MiniBarChart
             data={(stats?.weekly_trend || []).map(w => ({ label: w.label, value: w.count }))}
-            color="#6366f1"
+            color={theme.accent}
+            theme={theme}
           />
         </div>
 
         {/* Status distribution */}
         <div style={{
-          background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16, padding: 20,
+          background: theme.cardBg,
+          backdropFilter: theme.isLight ? 'none' : 'blur(12px)',
+          border: `1px solid ${theme.cardBorder}`,
+          borderRadius: 16, padding: 20,
+          boxShadow: theme.cardShadow,
         }}>
-          <h3 style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 600, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <BarChart3 size={16} color="#8b5cf6" /> Reports by Status
+          <h3 style={{ color: theme.sectionHeaderColor, fontSize: 14, fontWeight: 600, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <BarChart3 size={16} color={theme.accent} /> Reports by Status
           </h3>
           {stats && Object.entries(stats.status_distribution).map(([s, count]) => (
-            <ProgressBar key={s} label={STATUS_LABELS[s] || s} value={count} total={total} color={STATUS_COLORS[s] || '#6366f1'} />
+            <ProgressBar key={s} label={STATUS_LABELS[s] || s} value={count} total={total} color={STATUS_COLORS[s] || theme.accent} theme={theme} />
           ))}
         </div>
       </div>
@@ -178,19 +275,22 @@ export default function Dashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
         {/* Priority */}
         <div style={{
-          background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16, padding: 20,
+          background: theme.cardBg,
+          backdropFilter: theme.isLight ? 'none' : 'blur(12px)',
+          border: `1px solid ${theme.cardBorder}`,
+          borderRadius: 16, padding: 20,
+          boxShadow: theme.cardShadow,
         }}>
-          <h3 style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 600, margin: '0 0 16px' }}>Priority Breakdown</h3>
+          <h3 style={{ color: theme.sectionHeaderColor, fontSize: 14, fontWeight: 600, margin: '0 0 16px' }}>Priority Breakdown</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {stats && Object.entries(stats.priority_distribution).map(([p, count]) => (
               <div key={p} style={{
                 padding: 14, borderRadius: 12,
-                background: `${PRIORITY_COLORS[p]}10`, border: `1px solid ${PRIORITY_COLORS[p]}20`,
+                background: `${PRIORITY_COLORS[p]}10`, border: `1px solid ${PRIORITY_COLORS[p]}25`,
                 textAlign: 'center',
               }}>
                 <div style={{ color: PRIORITY_COLORS[p], fontSize: 22, fontWeight: 700 }}>{count}</div>
-                <div style={{ color: '#94a3b8', fontSize: 11, textTransform: 'capitalize', marginTop: 2 }}>{p.toLowerCase()}</div>
+                <div style={{ color: theme.textSecondary, fontSize: 11, textTransform: 'capitalize', marginTop: 2 }}>{p.toLowerCase()}</div>
               </div>
             ))}
           </div>
@@ -198,31 +298,34 @@ export default function Dashboard() {
 
         {/* Recent reports */}
         <div style={{
-          background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16, padding: 20,
+          background: theme.cardBg,
+          backdropFilter: theme.isLight ? 'none' : 'blur(12px)',
+          border: `1px solid ${theme.cardBorder}`,
+          borderRadius: 16, padding: 20,
+          boxShadow: theme.cardShadow,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 600, margin: 0 }}>Recent Reports</h3>
+            <h3 style={{ color: theme.sectionHeaderColor, fontSize: 14, fontWeight: 600, margin: 0 }}>Recent Reports</h3>
             <button onClick={() => navigate('/reports')} style={{
-              background: 'none', border: 'none', color: '#818cf8', fontSize: 12, cursor: 'pointer', fontWeight: 500,
+              background: 'none', border: 'none', color: theme.viewAllColor, fontSize: 12, cursor: 'pointer', fontWeight: 600,
             }}>View all →</button>
           </div>
           {(!stats?.recent_reports || stats.recent_reports.length === 0) ? (
-            <p style={{ color: '#64748b', fontSize: 13 }}>No reports yet.</p>
+            <p style={{ color: theme.textSecondary, fontSize: 13 }}>No reports yet.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {stats.recent_reports.map(report => (
                 <div key={report.id} style={{
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '10px 12px', borderRadius: 10,
-                  background: 'rgba(15,23,42,0.4)', border: '1px solid rgba(148,163,184,0.06)',
+                  background: theme.innerCardBg, border: `1px solid ${theme.innerCardBorder}`,
                 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: STATUS_COLORS[report.status] || '#6366f1', flexShrink: 0 }} />
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: STATUS_COLORS[report.status] || theme.accent, flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: '#e2e8f0', fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ color: theme.textPrimary, fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {report.case_number} — {report.description}
                     </div>
-                    <div style={{ color: '#64748b', fontSize: 10, marginTop: 2 }}>
+                    <div style={{ color: theme.textSecondary, fontSize: 10, marginTop: 2 }}>
                       {report.department_name}
                     </div>
                   </div>
@@ -240,13 +343,15 @@ export default function Dashboard() {
         {stats && stats.total > 0 && (
           <div style={{
             padding: 20, borderRadius: 16,
-            background: 'linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(99,102,241,0.15) 100%)',
-            border: '1px solid rgba(16,185,129,0.25)',
+            background: theme.isLight
+              ? 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(43,108,176,0.08) 100%)'
+              : 'linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(99,102,241,0.15) 100%)',
+            border: theme.isLight ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(16,185,129,0.25)',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <div>
               <p style={{ color: '#10b981', fontSize: 13, fontWeight: 600, margin: '0 0 4px' }}>Resolution Rate</p>
-              <p style={{ color: '#94a3b8', fontSize: 11, margin: 0 }}>
+              <p style={{ color: theme.textSecondary, fontSize: 11, margin: 0 }}>
                 {resolved + (stats.closed || 0)} of {total} reports resolved or closed
               </p>
             </div>

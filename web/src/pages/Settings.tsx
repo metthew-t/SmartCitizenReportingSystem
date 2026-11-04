@@ -5,9 +5,110 @@ import { Settings as SettingsIcon, User, Bell, Globe, Shield, Database, Camera, 
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
+// Light theme for department_manager and officer
+interface SettingsTheme {
+  isLight: boolean
+  pageBg: string
+  textPrimary: string
+  textSecondary: string
+  cardBg: string
+  cardBorder: string
+  cardHeaderBg: string
+  cardHeaderText: string
+  cardHeaderBorder: string
+  inputBg: string
+  inputBorder: string
+  inputText: string
+  inputDisabledBg: string
+  inputDisabledText: string
+  rowBorder: string
+  accent: string
+  accentLight: string
+  accentText: string
+  toggleOnBg: string
+  iconAccent: string
+}
+
+function getTheme(role: string | null | undefined): SettingsTheme {
+  if (role === 'department_manager') {
+    return {
+      isLight: true,
+      pageBg: 'transparent',
+      textPrimary: '#1A202C',
+      textSecondary: '#4A5568',
+      cardBg: '#FFFFFF',
+      cardBorder: 'rgba(26,54,93,0.12)',
+      cardHeaderBg: '#F7FAFF',
+      cardHeaderText: '#1A365D',
+      cardHeaderBorder: 'rgba(26,54,93,0.1)',
+      inputBg: '#F7FAFF',
+      inputBorder: 'rgba(43,108,176,0.25)',
+      inputText: '#1A202C',
+      inputDisabledBg: '#EEF2F7',
+      inputDisabledText: '#6B7280',
+      rowBorder: 'rgba(26,54,93,0.07)',
+      accent: '#2B6CB0',
+      accentLight: 'rgba(43,108,176,0.1)',
+      accentText: '#2B6CB0',
+      toggleOnBg: '#2B6CB0',
+      iconAccent: '#2B6CB0',
+    }
+  }
+  if (role === 'officer') {
+    return {
+      isLight: true,
+      pageBg: 'transparent',
+      textPrimary: '#1A202C',
+      textSecondary: '#4A5568',
+      cardBg: '#FFFFFF',
+      cardBorder: 'rgba(21,128,61,0.12)',
+      cardHeaderBg: '#F7FFF9',
+      cardHeaderText: '#14532D',
+      cardHeaderBorder: 'rgba(21,128,61,0.1)',
+      inputBg: '#F7FFF9',
+      inputBorder: 'rgba(22,163,74,0.25)',
+      inputText: '#1A202C',
+      inputDisabledBg: '#EEFAF2',
+      inputDisabledText: '#6B7280',
+      rowBorder: 'rgba(21,128,61,0.07)',
+      accent: '#16A34A',
+      accentLight: 'rgba(22,163,74,0.1)',
+      accentText: '#16A34A',
+      toggleOnBg: '#16A34A',
+      iconAccent: '#16A34A',
+    }
+  }
+  // Dark theme (default, admin, super_admin, mayor)
+  return {
+    isLight: false,
+    pageBg: 'transparent',
+    textPrimary: '#e2e8f0',
+    textSecondary: '#94a3b8',
+    cardBg: 'rgba(30,41,59,0.6)',
+    cardBorder: 'rgba(148,163,184,0.08)',
+    cardHeaderBg: 'transparent',
+    cardHeaderText: '#e2e8f0',
+    cardHeaderBorder: 'rgba(148,163,184,0.08)',
+    inputBg: 'rgba(15,23,42,0.5)',
+    inputBorder: 'rgba(148,163,184,0.2)',
+    inputText: '#e2e8f0',
+    inputDisabledBg: 'rgba(15,23,42,0.2)',
+    inputDisabledText: '#64748b',
+    rowBorder: 'rgba(148,163,184,0.04)',
+    accent: '#6366f1',
+    accentLight: 'rgba(99,102,241,0.15)',
+    accentText: '#a5b4fc',
+    toggleOnBg: '#10b981',
+    iconAccent: '#6366f1',
+  }
+}
+
 export default function Settings() {
   const { user, departmentName, role, token, updateUser } = useAuthStore()
   const { language, setLanguage, t } = useLanguageStore()
+  // Subscribe to language so component re-renders on language change
+  void language
+  const th = getTheme(role)
   const [photoUrl, setPhotoUrl] = useState(user?.profile_photo_url || '')
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState('')
@@ -131,19 +232,30 @@ export default function Settings() {
     }
   }
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '10px 12px',
+    background: th.inputBg,
+    border: `1px solid ${th.inputBorder}`,
+    borderRadius: 8,
+    color: th.inputText,
+    outline: 'none',
+    fontSize: 13,
+  }
+
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", maxWidth: 720 }}>
-      <h2 style={{ color: '#e2e8f0', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>
+      <h2 style={{ color: th.textPrimary, fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>
         {t('settings_title')}
       </h2>
-      <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 24px' }}>
+      <p style={{ color: th.textSecondary, fontSize: 13, margin: '0 0 24px' }}>
         {t('settings_subtitle')}
       </p>
 
       {/* Profile section */}
       <SettingsCard
         title={t('profile')}
-        icon={<User size={18} color="#6366f1" />}
+        icon={<User size={18} color={th.iconAccent} />}
+        th={th}
         action={
           !isEditingProfile ? (
             <button
@@ -159,12 +271,13 @@ export default function Settings() {
               }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)',
-                color: '#a5b4fc', padding: '6px 12px', borderRadius: 8,
+                background: th.accentLight,
+                border: `1px solid ${th.accent}40`,
+                color: th.accentText, padding: '6px 12px', borderRadius: 8,
                 fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
               }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.25)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'rgba(99,102,241,0.15)'}
+              onMouseEnter={e => e.currentTarget.style.background = `${th.accent}25`}
+              onMouseLeave={e => e.currentTarget.style.background = th.accentLight}
             >
               <Edit2 size={13} /> {t('edit_profile')}
             </button>
@@ -175,9 +288,9 @@ export default function Settings() {
           <div style={{ position: 'relative' }}>
             <div style={{
               width: 72, height: 72, borderRadius: '50%', overflow: 'hidden',
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              background: `linear-gradient(135deg, ${th.accent}, ${th.accent}99)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: '3px solid rgba(99,102,241,0.3)',
+              border: `3px solid ${th.accent}40`,
             }}>
               {photoUrl ? (
                 <img src={photoUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -193,7 +306,7 @@ export default function Settings() {
               style={{
                 position: 'absolute', bottom: -2, right: -2,
                 width: 28, height: 28, borderRadius: '50%',
-                background: '#6366f1', border: '2px solid #1e293b',
+                background: th.accent, border: `2px solid ${th.isLight ? '#F0F2F5' : '#1e293b'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
               }}
@@ -203,8 +316,8 @@ export default function Settings() {
             <input ref={fileRef} type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
           </div>
           <div>
-            <div style={{ color: '#e2e8f0', fontWeight: 600, fontSize: 16 }}>{user?.name || 'N/A'}</div>
-            <div style={{ color: '#94a3b8', fontSize: 12 }}>{role?.replace('_', ' ').toUpperCase() || 'OFFICER'}</div>
+            <div style={{ color: th.textPrimary, fontWeight: 600, fontSize: 16 }}>{user?.name || 'N/A'}</div>
+            <div style={{ color: th.textSecondary, fontSize: 12 }}>{role?.replace('_', ' ').toUpperCase() || 'OFFICER'}</div>
             {uploadMsg && <div style={{ color: uploadMsg.includes('updated') ? '#10b981' : '#ef4444', fontSize: 12, marginTop: 4 }}>{uploadMsg}</div>}
           </div>
         </div>
@@ -222,26 +335,26 @@ export default function Settings() {
 
         {!isEditingProfile ? (
           <div>
-            <SettingsRow label={t('full_name')} value={user?.name || 'N/A'} />
-            <SettingsRow label={t('phone_number')} value={user?.phone && !user.phone.includes('@') ? user.phone : t('not_provided')} />
-            <SettingsRow label={t('email')} value={user?.email || (user?.phone?.includes('@') ? user.phone : t('not_provided'))} />
-            <SettingsRow label={t('department')} value={departmentName || t('not_assigned')} />
+            <SettingsRow label={t('full_name')} value={user?.name || 'N/A'} th={th} />
+            <SettingsRow label={t('phone_number')} value={user?.phone && !user.phone.includes('@') ? user.phone : t('not_provided')} th={th} />
+            <SettingsRow label={t('email')} value={user?.email || (user?.phone?.includes('@') ? user.phone : t('not_provided'))} th={th} />
+            <SettingsRow label={t('department')} value={departmentName || t('not_assigned')} th={th} />
           </div>
         ) : (
           <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>{t('full_name')}</label>
+              <label style={{ display: 'block', color: th.textSecondary, fontSize: 12, fontWeight: 600, marginBottom: 4 }}>{t('full_name')}</label>
               <input
                 type="text"
                 value={profileForm.fullName}
                 onChange={e => setProfileForm({ ...profileForm, fullName: e.target.value })}
-                style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none' }}
+                style={inputStyle}
               />
             </div>
 
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <label style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>{t('phone_number')}</label>
+                <label style={{ color: th.textSecondary, fontSize: 12, fontWeight: 600 }}>{t('phone_number')}</label>
                 <span style={{ fontSize: 10, color: '#10b981', fontWeight: 600 }}>{t('editable')}</span>
               </div>
               <input
@@ -249,15 +362,15 @@ export default function Settings() {
                 placeholder="09xxxxxxxx"
                 value={profileForm.phone}
                 onChange={e => setProfileForm({ ...profileForm, phone: e.target.value })}
-                style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none' }}
+                style={inputStyle}
               />
             </div>
 
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <label style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Email Address</label>
+                <label style={{ color: th.textSecondary, fontSize: 12, fontWeight: 600 }}>Email Address</label>
                 {role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? (
-                  <span style={{ fontSize: 10, color: '#6366f1', fontWeight: 600 }}>Admin Editable</span>
+                  <span style={{ fontSize: 10, color: th.accent, fontWeight: 600 }}>Admin Editable</span>
                 ) : (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#f59e0b', fontWeight: 600 }}>
                     <Lock size={10} /> Managed by Admin / Manager
@@ -270,12 +383,10 @@ export default function Settings() {
                 value={profileForm.email}
                 onChange={e => setProfileForm({ ...profileForm, email: e.target.value })}
                 style={{
-                  width: '100%', padding: '10px 12px',
-                  background: role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? 'rgba(15,23,42,0.5)' : 'rgba(15,23,42,0.2)',
-                  border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8,
-                  color: role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? '#e2e8f0' : '#64748b',
+                  ...inputStyle,
+                  background: role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? th.inputBg : th.inputDisabledBg,
+                  color: role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? th.inputText : th.inputDisabledText,
                   cursor: role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? 'text' : 'not-allowed',
-                  outline: 'none',
                 }}
               />
             </div>
@@ -285,8 +396,8 @@ export default function Settings() {
                 type="button"
                 onClick={() => setIsEditingProfile(false)}
                 style={{
-                  padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(148,163,184,0.2)',
-                  background: 'transparent', color: '#94a3b8', fontSize: 13, cursor: 'pointer',
+                  padding: '8px 16px', borderRadius: 8, border: `1px solid ${th.cardBorder}`,
+                  background: 'transparent', color: th.textSecondary, fontSize: 13, cursor: 'pointer',
                 }}
               >
                 {t('cancel')}
@@ -310,14 +421,14 @@ export default function Settings() {
       </SettingsCard>
 
       {/* Notifications */}
-      <SettingsCard title={t('notifications')} icon={<Bell size={18} color="#f59e0b" />}>
-        <SettingsToggle label={t('push_notifications')} defaultValue={true} />
-        <SettingsToggle label={t('email_notifications')} defaultValue={false} />
-        <SettingsToggle label={t('critical_alert_sound')} defaultValue={true} />
+      <SettingsCard title={t('notifications')} icon={<Bell size={18} color="#f59e0b" />} th={th}>
+        <SettingsToggle label={t('push_notifications')} defaultValue={true} th={th} />
+        <SettingsToggle label={t('email_notifications')} defaultValue={false} th={th} />
+        <SettingsToggle label={t('critical_alert_sound')} defaultValue={true} th={th} />
       </SettingsCard>
 
       {/* Language */}
-      <SettingsCard title={t('language')} icon={<Globe size={18} color="#10b981" />}>
+      <SettingsCard title={t('language')} icon={<Globe size={18} color="#10b981" />} th={th}>
         {langMsg && (
           <div style={{
             padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 13, fontWeight: 600,
@@ -351,27 +462,27 @@ export default function Settings() {
                 }}
                 style={{
                   flex: '1 1 180px', padding: '14px', borderRadius: 12, cursor: 'pointer',
-                  background: isSelected ? 'rgba(99,102,241,0.2)' : 'rgba(15,23,42,0.5)',
-                  border: isSelected ? '2px solid #6366f1' : '1px solid rgba(148,163,184,0.15)',
-                  color: isSelected ? '#ffffff' : '#94a3b8', textAlign: 'center',
+                  background: isSelected ? (th.isLight ? th.accentLight : 'rgba(99,102,241,0.2)') : (th.isLight ? '#F9FAFB' : 'rgba(15,23,42,0.5)'),
+                  border: isSelected ? `2px solid ${th.accent}` : `1px solid ${th.cardBorder}`,
+                  color: isSelected ? th.accentText : th.textSecondary, textAlign: 'center',
                   transition: 'all 0.2s', position: 'relative',
-                  boxShadow: isSelected ? '0 0 16px rgba(99,102,241,0.25)' : 'none',
+                  boxShadow: isSelected ? `0 0 16px ${th.accent}25` : 'none',
                 }}
               >
                 {isSelected && (
                   <span style={{
                     position: 'absolute', top: 8, right: 8,
-                    background: '#6366f1', color: 'white', borderRadius: '50%',
+                    background: th.accent, color: 'white', borderRadius: '50%',
                     width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     <Check size={11} strokeWidth={3} />
                   </span>
                 )}
                 <span style={{ fontSize: 22 }}>{lang.flag}</span>
-                <div style={{ fontSize: 13, fontWeight: 700, marginTop: 6, color: isSelected ? '#ffffff' : '#e2e8f0' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginTop: 6, color: isSelected ? th.accentText : th.textPrimary }}>
                   {lang.name}
                 </div>
-                <div style={{ fontSize: 11, color: isSelected ? '#a5b4fc' : '#64748b', marginTop: 2 }}>
+                <div style={{ fontSize: 11, color: isSelected ? th.accentText : th.textSecondary, marginTop: 2 }}>
                   {lang.localName}
                 </div>
               </button>
@@ -381,27 +492,32 @@ export default function Settings() {
       </SettingsCard>
 
       {/* System info */}
-      <SettingsCard title={t('system_info')} icon={<Database size={18} color="#64748b" />}>
-        <SettingsRow label={t('version')} value="1.0.0" />
+      <SettingsCard title={t('system_info')} icon={<Database size={18} color={th.textSecondary} />} th={th}>
+        <SettingsRow label={t('version')} value="1.0.0" th={th} />
       </SettingsCard>
     </div>
   )
 }
 
-function SettingsCard({ title, icon, action, children }: { title: string, icon: any, action?: React.ReactNode, children: React.ReactNode }) {
+function SettingsCard({ title, icon, action, children, th }: { title: string, icon: any, action?: React.ReactNode, children: React.ReactNode, th: SettingsTheme }) {
   return (
     <div style={{
-      background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-      border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16,
-      marginBottom: 16, overflow: 'hidden'
+      background: th.cardBg,
+      backdropFilter: th.isLight ? 'none' : 'blur(12px)',
+      border: `1px solid ${th.cardBorder}`,
+      borderRadius: 16,
+      marginBottom: 16, overflow: 'hidden',
+      boxShadow: th.isLight ? '0 2px 12px rgba(0,0,0,0.06)' : 'none',
     }}>
       <div style={{
-        padding: '16px 20px', borderBottom: '1px solid rgba(148,163,184,0.08)',
+        padding: '16px 20px',
+        borderBottom: `1px solid ${th.cardHeaderBorder}`,
+        background: th.cardHeaderBg,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {icon}
-          <h3 style={{ color: '#e2e8f0', fontSize: 15, fontWeight: 600, margin: 0 }}>{title}</h3>
+          <h3 style={{ color: th.cardHeaderText, fontSize: 15, fontWeight: 600, margin: 0 }}>{title}</h3>
         </div>
         {action}
       </div>
@@ -412,32 +528,32 @@ function SettingsCard({ title, icon, action, children }: { title: string, icon: 
   )
 }
 
-function SettingsRow({ label, value }: { label: string, value: string }) {
+function SettingsRow({ label, value, th }: { label: string, value: string, th: SettingsTheme }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid rgba(148,163,184,0.04)' }}>
-      <span style={{ color: '#94a3b8', fontSize: 13 }}>{label}</span>
-      <span style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 500 }}>{value}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${th.rowBorder}` }}>
+      <span style={{ color: th.textSecondary, fontSize: 13 }}>{label}</span>
+      <span style={{ color: th.textPrimary, fontSize: 13, fontWeight: 500 }}>{value}</span>
     </div>
   )
 }
 
-function SettingsToggle({ label, defaultValue }: { label: string, defaultValue: boolean }) {
+function SettingsToggle({ label, defaultValue, th }: { label: string, defaultValue: boolean, th: SettingsTheme }) {
   const [isOn, setIsOn] = React.useState(defaultValue)
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid rgba(148,163,184,0.04)' }}>
-      <span style={{ color: '#e2e8f0', fontSize: 13 }}>{label}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${th.rowBorder}` }}>
+      <span style={{ color: th.textPrimary, fontSize: 13 }}>{label}</span>
       <button
         onClick={() => setIsOn(!isOn)}
         style={{
           width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
-          background: isOn ? '#10b981' : 'rgba(148,163,184,0.2)',
+          background: isOn ? th.toggleOnBg : (th.isLight ? '#D1D5DB' : 'rgba(148,163,184,0.2)'),
           position: 'relative', transition: 'background 0.2s',
         }}
       >
         <div style={{
           width: 18, height: 18, borderRadius: '50%', background: 'white',
           position: 'absolute', top: 3, left: isOn ? 23 : 3, transition: 'left 0.2s',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+          boxShadow: '0 2px 4px rgba(0,0,0,0.15)'
         }} />
       </button>
     </div>
