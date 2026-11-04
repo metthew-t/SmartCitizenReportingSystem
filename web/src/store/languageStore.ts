@@ -25,6 +25,9 @@ export const translations: TranslationDictionary = {
   city_administration: { en: 'City Administration', om: 'Bulchiinsa Magaalaa', am: 'ከተማ አስተዳደር' },
   super_admin: { en: 'Super Admin', om: "Bulchaa Ol'aanaa", am: 'ከፍተኛ አስተዳዳሪ' },
   city_admin: { en: 'City Admin', om: 'Bulchaa Magaalaa', am: 'የከተማ አስተዳዳሪ' },
+  mayor: { en: 'Mayor', om: 'Kantiibaa', am: 'ከንቲባ' },
+  office_of_the_mayor: { en: 'Office of the Mayor', om: 'Waajjira Kantiibaa', am: 'የከንቲባ ጽሕፈት ቤት' },
+  mayor_command_center: { en: 'Mayor Command Center', om: 'Wiirtuu Ajajaa Kantiibaa', am: 'የከንቲባ ዕዝ ማዕከል' },
 
   // Settings Page
   settings_title: { en: 'Settings', om: 'Qindaa\'inoota', am: 'ቅንብሮች' },

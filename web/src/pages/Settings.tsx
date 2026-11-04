@@ -97,8 +97,8 @@ export default function Settings() {
         full_name: profileForm.fullName,
         phone_number: profileForm.phone,
       }
-      // Only city admin or super admin can update email for themselves
-      if (role === 'city_admin' || role === 'super_admin') {
+      // Only city admin, super admin, or mayor can update email for themselves
+      if (role === 'city_admin' || role === 'super_admin' || role === 'mayor') {
         payload.email = profileForm.email
       }
 
@@ -256,7 +256,7 @@ export default function Settings() {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                 <label style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Email Address</label>
-                {role === 'city_admin' || role === 'super_admin' ? (
+                {role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? (
                   <span style={{ fontSize: 10, color: '#6366f1', fontWeight: 600 }}>Admin Editable</span>
                 ) : (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#f59e0b', fontWeight: 600 }}>
@@ -266,15 +266,15 @@ export default function Settings() {
               </div>
               <input
                 type="email"
-                disabled={role !== 'city_admin' && role !== 'super_admin'}
+                disabled={role !== 'city_admin' && role !== 'super_admin' && role !== 'mayor'}
                 value={profileForm.email}
                 onChange={e => setProfileForm({ ...profileForm, email: e.target.value })}
                 style={{
                   width: '100%', padding: '10px 12px',
-                  background: role === 'city_admin' || role === 'super_admin' ? 'rgba(15,23,42,0.5)' : 'rgba(15,23,42,0.2)',
+                  background: role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? 'rgba(15,23,42,0.5)' : 'rgba(15,23,42,0.2)',
                   border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8,
-                  color: role === 'city_admin' || role === 'super_admin' ? '#e2e8f0' : '#64748b',
-                  cursor: role === 'city_admin' || role === 'super_admin' ? 'text' : 'not-allowed',
+                  color: role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? '#e2e8f0' : '#64748b',
+                  cursor: role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? 'text' : 'not-allowed',
                   outline: 'none',
                 }}
               />

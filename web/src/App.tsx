@@ -10,6 +10,7 @@ import ReportDetails from './pages/ReportDetails'
 import AdminUsers from './pages/AdminUsers'
 import DeptChat from './pages/DeptChat'
 import OfficialReports from './pages/OfficialReports'
+import MayorCommandCenter from './pages/MayorCommandCenter'
 import { useAuthStore } from './store/authStore'
 import { Building2, LogIn } from 'lucide-react'
 import PublicDashboard from './pages/PublicDashboard'
@@ -70,6 +71,11 @@ function Login() {
         const cleanEmail = rawEmail || (rawPhone.includes('@') ? rawPhone : (phone.includes('@') ? phone : ''))
         const cleanName = me?.full_name || cleanEmail || cleanPhone || 'User'
 
+        const isSuperAdmin = me?.is_super_admin || false
+        const isMayor = me?.is_mayor || false
+        const role = isSuperAdmin ? 'super_admin' : (isMayor ? 'mayor' : (me?.is_city_admin ? 'city_admin' : (me?.is_department_manager ? 'department_manager' : 'officer')))
+        const deptName = isMayor ? 'Office of the Mayor' : (me?.department_name || (me?.is_city_admin ? 'City Administration' : null))
+
         login(data.access, {
           id: me?.id || null,
           phone: cleanPhone,
@@ -78,9 +84,14 @@ function Login() {
           profile_photo_url: me?.profile_photo_url || null,
           department_name: me?.department_name || null,
           is_city_admin: me?.is_city_admin || false,
-          is_super_admin: me?.is_super_admin || false,
-        }, me?.department_name || (me?.is_city_admin ? 'City Administration' : null), me?.is_super_admin ? 'super_admin' : (me?.is_city_admin ? 'city_admin' : (me?.is_department_manager ? 'department_manager' : 'officer')))
-        navigate('/dashboard')
+          is_super_admin: isSuperAdmin,
+          is_mayor: isMayor,
+        }, deptName, role)
+        if (isMayor) {
+          navigate('/mayor')
+        } else {
+          navigate('/dashboard')
+        }
       } else {
         setError('Invalid email/phone number or password.')
       }
@@ -223,6 +234,7 @@ export default function App() {
           </ProtectedRoute>
         }>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/mayor" element={<MayorCommandCenter />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/reports/:id" element={<ReportDetails />} />
           <Route path="/official-reports" element={<OfficialReports />} />

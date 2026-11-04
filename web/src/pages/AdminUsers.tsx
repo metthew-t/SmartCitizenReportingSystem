@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
-import { Trash2, User, Building2, Shield, Search, Plus, X, KeyRound, Edit2, Phone, Mail } from 'lucide-react'
+import { Trash2, User, Building2, Shield, Search, Plus, X, KeyRound, Edit2, Phone, Mail, Crown } from 'lucide-react'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
@@ -15,6 +15,7 @@ interface UserData {
   is_department_manager: boolean
   is_city_admin: boolean
   is_super_admin: boolean
+  is_mayor: boolean
   department_name: string | null
   date_joined: string
 }
@@ -26,7 +27,7 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [filterRole, setFilterRole] = useState<'ALL' | 'CITIZEN' | 'OFFICER' | 'MANAGER' | 'ADMIN' | 'SUPER_ADMIN'>('ALL')
+  const [filterRole, setFilterRole] = useState<'ALL' | 'CITIZEN' | 'OFFICER' | 'MANAGER' | 'ADMIN' | 'SUPER_ADMIN' | 'MAYOR'>('ALL')
   
   // Modal state
   const [showModal, setShowModal] = useState(false)
@@ -40,6 +41,7 @@ export default function AdminUsers() {
     is_manager: false,
     is_city_admin: false,
     is_super_admin: false,
+    is_mayor: false,
   })
 
   // Edit User modal state
@@ -118,11 +120,13 @@ export default function AdminUsers() {
         payload.is_manager = false
         payload.is_city_admin = false
         payload.is_super_admin = false
+        payload.is_mayor = false
       }
-      // Only super admin can create city admins or super admins
+      // Only super admin can create city admins, super admins, or mayors
       if (role !== 'super_admin') {
         payload.is_city_admin = false
         payload.is_super_admin = false
+        payload.is_mayor = false
       }
 
       const res = await fetch(`${API}/auth/officer-register/`, {
@@ -140,7 +144,7 @@ export default function AdminUsers() {
         alert('User created successfully!')
         setShowModal(false)
         fetchUsers() // Refresh list
-        setFormData({ email: '', phone_number: '', password: '', full_name: '', department_name: '', is_manager: false, is_city_admin: false, is_super_admin: false })
+        setFormData({ email: '', phone_number: '', password: '', full_name: '', department_name: '', is_manager: false, is_city_admin: false, is_super_admin: false, is_mayor: false })
       } else {
         alert('Error: ' + JSON.stringify(data))
       }
@@ -236,8 +240,9 @@ export default function AdminUsers() {
       (filterRole === 'CITIZEN' && u.is_citizen) ||
       (filterRole === 'OFFICER' && u.is_officer && !u.is_department_manager && !u.is_city_admin) ||
       (filterRole === 'MANAGER' && u.is_department_manager) ||
-      (filterRole === 'ADMIN' && u.is_city_admin && !u.is_super_admin) ||
-      (filterRole === 'SUPER_ADMIN' && u.is_super_admin)
+      (filterRole === 'ADMIN' && u.is_city_admin && !u.is_super_admin && !u.is_mayor) ||
+      (filterRole === 'SUPER_ADMIN' && u.is_super_admin) ||
+      (filterRole === 'MAYOR' && u.is_mayor)
 
     return searchMatch && roleMatch
   })
@@ -294,8 +299,8 @@ export default function AdminUsers() {
             />
           </div>
 
-          <div style={{ display: 'flex', gap: 8 }}>
-            {(['ALL', 'CITIZEN', 'OFFICER', 'MANAGER', 'ADMIN', ...(role === 'super_admin' ? ['SUPER_ADMIN'] : [])] as const).map(r => (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {(['ALL', 'CITIZEN', 'OFFICER', 'MANAGER', 'ADMIN', ...(role === 'super_admin' ? ['MAYOR', 'SUPER_ADMIN'] : [])] as const).map(r => (
               <button
                 key={r}
                 onClick={() => setFilterRole(r as any)}
@@ -307,7 +312,7 @@ export default function AdminUsers() {
                   cursor: 'pointer', transition: 'all 0.2s',
                 }}
               >
-                {r === 'SUPER_ADMIN' ? 'Super Admin' : r.charAt(0) + r.slice(1).toLowerCase()}
+                {r === 'SUPER_ADMIN' ? 'Super Admin' : r === 'MAYOR' ? 'Mayor' : r.charAt(0) + r.slice(1).toLowerCase()}
               </button>
             ))}
           </div>
@@ -356,6 +361,7 @@ export default function AdminUsers() {
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {user.is_mayor && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(234,179,8,0.15)', color: '#eab308', fontSize: 10, fontWeight: 700 }}><Crown size={10} style={{ display: 'inline', marginRight: 2 }} /> MAYOR</span>}
                         {user.is_super_admin && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', fontSize: 10, fontWeight: 600 }}><Shield size={10} style={{ display: 'inline', marginRight: 2 }} /> SUPER ADMIN</span>}
                         {user.is_city_admin && !user.is_super_admin && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(16,185,129,0.1)', color: '#10b981', fontSize: 10, fontWeight: 600 }}><Shield size={10} style={{ display: 'inline', marginRight: 2 }} /> ADMIN</span>}
                         {user.is_department_manager && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(236,72,153,0.1)', color: '#ec4899', fontSize: 10, fontWeight: 600 }}><Building2 size={10} style={{ display: 'inline', marginRight: 2 }} /> MANAGER</span>}
@@ -370,8 +376,8 @@ export default function AdminUsers() {
                       {new Date(user.date_joined).toLocaleDateString()}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                      {/* Only super_admin can manage admin/super_admin accounts */}
-                      {(role === 'super_admin' || (!user.is_super_admin && !user.is_city_admin)) && (
+                      {/* Only super_admin can manage admin/super_admin/mayor accounts */}
+                      {(role === 'super_admin' || (!user.is_super_admin && !user.is_city_admin && !user.is_mayor)) && (
                       <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
                         <button 
                           onClick={() => openEditModal(user)}
@@ -525,6 +531,18 @@ export default function AdminUsers() {
                             onChange={e => setFormData({...formData, is_super_admin: e.target.checked})}
                           />
                           Is Super Admin
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#eab308', fontSize: 14, fontWeight: 600 }}>
+                          <input 
+                            type="checkbox" 
+                            checked={formData.is_mayor}
+                            onChange={e => setFormData({
+                              ...formData,
+                              is_mayor: e.target.checked,
+                              department_name: e.target.checked ? 'Waajjira Kantiibaa' : formData.department_name
+                            })}
+                          />
+                          Is Mayor (Office of the Mayor)
                         </label>
                       </>
                     )}

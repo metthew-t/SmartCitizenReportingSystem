@@ -11,7 +11,11 @@ from api.analytics_views import (
     SLAOverviewView, DepartmentPerformanceView, AuditLogView
 )
 from rest_framework.routers import DefaultRouter
-from api.views import ReportViewSet, DepartmentViewSet, ReportCategoryViewSet, MessageViewSet, DepartmentMessageViewSet, PingView, OfficialReportViewSet
+from api.views import (
+    ReportViewSet, DepartmentViewSet, ReportCategoryViewSet, MessageViewSet,
+    DepartmentMessageViewSet, PingView, OfficialReportViewSet,
+    MayorOverviewView, MayorDirectiveViewSet
+)
 from api.notification_views import NotificationViewSet, DeviceTokenViewSet
 
 router = DefaultRouter()
@@ -23,6 +27,7 @@ router.register(r'device-tokens', DeviceTokenViewSet, basename='device-token')
 router.register(r'messages', MessageViewSet, basename='message')
 router.register(r'dept-messages', DepartmentMessageViewSet, basename='dept-message')
 router.register(r'official-reports', OfficialReportViewSet, basename='official-report')
+router.register(r'mayor/directives', MayorDirectiveViewSet, basename='mayor-directive')
 
 urlpatterns = [
     # Auth Endpoints
@@ -50,5 +55,7 @@ urlpatterns = [
     path('analytics/sla-overview/', SLAOverviewView.as_view(), name='analytics_sla'),
     path('analytics/performance/', DepartmentPerformanceView.as_view(), name='analytics_performance'),
     path('analytics/audit-logs/', AuditLogView.as_view(), name='analytics_audit_logs'),
+    # Mayor Executive Command Center
+    path('mayor/overview/', MayorOverviewView.as_view(), name='mayor_overview'),
     path('ping/', PingView.as_view(), name='ping'),
 ] + router.urls

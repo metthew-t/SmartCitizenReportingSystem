@@ -250,3 +250,38 @@ class OfficialReport(models.Model):
 
     def __str__(self):
         return f"[{self.reference_number}] {self.title} ({self.status})"
+
+
+class MayorDirective(models.Model):
+    """Executive directives issued by the Mayor directly to sectors / municipal departments."""
+    PRIORITY_CHOICES = (
+        ('ROUTINE', 'Routine Directive'),
+        ('CRITICAL', 'Critical Executive Priority'),
+        ('EMERGENCY', 'State of Emergency / Immediate Action'),
+    )
+    STATUS_CHOICES = (
+        ('ISSUED', 'Issued / Active'),
+        ('IN_PROGRESS', 'Department In Progress'),
+        ('COMPLETED', 'Fulfilled / Completed'),
+        ('CANCELLED', 'Revoked / Superseded'),
+    )
+
+    reference_number = models.CharField(max_length=60, unique=True)
+    title = models.CharField(max_length=255)
+    target_department = models.ForeignKey(Department, on_delete=models.CASCADE, null=True, blank=True, related_name='mayor_directives')
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='CRITICAL')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='ISSUED')
+    instructions = models.TextField()
+    deadline = models.DateTimeField(null=True, blank=True)
+    issued_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='issued_mayor_directives')
+    acknowledgement_notes = models.TextField(blank=True, null=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        dept_name = self.target_department.name if self.target_department else 'ALL SECTORS'
+        return f"[{self.reference_number}] To {dept_name}: {self.title}"

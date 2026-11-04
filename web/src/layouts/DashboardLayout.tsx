@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore'
 import { useLanguageStore } from '../store/languageStore'
 import {
   LayoutDashboard, FileText, Map, Users, Settings, LogOut,
-  Bell, Menu, X, Building2, ShieldCheck, Clock, AlertTriangle, MessageSquare, ScrollText
+  Bell, Menu, X, Building2, ShieldCheck, Clock, AlertTriangle, MessageSquare, ScrollText, Crown
 } from 'lucide-react'
 
 interface Notification {
@@ -153,7 +153,10 @@ export default function DashboardLayout() {
 
   // Add role-specific navigation
   const navItems = [...baseNavItems]
-  if (role === 'super_admin' || role === 'city_admin' || role === 'department_manager') {
+  if (role === 'mayor' || role === 'super_admin') {
+    navItems.splice(1, 0, { path: '/mayor', label: t('mayor_command_center'), icon: Crown })
+  }
+  if (role === 'super_admin' || role === 'city_admin' || role === 'department_manager' || role === 'mayor') {
     navItems.push({ path: '/departments', label: t('departments'), icon: Building2 })
   }
   if (role === 'officer' || role === 'department_manager' || role === 'super_admin') {
@@ -242,7 +245,9 @@ export default function DashboardLayout() {
                 fontSize: 12,
               }}
             >
-              {role === 'super_admin' ? (
+              {role === 'mayor' ? (
+                <Crown size={14} color="#f59e0b" />
+              ) : role === 'super_admin' ? (
                 <ShieldCheck size={14} color="#f59e0b" />
               ) : role === 'city_admin' ? (
                 <ShieldCheck size={14} color="#10b981" />
@@ -250,7 +255,7 @@ export default function DashboardLayout() {
                 <Building2 size={14} color="#94a3b8" />
               )}
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
-                {role === 'super_admin' ? 'Super Admin' : role === 'city_admin' ? 'City Admin' : departmentName || 'Loading...'}
+                {role === 'mayor' ? 'Office of the Mayor' : role === 'super_admin' ? 'Super Admin' : role === 'city_admin' ? 'City Admin' : departmentName || 'Loading...'}
               </span>
             </div>
           )}
@@ -316,7 +321,7 @@ export default function DashboardLayout() {
                   {user?.name || 'Loading...'}
                 </div>
                 <div style={{ color: '#64748b', fontSize: 11, textTransform: 'capitalize' }}>
-                  {role?.replace('_', ' ') || 'Officer'}
+                  {role === 'mayor' ? 'Executive Mayor' : role?.replace('_', ' ') || 'Officer'}
                 </div>
               </div>
             </div>

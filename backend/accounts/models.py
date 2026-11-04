@@ -27,6 +27,7 @@ class User(AbstractUser):
     is_department_manager = models.BooleanField(default=False)
     is_city_admin = models.BooleanField(default=False)
     is_super_admin = models.BooleanField(default=False)
+    is_mayor = models.BooleanField(default=False)
     profile_photo = models.ImageField(upload_to='profiles/', null=True, blank=True)
 
     USERNAME_FIELD = 'phone_number'

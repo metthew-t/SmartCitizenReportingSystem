@@ -177,3 +177,19 @@ class OfficialReportSerializer(serializers.ModelSerializer):
             'reviewer', 'reviewer_name', 'reviewed_at', 'created_at', 'updated_at'
         ]
 
+
+class MayorDirectiveSerializer(serializers.ModelSerializer):
+    department_name = serializers.CharField(source='target_department.name', read_only=True, default='All Sectors')
+    issued_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        from core.models import MayorDirective
+        model = MayorDirective
+        fields = '__all__'
+        read_only_fields = ('reference_number', 'issued_by', 'created_at', 'updated_at')
+
+    def get_issued_by_name(self, obj):
+        if not obj.issued_by:
+            return 'Mayor of Adama'
+        return obj.issued_by.full_name or obj.issued_by.email or 'Mayor of Adama'
+

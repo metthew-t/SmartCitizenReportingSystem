@@ -4,7 +4,7 @@ interface AuthState {
   token: string | null
   user: any | null
   departmentName: string | null
-  role: 'citizen' | 'officer' | 'department_manager' | 'city_admin' | 'super_admin' | null
+  role: 'citizen' | 'officer' | 'department_manager' | 'city_admin' | 'super_admin' | 'mayor' | null
   login: (token: string, user: any, departmentName: string | null, role: string) => void
   updateUser: (fields: any) => void
   logout: () => void

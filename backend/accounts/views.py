@@ -278,11 +278,13 @@ class OfficerRegisterView(APIView):
             data['is_manager'] = False # Managers cannot create other managers
             data['is_city_admin'] = False
             data['is_super_admin'] = False
+            data['is_mayor'] = False
 
-        # Only super admin can create city admins or other super admins
+        # Only super admin can create city admins, super admins, or mayors
         if not is_super:
             data['is_city_admin'] = False
             data['is_super_admin'] = False
+            data['is_mayor'] = False
 
         serializer = OfficerRegisterSerializer(data=data)
         if serializer.is_valid():
@@ -312,11 +314,11 @@ class CurrentUserView(generics.RetrieveAPIView):
         user = request.user
         data = request.data
 
-        # Only City Admin / Super Admin can edit their email
+        # Only City Admin / Super Admin / Mayor can edit their email
         if 'email' in data:
             new_email = (data.get('email') or '').strip().lower()
             if new_email and new_email != (user.email or '').lower():
-                if not (user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False)):
+                if not (user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False) or getattr(user, 'is_mayor', False)):
                     return Response(
                         {'error': 'Officers and Department Managers cannot change their own email. Please contact City Admin.'},
                         status=status.HTTP_403_FORBIDDEN
@@ -392,8 +394,9 @@ class AdminResetPasswordView(APIView):
             # City admin cannot reset super admin passwords
             requester_is_super = bool(requester.is_superuser or getattr(requester, 'is_super_admin', False))
             target_is_super = bool(target_user.is_superuser or getattr(target_user, 'is_super_admin', False))
-            if target_is_super and not requester_is_super:
-                return Response({'error': 'Only Super Admin can reset another Super Admin password.'}, status=status.HTTP_403_FORBIDDEN)
+            target_is_mayor = bool(getattr(target_user, 'is_mayor', False))
+            if (target_is_super or target_is_mayor) and not requester_is_super:
+                return Response({'error': 'Only Super Admin can reset Mayor or Super Admin passwords.'}, status=status.HTTP_403_FORBIDDEN)
             target_user.set_password(new_password)
             target_user.save()
             return Response({'message': f'Password for {target_user.email or target_user.phone_number} has been reset.'})
@@ -449,10 +452,11 @@ class UserListView(APIView):
             if target_user.id == user.id:
                 return Response({'error': 'Cannot delete your own account'}, status=status.HTTP_400_BAD_REQUEST)
             
-            # Super admin accounts can only be deleted by another super admin
+            # Super admin or Mayor accounts can only be deleted by Super Admin
             target_is_super = bool(target_user.is_superuser or getattr(target_user, 'is_super_admin', False))
-            if target_is_super and not is_super:
-                return Response({'error': 'Only Super Admin can delete a Super Admin account.'}, status=status.HTTP_403_FORBIDDEN)
+            target_is_mayor = bool(getattr(target_user, 'is_mayor', False))
+            if (target_is_super or target_is_mayor) and not is_super:
+                return Response({'error': 'Only Super Admin can delete a Super Admin or Mayor account.'}, status=status.HTTP_403_FORBIDDEN)
             
             # City admin accounts can only be deleted by super admin
             if target_user.is_city_admin and not is_super:
@@ -483,10 +487,11 @@ class UserListView(APIView):
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Super admin accounts can only be edited by another super admin
+        # Super admin or Mayor accounts can only be edited by Super Admin
         target_is_super = bool(target_user.is_superuser or getattr(target_user, 'is_super_admin', False))
-        if target_is_super and not caller_is_super:
-            return Response({'error': 'Only Super Admin can edit a Super Admin account.'}, status=status.HTTP_403_FORBIDDEN)
+        target_is_mayor = bool(getattr(target_user, 'is_mayor', False))
+        if (target_is_super or target_is_mayor) and not caller_is_super:
+            return Response({'error': 'Only Super Admin can edit a Super Admin or Mayor account.'}, status=status.HTTP_403_FORBIDDEN)
 
         # City admin accounts can only be edited by super admin
         if target_user.is_city_admin and not caller_is_super:

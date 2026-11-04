@@ -281,6 +281,7 @@ class ReportViewSet(viewsets.ModelViewSet):
                 'is_officer': 'BOOLEAN DEFAULT FALSE',
                 'is_department_manager': 'BOOLEAN DEFAULT FALSE',
                 'is_super_admin': 'BOOLEAN DEFAULT FALSE',
+                'is_mayor': 'BOOLEAN DEFAULT FALSE',
                 'full_name': "VARCHAR(255) DEFAULT ''",
                 'profile_photo': 'VARCHAR(100) NULL',
                 'email': 'VARCHAR(254) UNIQUE NULL',
@@ -407,6 +408,21 @@ class ReportViewSet(viewsets.ModelViewSet):
                 reviewer_id INTEGER NULL,
                 sender_id INTEGER NOT NULL
             )""",
+            """CREATE TABLE IF NOT EXISTS core_mayordirective (
+                id SERIAL PRIMARY KEY,
+                reference_number VARCHAR(60) UNIQUE NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                priority VARCHAR(20) DEFAULT 'CRITICAL',
+                status VARCHAR(30) DEFAULT 'ISSUED',
+                instructions TEXT NOT NULL,
+                deadline TIMESTAMP WITH TIME ZONE NULL,
+                acknowledgement_notes TEXT NULL,
+                completed_at TIMESTAMP WITH TIME ZONE NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                issued_by_id INTEGER NOT NULL,
+                target_department_id INTEGER NULL
+            )""",
         ]
         for sql in tables_to_create:
             table_name = sql.split('IF NOT EXISTS ')[1].split(' ')[0] if 'IF NOT EXISTS' in sql else 'unknown'
@@ -437,15 +453,17 @@ class ReportViewSet(viewsets.ModelViewSet):
             admin.email = email
             admin.set_password(password)
             admin.is_super_admin = True
+            admin.is_mayor = True
             admin.is_superuser = True
             admin.is_staff = True
             admin.save()
-            return Response({'message': f'Existing master admin updated as Super Admin! You can now log in with Email: {email} and Password: {password}'})
+            return Response({'message': f'Existing master admin updated as Super Admin & Mayor! You can now log in with Email: {email} and Password: {password}'})
             
         user = User(
             email=email,
             is_city_admin=True,
             is_super_admin=True,
+            is_mayor=True,
             is_staff=True,
             is_superuser=True
         )
@@ -982,5 +1000,271 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
             pass
 
         return Response(OfficialReportSerializer(official_report).data)
+
+
+class MayorOverviewView(APIView):
+    """
+    Mayor Executive Command Center Overview Endpoint.
+    Provides total municipal sector telemetry, cross-sector live audit trails,
+    department performance rankings, kebele spatial distribution, and active mayoral directives.
+    Restricted to Mayor, Super Admin, and City Admin.
+    """
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        user = request.user
+        is_mayor = bool(getattr(user, 'is_mayor', False))
+        is_super = bool(user.is_superuser or getattr(user, 'is_super_admin', False))
+        is_admin = bool(user.is_city_admin)
+
+        if not (is_mayor or is_super or is_admin):
+            return Response({'error': 'Access Denied. Mayoral Clearance Required.'}, status=status.HTTP_403_FORBIDDEN)
+
+        from core.models import Report, Department, ReportStatusHistory, OfficialReport, MayorDirective, Feedback
+        from django.db.models import Count, Q, Avg
+        from django.utils import timezone
+
+        # Ensure directives table exists
+        try:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS core_mayordirective (
+                        id SERIAL PRIMARY KEY,
+                        reference_number VARCHAR(60) UNIQUE NOT NULL,
+                        title VARCHAR(255) NOT NULL,
+                        priority VARCHAR(20) DEFAULT 'CRITICAL',
+                        status VARCHAR(30) DEFAULT 'ISSUED',
+                        instructions TEXT NOT NULL,
+                        deadline TIMESTAMP WITH TIME ZONE NULL,
+                        acknowledgement_notes TEXT NULL,
+                        completed_at TIMESTAMP WITH TIME ZONE NULL,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                        issued_by_id INTEGER NOT NULL,
+                        target_department_id INTEGER NULL
+                    );
+                """)
+        except Exception:
+            pass
+
+        # ── City-Wide Telemetry ──────────────────────────────────────────────
+        total_reports = Report.objects.count()
+        resolved_count = Report.objects.filter(status='RESOLVED').count()
+        closed_count = Report.objects.filter(status='CLOSED').count()
+        in_progress_count = Report.objects.filter(status='IN_PROGRESS').count()
+        investigation_count = Report.objects.filter(status='UNDER_INVESTIGATION').count()
+        submitted_count = Report.objects.filter(status='SUBMITTED').count()
+        critical_count = Report.objects.filter(priority='CRITICAL').exclude(status__in=['RESOLVED', 'CLOSED']).count()
+        high_count = Report.objects.filter(priority='HIGH').exclude(status__in=['RESOLVED', 'CLOSED']).count()
+
+        completed_total = resolved_count + closed_count
+        resolution_rate = round((completed_total / total_reports * 100), 1) if total_reports > 0 else 0.0
+
+        # Citizen Satisfaction rating (1 to 5)
+        satisfaction_avg = 4.2
+        try:
+            fb = Feedback.objects.aggregate(avg_rating=Avg('rating'))
+            if fb.get('avg_rating'):
+                satisfaction_avg = round(fb['avg_rating'], 1)
+        except Exception:
+            pass
+
+        # ── All Sectors (Departments) Performance Matrix ────────────────────
+        sectors_matrix = []
+        departments = Department.objects.all().order_by('name')
+
+        for dept in departments:
+            d_total = Report.objects.filter(primary_department=dept).count()
+            d_resolved = Report.objects.filter(primary_department=dept, status='RESOLVED').count()
+            d_closed = Report.objects.filter(primary_department=dept, status='CLOSED').count()
+            d_in_progress = Report.objects.filter(primary_department=dept, status='IN_PROGRESS').count()
+            d_investigation = Report.objects.filter(primary_department=dept, status='UNDER_INVESTIGATION').count()
+            d_pending = Report.objects.filter(primary_department=dept, status='SUBMITTED').count()
+            d_critical = Report.objects.filter(primary_department=dept, priority='CRITICAL').exclude(status__in=['RESOLVED', 'CLOSED']).count()
+
+            d_done = d_resolved + d_closed
+            d_rate = round((d_done / d_total * 100), 1) if d_total > 0 else (100.0 if d_total == 0 else 0.0)
+
+            # Performance Tier
+            if d_rate >= 80:
+                tier = 'EXCELLENT'
+            elif d_rate >= 50:
+                tier = 'SATISFACTORY'
+            else:
+                tier = 'ATTENTION_REQUIRED'
+
+            sectors_matrix.append({
+                'id': dept.id,
+                'name': dept.name,
+                'total_reports': d_total,
+                'resolved': d_resolved,
+                'closed': d_closed,
+                'in_progress': d_in_progress,
+                'under_investigation': d_investigation,
+                'pending': d_pending,
+                'critical_active': d_critical,
+                'resolution_rate': d_rate,
+                'performance_tier': tier,
+            })
+
+        # Sort sectors by highest critical count and lower resolution rate
+        sectors_matrix.sort(key=lambda s: (s['critical_active'], -s['resolution_rate']), reverse=True)
+
+        # ── Live Cross-Sector Activity Feed ──────────────────────────────────
+        recent_activity = []
+        try:
+            histories = ReportStatusHistory.objects.select_related('report', 'report__primary_department').order_by('-changed_at')[:30]
+            for h in histories:
+                recent_activity.append({
+                    'id': h.id,
+                    'case_number': h.report.case_number if h.report else 'N/A',
+                    'report_title': h.report.description[:50] if h.report and h.report.description else 'Citizen Report',
+                    'department_name': h.report.primary_department.name if h.report and h.report.primary_department else 'City Municipal',
+                    'old_status': h.old_status,
+                    'new_status': h.new_status,
+                    'actor_name': h.changed_by_name or 'Official',
+                    'timestamp': h.changed_at.isoformat(),
+                    'note': h.note or '',
+                    'priority': h.report.priority if h.report else 'MEDIUM',
+                })
+        except Exception:
+            pass
+
+        # ── Official Executive Reports Submitted to Mayor/Admin ──────────────
+        executive_reports = []
+        try:
+            exec_qs = OfficialReport.objects.select_related('department', 'sender').order_by('-created_at')[:15]
+            for er in exec_qs:
+                executive_reports.append({
+                    'id': er.id,
+                    'reference_number': er.reference_number,
+                    'title': er.title,
+                    'department_name': er.department.name if er.department else 'Municipal Sector',
+                    'sender_name': er.sender_name or 'Department Manager',
+                    'level': er.level,
+                    'status': er.status,
+                    'priority': er.priority,
+                    'created_at': er.created_at.isoformat(),
+                    'executive_summary': er.executive_summary[:120] if er.executive_summary else '',
+                })
+        except Exception:
+            pass
+
+        # ── Mayor Directives ────────────────────────────────────────────────
+        directives = []
+        try:
+            dirs = MayorDirective.objects.select_related('target_department', 'issued_by').order_by('-created_at')[:20]
+            for d in dirs:
+                directives.append({
+                    'id': d.id,
+                    'reference_number': d.reference_number,
+                    'title': d.title,
+                    'target_department': d.target_department.name if d.target_department else 'ALL SECTORS',
+                    'target_department_id': d.target_department_id,
+                    'priority': d.priority,
+                    'status': d.status,
+                    'instructions': d.instructions,
+                    'deadline': d.deadline.isoformat() if d.deadline else None,
+                    'created_at': d.created_at.isoformat(),
+                })
+        except Exception:
+            pass
+
+        # ── Kebele / Ward Summary ────────────────────────────────────────────
+        kebele_summary = []
+        try:
+            kebeles = (
+                Report.objects.exclude(kebele__isnull=True)
+                .exclude(kebele__exact='')
+                .values('kebele')
+                .annotate(
+                    total=Count('id'),
+                    resolved=Count('id', filter=Q(status__in=['RESOLVED', 'CLOSED']))
+                )
+                .order_by('-total')[:10]
+            )
+            for k in kebeles:
+                total_k = k['total']
+                res_k = k['resolved']
+                rate_k = round((res_k / total_k * 100), 1) if total_k > 0 else 0
+                kebele_summary.append({
+                    'kebele': k['kebele'],
+                    'total': total_k,
+                    'resolved': res_k,
+                    'rate': rate_k,
+                })
+        except Exception:
+            pass
+
+        return Response({
+            'telemetry': {
+                'total_reports': total_reports,
+                'resolved_count': resolved_count,
+                'closed_count': closed_count,
+                'in_progress_count': in_progress_count,
+                'investigation_count': investigation_count,
+                'submitted_count': submitted_count,
+                'critical_active': critical_count,
+                'high_active': high_count,
+                'resolution_rate': resolution_rate,
+                'citizen_satisfaction': satisfaction_avg,
+                'total_sectors': len(departments),
+            },
+            'sectors_matrix': sectors_matrix,
+            'recent_activity': recent_activity,
+            'executive_reports': executive_reports,
+            'directives': directives,
+            'kebele_summary': kebele_summary,
+        })
+
+
+class MayorDirectiveViewSet(viewsets.ModelViewSet):
+    """Endpoints for Mayor to issue, acknowledge and manage executive directives."""
+    permission_classes = (permissions.IsAuthenticated,)
+    from api.serializers import MayorDirectiveSerializer
+    serializer_class = MayorDirectiveSerializer
+
+    def get_queryset(self):
+        from core.models import MayorDirective
+        return MayorDirective.objects.select_related('target_department', 'issued_by').all().order_by('-created_at')
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        is_mayor = bool(getattr(user, 'is_mayor', False))
+        is_super = bool(user.is_superuser or getattr(user, 'is_super_admin', False))
+        if not (is_mayor or is_super or user.is_city_admin):
+            raise PermissionDenied("Only the Mayor or Super Admin can issue executive directives.")
+
+        import uuid
+        from datetime import datetime
+        year = datetime.now().year
+        ref_num = f"MYR-DIR-{year}-{uuid.uuid4().hex[:6].upper()}"
+
+        directive = serializer.save(
+            issued_by=user,
+            reference_number=ref_num
+        )
+
+        # Broadcast push notification to department managers
+        try:
+            from core.push_service import send_push_notification
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            target_dept = directive.target_department
+            if target_dept:
+                managers = User.objects.filter(is_department_manager=True, officer_profile__department=target_dept)
+            else:
+                managers = User.objects.filter(is_department_manager=True)
+
+            for m in managers:
+                send_push_notification(
+                    m,
+                    title=f"MAYORAL DIRECTIVE: {directive.title}",
+                    body=f"Executive Order [{ref_num}] issued by the Mayor's Office. Priority: {directive.priority}.",
+                    data={'type': 'MAYOR_DIRECTIVE', 'directive_id': directive.id}
+                )
+        except Exception:
+            pass
 
 
