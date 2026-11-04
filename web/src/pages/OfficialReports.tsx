@@ -4,8 +4,10 @@ import {
   ScrollText, Plus, Search, Filter, CheckCircle2, Clock,
   AlertTriangle, FileText, Send, Building2, User, Eye,
   ArrowRight, ShieldCheck, X, Printer, AlertCircle, FileCheck, Check,
-  CornerDownRight, RefreshCw, Bookmark
+  CornerDownRight, RefreshCw, Bookmark, Download, FileSpreadsheet
 } from 'lucide-react'
+import { exportToWord, exportToExcel, exportAllReportsToExcel } from '../utils/reportExporter'
+import { logAuditEvent } from '../utils/auditLogger'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
@@ -356,6 +358,27 @@ export default function OfficialReports() {
             }}
           >
             <RefreshCw size={14} /> Refresh
+          </button>
+
+          <button
+            onClick={() => {
+              exportAllReportsToExcel(reports)
+              logAuditEvent({
+                action: 'OFFICIAL_REPORTS_BATCH_EXPORT',
+                entity_type: 'OFFICIAL_REPORT',
+                entity_id: 'ALL',
+                changes: { count: reports.length, format: 'CSV_EXCEL' }
+              })
+            }}
+            title="Export all official reports to Excel / CSV"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)',
+              color: '#34d399', padding: '9px 14px', borderRadius: 10, fontSize: 13,
+              fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
+            }}
+          >
+            <FileSpreadsheet size={15} /> Export Registry (Excel)
           </button>
 
           <button
@@ -750,18 +773,70 @@ export default function OfficialReports() {
                   Official Dossier: {selectedReport.reference_number}
                 </span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <button
-                  onClick={() => window.print()}
+                  onClick={() => {
+                    exportToWord(selectedReport)
+                    logAuditEvent({
+                      action: 'OFFICIAL_REPORT_EXPORT_WORD',
+                      entity_type: 'OFFICIAL_REPORT',
+                      entity_id: selectedReport.reference_number,
+                      changes: { title: selectedReport.title, format: 'WORD_DOC' }
+                    })
+                  }}
+                  title="Export official dossier as Microsoft Word document"
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6,
-                    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(148,163,184,0.15)',
-                    color: '#cbd5e1', padding: '6px 12px', borderRadius: 8, fontSize: 12,
-                    fontWeight: 500, cursor: 'pointer',
+                    background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)',
+                    color: '#60a5fa', padding: '6px 12px', borderRadius: 8, fontSize: 12,
+                    fontWeight: 600, cursor: 'pointer',
                   }}
                 >
-                  <Printer size={13} /> Print Dossier
+                  <FileText size={13} /> Export Word (.doc)
                 </button>
+
+                <button
+                  onClick={() => {
+                    exportToExcel(selectedReport)
+                    logAuditEvent({
+                      action: 'OFFICIAL_REPORT_EXPORT_EXCEL',
+                      entity_type: 'OFFICIAL_REPORT',
+                      entity_id: selectedReport.reference_number,
+                      changes: { title: selectedReport.title, format: 'EXCEL_CSV' }
+                    })
+                  }}
+                  title="Export official dossier as Excel spreadsheet"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)',
+                    color: '#34d399', padding: '6px 12px', borderRadius: 8, fontSize: 12,
+                    fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  <FileSpreadsheet size={13} /> Export Excel
+                </button>
+
+                <button
+                  onClick={() => {
+                    window.print()
+                    logAuditEvent({
+                      action: 'OFFICIAL_REPORT_PRINT_PDF',
+                      entity_type: 'OFFICIAL_REPORT',
+                      entity_id: selectedReport.reference_number,
+                      changes: { title: selectedReport.title, format: 'PRINT_PDF' }
+                    })
+                  }}
+                  title="Print dossier or save as PDF"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    background: 'linear-gradient(135deg, #6366f1, #4f46e5)', border: 'none',
+                    color: 'white', padding: '6px 14px', borderRadius: 8, fontSize: 12,
+                    fontWeight: 600, cursor: 'pointer', boxShadow: '0 2px 8px rgba(99,102,241,0.3)',
+                  }}
+                >
+                  <Printer size={13} /> Print / Save PDF
+                </button>
+
                 <button
                   onClick={() => setIsDossierOpen(false)}
                   style={{
@@ -775,7 +850,7 @@ export default function OfficialReports() {
             </div>
 
             {/* Printable Official Government Letterhead Document */}
-            <div style={{ overflowY: 'auto', padding: 28, flex: 1 }}>
+            <div id="official-dossier-printable" style={{ overflowY: 'auto', padding: 28, flex: 1 }}>
               {/* Header Letterhead */}
               <div style={{
                 textAlign: 'center', paddingBottom: 20, marginBottom: 24,
@@ -848,6 +923,54 @@ export default function OfficialReports() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Formal Government Endorsement & Official Seal Block */}
+              <div style={{
+                marginTop: 28, paddingTop: 20, borderTop: '2pt double rgba(148,163,184,0.25)',
+                display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20
+              }}>
+                <div style={{
+                  padding: 16, borderRadius: 10, background: 'rgba(15,23,42,0.6)',
+                  border: '1px solid rgba(148,163,184,0.1)'
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 6 }}>
+                    SUBMITTING CIVIL SERVANT / INVESTIGATOR
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#f8fafc' }}>
+                    {selectedReport.sender_name}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#818cf8', fontWeight: 600 }}>
+                    {selectedReport.sender_role} &bull; {selectedReport.department_name}
+                  </div>
+                  <div style={{ marginTop: 24, borderTop: '1px solid #475569', paddingTop: 6, fontSize: 11, color: '#64748b' }}>
+                    Authorized Digital Signature &bull; {new Date(selectedReport.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: 16, borderRadius: 10, background: 'rgba(15,23,42,0.6)',
+                  border: '1.5pt dashed rgba(99,102,241,0.3)', textAlign: 'center', position: 'relative'
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#818cf8', textTransform: 'uppercase', marginBottom: 4 }}>
+                    MUNICIPAL EXECUTIVE REGISTRY SEAL
+                  </div>
+                  <div style={{ fontSize: 10, color: '#94a3b8', fontStyle: 'italic', marginBottom: 12 }}>
+                    Bulchiinsa Magaalaa Adaamaa &bull; Waajjira Kantiibaa
+                  </div>
+                  <div style={{
+                    display: 'inline-block', padding: '6px 14px', borderRadius: 8,
+                    background: selectedReport.status === 'APPROVED' ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.15)',
+                    border: `1.5pt solid ${selectedReport.status === 'APPROVED' ? '#10b981' : '#6366f1'}`,
+                    color: selectedReport.status === 'APPROVED' ? '#34d399' : '#a5b4fc',
+                    fontWeight: 800, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase'
+                  }}>
+                    {STATUS_LABELS[selectedReport.status] || selectedReport.status}
+                  </div>
+                  <div style={{ marginTop: 14, fontSize: 10, color: '#64748b' }}>
+                    Verified via Adama Smart Governance System &bull; Ref: {selectedReport.reference_number}
+                  </div>
+                </div>
               </div>
 
               {/* Title */}
@@ -1083,6 +1206,54 @@ export default function OfficialReports() {
                   </form>
                 )}
               </div>
+
+              {/* Formal Government Endorsement & Official Seal Block */}
+              <div style={{
+                marginTop: 28, paddingTop: 20, borderTop: '2pt double rgba(148,163,184,0.25)',
+                display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20
+              }}>
+                <div style={{
+                  padding: 16, borderRadius: 10, background: 'rgba(15,23,42,0.6)',
+                  border: '1px solid rgba(148,163,184,0.1)'
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 6 }}>
+                    SUBMITTING CIVIL SERVANT / INVESTIGATOR
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#f8fafc' }}>
+                    {selectedReport.sender_name}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#818cf8', fontWeight: 600 }}>
+                    {selectedReport.sender_role} &bull; {selectedReport.department_name}
+                  </div>
+                  <div style={{ marginTop: 24, borderTop: '1px solid #475569', paddingTop: 6, fontSize: 11, color: '#64748b' }}>
+                    Authorized Digital Signature &bull; {new Date(selectedReport.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: 16, borderRadius: 10, background: 'rgba(15,23,42,0.6)',
+                  border: '1.5pt dashed rgba(99,102,241,0.3)', textAlign: 'center', position: 'relative'
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#818cf8', textTransform: 'uppercase', marginBottom: 4 }}>
+                    MUNICIPAL EXECUTIVE REGISTRY SEAL
+                  </div>
+                  <div style={{ fontSize: 10, color: '#94a3b8', fontStyle: 'italic', marginBottom: 12 }}>
+                    Bulchiinsa Magaalaa Adaamaa &bull; Waajjira Kantiibaa
+                  </div>
+                  <div style={{
+                    display: 'inline-block', padding: '6px 14px', borderRadius: 8,
+                    background: selectedReport.status === 'APPROVED' ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.15)',
+                    border: `1.5pt solid ${selectedReport.status === 'APPROVED' ? '#10b981' : '#6366f1'}`,
+                    color: selectedReport.status === 'APPROVED' ? '#34d399' : '#a5b4fc',
+                    fontWeight: 800, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase'
+                  }}>
+                    {STATUS_LABELS[selectedReport.status] || selectedReport.status}
+                  </div>
+                  <div style={{ marginTop: 14, fontSize: 10, color: '#64748b' }}>
+                    Verified via Adama Smart Governance System &bull; Ref: {selectedReport.reference_number}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1308,6 +1479,42 @@ export default function OfficialReports() {
           </div>
         </div>
       )}
+      {/* High-Fidelity Print Styling for Official Government Documents */}
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          aside, header, nav, button, select, input, .no-print {
+            display: none !important;
+          }
+          #official-dossier-printable, #official-dossier-printable * {
+            visibility: visible;
+          }
+          #official-dossier-printable {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
+            padding: 24px !important;
+            box-shadow: none !important;
+            border: none !important;
+          }
+          #official-dossier-printable h2,
+          #official-dossier-printable h3,
+          #official-dossier-printable h4,
+          #official-dossier-printable div,
+          #official-dossier-printable span,
+          #official-dossier-printable strong {
+            color: #0f172a !important;
+          }
+          #official-dossier-printable .print-border {
+            border-color: #cbd5e1 !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }

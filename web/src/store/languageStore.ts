@@ -89,6 +89,10 @@ export const translations: TranslationDictionary = {
   filter: { en: 'Filter', om: 'Filtarii', am: 'አጣራ' },
   view_details: { en: 'View Details', om: 'Bal\'inaan Ilaali', am: 'ዝርዝሩን ይመልከቱ' },
   share_report: { en: 'Share Report', om: 'Gabaasa Qoodi', am: 'ሪፖርት አጋራ' },
+  audit_logs: { en: 'Audit Logs', om: 'Galmee Ooditii', am: 'የኦዲት መዝገብ' },
+  export_excel: { en: 'Export Excel', om: 'Excel Baasi', am: 'Excel ላክ' },
+  export_word: { en: 'Export Word', om: 'Word Baasi', am: 'Word ላክ' },
+  export_pdf: { en: 'Export PDF', om: 'PDF Baasi', am: 'PDF ላክ' },
 }
 
 interface LanguageState {

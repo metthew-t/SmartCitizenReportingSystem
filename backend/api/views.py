@@ -1022,7 +1022,7 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
 
         sender_name = user.full_name or (user.officer_profile.full_name if _safe_hasattr(user, 'officer_profile') else '') or user.email or user.phone_number
 
-        serializer.save(
+        instance = serializer.save(
             sender=user,
             sender_name=sender_name,
             sender_role=sender_role,
@@ -1031,6 +1031,25 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
             reference_number=ref_num,
             status=self.request.data.get('status', 'SUBMITTED')
         )
+
+        try:
+            from api.analytics_views import log_audit_event
+            log_audit_event(
+                user=user,
+                action='OFFICIAL_REPORT_SUBMITTED',
+                entity_type='OFFICIAL_REPORT',
+                entity_id=ref_num,
+                changes={
+                    'title': getattr(instance, 'title', ''),
+                    'level': level,
+                    'department': dept.name if dept else '',
+                    'priority': getattr(instance, 'priority', 'ROUTINE'),
+                    'status': getattr(instance, 'status', 'SUBMITTED'),
+                },
+                request=self.request
+            )
+        except Exception:
+            pass
 
     @action(detail=True, methods=['post'], url_path='review')
     def review(self, request, pk=None):
@@ -1086,6 +1105,25 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
                 title=f"Official Report {status_labels.get(new_status, new_status)}",
                 message=f"Report [{official_report.reference_number}] '{official_report.title}' has been {status_labels.get(new_status, new_status).lower()} by {reviewer_name}.",
                 notification_type='OFFICIAL_REPORT'
+            )
+        except Exception:
+            pass
+
+        # Record system audit event
+        try:
+            from api.analytics_views import log_audit_event
+            log_audit_event(
+                user=user,
+                action=f'OFFICIAL_REPORT_{new_status}',
+                entity_type='OFFICIAL_REPORT',
+                entity_id=official_report.reference_number,
+                changes={
+                    'title': official_report.title,
+                    'status': new_status,
+                    'feedback': feedback,
+                    'reviewer': reviewer_name,
+                },
+                request=request
             )
         except Exception:
             pass
@@ -1336,6 +1374,23 @@ class MayorDirectiveViewSet(viewsets.ModelViewSet):
             issued_by=user,
             reference_number=ref_num
         )
+
+        try:
+            from api.analytics_views import log_audit_event
+            log_audit_event(
+                user=user,
+                action='MAYOR_DIRECTIVE_PROMULGATED',
+                entity_type='MAYOR_DIRECTIVE',
+                entity_id=ref_num,
+                changes={
+                    'title': directive.title,
+                    'priority': directive.priority,
+                    'target_department': directive.target_department.name if directive.target_department else 'ALL_SECTORS',
+                },
+                request=self.request
+            )
+        except Exception:
+            pass
 
         # Broadcast push notification to department managers
         try:

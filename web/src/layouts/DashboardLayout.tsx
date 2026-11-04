@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore'
 import { useLanguageStore } from '../store/languageStore'
 import {
   LayoutDashboard, FileText, Map, Users, Settings, LogOut,
-  Bell, Menu, X, Building2, ShieldCheck, Clock, AlertTriangle, MessageSquare, ScrollText, Crown
+  Bell, Menu, X, Building2, ShieldCheck, Clock, AlertTriangle, MessageSquare, ScrollText, Crown, ShieldAlert
 } from 'lucide-react'
 
 interface Notification {
@@ -307,6 +307,9 @@ export default function DashboardLayout() {
     }
     if (role === 'super_admin' || role === 'city_admin' || role === 'department_manager') {
       navItems.push({ path: '/users', label: t('user_management'), icon: Users })
+    }
+    if (role === 'super_admin') {
+      navItems.push({ path: '/audit-logs', label: t('audit_logs') || 'Audit Logs', icon: ShieldAlert })
     }
     navItems.push({ path: '/settings', label: t('settings'), icon: Settings })
   }

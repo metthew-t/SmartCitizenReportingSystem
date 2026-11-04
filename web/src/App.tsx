@@ -11,6 +11,7 @@ import AdminUsers from './pages/AdminUsers'
 import DeptChat from './pages/DeptChat'
 import OfficialReports from './pages/OfficialReports'
 import MayorCommandCenter from './pages/MayorCommandCenter'
+import AuditLogs from './pages/AuditLogs'
 import { useAuthStore } from './store/authStore'
 import { Building2, LogIn } from 'lucide-react'
 import PublicDashboard from './pages/PublicDashboard'
@@ -242,6 +243,7 @@ export default function App() {
           <Route path="/departments" element={<Departments />} />
           <Route path="/map" element={<MapView />} />
           <Route path="/users" element={<AdminUsers />} />
+          <Route path="/audit-logs" element={<AuditLogs />} />
           <Route path="/dept-chat" element={<DeptChat />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
