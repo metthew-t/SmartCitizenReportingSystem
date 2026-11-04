@@ -268,6 +268,10 @@ export default function OfficialReports() {
   const handleReviewReport = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedReport) return
+    if (reviewStatus === 'REJECTED' && !reviewFeedback.trim()) {
+      setReviewMsg({ type: 'error', text: 'A mandatory justification / remarks are required when rejecting an official report.' })
+      return
+    }
     setReviewing(true)
     setReviewMsg(null)
 

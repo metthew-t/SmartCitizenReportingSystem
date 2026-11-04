@@ -621,10 +621,21 @@ class ReportViewSet(viewsets.ModelViewSet):
             )
 
         old_status = report.status
+        rejection_reason = (request.data.get('rejection_reason', '') or request.data.get('reason', '') or '').strip()
         resolution_notes = note if note else request.data.get('resolution_notes')
 
+        if new_status == 'REJECTED':
+            final_reason = rejection_reason or (resolution_notes or '').strip()
+            if not final_reason:
+                return Response(
+                    {'error': 'A valid rejection reason is mandatory when rejecting a report.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            report.rejection_reason = final_reason
+            resolution_notes = final_reason
+
         report.status = new_status
-        if resolution_notes:
+        if resolution_notes and new_status != 'REJECTED':
             report.resolution_notes = resolution_notes
 
         resolution_doc = request.FILES.get('resolution_document')
@@ -959,18 +970,28 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
         status_filter = self.request.query_params.get('status')
         dept_filter = self.request.query_params.get('department')
 
-        if user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False):
+        if user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False) or getattr(user, 'is_mayor', False):
             qs = OfficialReport.objects.select_related('department', 'linked_citizen_report', 'sender', 'reviewer').all()
         elif user.is_department_manager:
-            dept = user.officer_profile.department if _safe_hasattr(user, 'officer_profile') else None
+            from core.models import OfficerProfile
+            prof = getattr(user, 'officer_profile', None) or OfficerProfile.objects.filter(user=user).select_related('department').first()
+            dept = prof.department if prof else None
             if dept:
                 qs = OfficialReport.objects.select_related('department', 'linked_citizen_report', 'sender', 'reviewer').filter(
                     Q(department=dept) | Q(sender=user)
                 )
             else:
-                qs = OfficialReport.objects.select_related('department', 'linked_citizen_report', 'sender', 'reviewer').filter(sender=user)
+                qs = OfficialReport.objects.select_related('department', 'linked_citizen_report', 'sender', 'reviewer').all()
         elif user.is_officer:
-            qs = OfficialReport.objects.select_related('department', 'linked_citizen_report', 'sender', 'reviewer').filter(sender=user)
+            from core.models import OfficerProfile
+            prof = getattr(user, 'officer_profile', None) or OfficerProfile.objects.filter(user=user).select_related('department').first()
+            dept = prof.department if prof else None
+            if dept:
+                qs = OfficialReport.objects.select_related('department', 'linked_citizen_report', 'sender', 'reviewer').filter(
+                    Q(sender=user) | (Q(department=dept) & Q(level='OFFICER_TO_MANAGER'))
+                )
+            else:
+                qs = OfficialReport.objects.select_related('department', 'linked_citizen_report', 'sender', 'reviewer').filter(sender=user)
         else:
             return OfficialReport.objects.none()
 
@@ -1090,6 +1111,12 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
         if new_status not in valid_statuses:
             return Response(
                 {'error': f"Invalid status. Must be one of: {', '.join(valid_statuses)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if new_status == 'REJECTED' and not (feedback or '').strip():
+            return Response(
+                {'error': 'A valid justification / rejection reason is mandatory when rejecting an official report.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 

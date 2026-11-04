@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
-import { Activity, CheckCircle, AlertTriangle, Clock, TrendingUp, BarChart3 } from 'lucide-react'
+import { Activity, CheckCircle, AlertTriangle, Clock, TrendingUp, BarChart3, ScrollText, ArrowRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
@@ -87,10 +87,11 @@ function StatCard({ title, value, icon: Icon, color }: {
 }
 
 export default function Dashboard() {
-  const { departmentName, token } = useAuthStore()
+  const { departmentName, token, role } = useAuthStore()
   const navigate = useNavigate()
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [pendingOfficialCount, setPendingOfficialCount] = useState<number>(0)
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -107,10 +108,35 @@ export default function Dashboard() {
         setLoading(false)
       }
     }
+
+    const fetchOfficialReports = async () => {
+      if (role !== 'department_manager' && role !== 'city_admin') return
+      try {
+        const res = await fetch(`${API}/official-reports/`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (res.ok) {
+          const list: any[] = await res.json()
+          const items = Array.isArray(list) ? list : (list as any).results || []
+          if (role === 'department_manager') {
+            const count = items.filter((r: any) => r.level === 'OFFICER_TO_MANAGER' && (r.status === 'SUBMITTED' || r.status === 'UNDER_REVIEW')).length
+            setPendingOfficialCount(count)
+          } else if (role === 'city_admin') {
+            const count = items.filter((r: any) => r.level === 'MANAGER_TO_ADMIN' && (r.status === 'SUBMITTED' || r.status === 'UNDER_REVIEW')).length
+            setPendingOfficialCount(count)
+          }
+        }
+      } catch {}
+    }
+
     fetchStats()
-    const interval = setInterval(fetchStats, 15000)
+    fetchOfficialReports()
+    const interval = setInterval(() => {
+      fetchStats()
+      fetchOfficialReports()
+    }, 15000)
     return () => clearInterval(interval)
-  }, [token])
+  }, [token, role])
 
   if (loading) {
     return (
@@ -135,6 +161,50 @@ export default function Dashboard() {
           Real-time overview of citizen reports
         </p>
       </div>
+
+      {/* Operational Official Reports Pending Action Alert Banner */}
+      {pendingOfficialCount > 0 && (
+        <div style={{
+          marginBottom: 20, padding: '14px 18px', borderRadius: 12,
+          background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.15) 100%)',
+          border: '1px solid rgba(99,102,241,0.35)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
+          boxShadow: '0 4px 15px rgba(99,102,241,0.15)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: 10, background: 'rgba(99,102,241,0.2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <ScrollText size={20} color="#a5b4fc" />
+            </div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#f8fafc' }}>
+                {role === 'department_manager'
+                  ? `${pendingOfficialCount} Officer Field Report${pendingOfficialCount > 1 ? 's' : ''} Awaiting Review`
+                  : `${pendingOfficialCount} Department Executive Report${pendingOfficialCount > 1 ? 's' : ''} Awaiting Review`}
+              </div>
+              <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                {role === 'department_manager'
+                  ? 'Field officers from your sector have submitted investigation dossiers for your evaluation.'
+                  : 'Executive departmental briefs from sector directors have been submitted for city administration oversight.'}
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => navigate('/official-reports')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: '#6366f1', color: 'white', border: 'none',
+              padding: '9px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+              cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(99,102,241,0.3)'
+            }}
+          >
+            Review in Official Reports <ArrowRight size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>

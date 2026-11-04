@@ -34,6 +34,9 @@ export default function ReportDetails() {
   const [resolutionFile, setResolutionFile] = React.useState<File | null>(null)
   const [showResolveModal, setShowResolveModal] = React.useState(false)
   const resolveFileRef = React.useRef<HTMLInputElement>(null)
+  const [showRejectModal, setShowRejectModal] = React.useState(false)
+  const [rejectionReason, setRejectionReason] = React.useState('')
+  const [rejectError, setRejectError] = React.useState('')
   const [statusHistory, setStatusHistory] = React.useState<any[]>([])
   const [officerNote, setOfficerNote] = React.useState('')
   const [officerSelectedStatus, setOfficerSelectedStatus] = React.useState('')
@@ -90,6 +93,7 @@ export default function ReportDetails() {
             assignedOfficerName: data.assigned_officer_name,
             shared_with: data.shared_with || [],
             resolutionNotes: data.resolution_notes || '',
+            rejection_reason: data.rejection_reason || '',
           })
         }
         
@@ -175,6 +179,10 @@ export default function ReportDetails() {
       setShowResolveModal(true)
       return
     }
+    if (newStatus === 'REJECTED') {
+      setShowRejectModal(true)
+      return
+    }
 
     setStatusUpdating(true)
     try {
@@ -198,6 +206,47 @@ export default function ReportDetails() {
       }
     } catch (err) {
       setStatusMsg({ type: 'error', text: 'Network error — could not update status.' })
+    } finally {
+      setStatusUpdating(false)
+      setTimeout(() => setStatusMsg(null), 5000)
+    }
+  }
+
+  const submitRejection = async () => {
+    if (!rejectionReason.trim()) {
+      setRejectError('Please provide a mandatory justification explaining why this report is rejected.')
+      return
+    }
+    setRejectError('')
+    setStatusUpdating(true)
+    try {
+      const token = useAuthStore.getState().token
+      const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/update_status/`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'REJECTED',
+          rejection_reason: rejectionReason.trim(),
+          note: rejectionReason.trim(),
+        })
+      })
+      if (res.ok) {
+        setReport((prev: any) => ({ ...prev, status: 'REJECTED', rejection_reason: rejectionReason.trim() }))
+        setStatusMsg({ type: 'success', text: '✅ Report rejected with recorded justification.' })
+        setShowRejectModal(false)
+        setRejectionReason('')
+        try {
+          const histRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/status_history/`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+          if (histRes.ok) setStatusHistory(await histRes.json())
+        } catch (_) {}
+      } else {
+        const errData = await res.json().catch(() => ({}))
+        setRejectError(errData.error || 'Failed to reject report.')
+      }
+    } catch {
+      setRejectError('Network error — could not update status.')
     } finally {
       setStatusUpdating(false)
       setTimeout(() => setStatusMsg(null), 5000)
@@ -601,7 +650,7 @@ export default function ReportDetails() {
         </div>
 
         {/* Reopened / Rejected special statuses */}
-        {(report.status === 'REOPENED' || report.status === 'REJECTED') && (
+        {report.status === 'REOPENED' && (
           <div style={{
             marginTop: 12, padding: '10px 14px', borderRadius: 8,
             background: `${STATUS_COLORS[report.status]}15`,
@@ -609,7 +658,27 @@ export default function ReportDetails() {
             fontSize: 13, fontWeight: 600, textAlign: 'center',
             border: `1px solid ${STATUS_COLORS[report.status]}30`,
           }}>
-            ⚠️ This report has been {report.status.toLowerCase()}.
+            ⚠️ This report has been reopened for further investigation.
+          </div>
+        )}
+
+        {report.status === 'REJECTED' && (
+          <div style={{
+            marginTop: 14, padding: '14px 18px', borderRadius: 10,
+            background: 'rgba(239,68,68,0.1)',
+            border: '1.5px solid rgba(239,68,68,0.3)',
+            textAlign: 'left',
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              color: '#ef4444', fontSize: 14, fontWeight: 700, marginBottom: 6
+            }}>
+              <span>🚫 Report Rejected</span>
+            </div>
+            <div style={{ color: '#cbd5e1', fontSize: 13, lineHeight: 1.5 }}>
+              <strong style={{ color: '#fca5a5' }}>Mandatory Justification / Reason: </strong>
+              {report.rejection_reason || 'Case was rejected in accordance with municipal review criteria.'}
+            </div>
           </div>
         )}
       </div>
@@ -1059,6 +1128,79 @@ export default function ReportDetails() {
                   opacity: statusUpdating ? 0.6 : 1,
                 }}
               >{statusUpdating ? 'Submitting...' : 'Submit Resolution'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mandatory Rejection Reason Modal */}
+      {showRejectModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16
+        }}>
+          <div style={{
+            background: '#0f172a', border: '1px solid rgba(239,68,68,0.3)',
+            borderRadius: 16, width: '100%', maxWidth: 480, padding: 24,
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.7)'
+          }}>
+            <h3 style={{ color: '#f87171', margin: '0 0 10px', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+              ⚠️ Reject Incident Report
+            </h3>
+            <p style={{ color: '#94a3b8', fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
+              In accordance with municipal transparency regulations, you must provide a clear and formal justification explaining why this case is rejected (e.g., duplicate filing, out-of-jurisdiction, unsubstantiated claim).
+            </p>
+
+            {rejectError && (
+              <div style={{
+                padding: '10px 12px', borderRadius: 8, marginBottom: 14,
+                background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
+                color: '#ef4444', fontSize: 12, fontWeight: 600
+              }}>
+                {rejectError}
+              </div>
+            )}
+
+            <label style={{ color: '#cbd5e1', fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6 }}>
+              Mandatory Rejection Justification / Sababa Kufaa *
+            </label>
+            <textarea
+              value={rejectionReason}
+              onChange={e => { setRejectionReason(e.target.value); setRejectError(''); }}
+              placeholder="State the official ground for rejecting this report..."
+              rows={4}
+              style={{
+                width: '100%', padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
+                background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(148,163,184,0.25)',
+                color: '#e2e8f0', fontSize: 13, outline: 'none', resize: 'vertical', marginBottom: 20
+              }}
+            />
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                type="button"
+                onClick={() => { setShowRejectModal(false); setRejectionReason(''); setRejectError(''); }}
+                style={{
+                  flex: 1, padding: 12, borderRadius: 8, border: '1px solid rgba(148,163,184,0.2)',
+                  background: 'transparent', color: '#94a3b8', fontWeight: 600, cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitRejection}
+                disabled={statusUpdating}
+                style={{
+                  flex: 1, padding: 12, borderRadius: 8, border: 'none',
+                  background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                  color: 'white', fontWeight: 700, cursor: statusUpdating ? 'not-allowed' : 'pointer',
+                  opacity: statusUpdating ? 0.6 : 1, boxShadow: '0 4px 14px rgba(239,68,68,0.35)'
+                }}
+              >
+                {statusUpdating ? 'Rejecting...' : 'Confirm Rejection'}
+              </button>
             </div>
           </div>
         </div>

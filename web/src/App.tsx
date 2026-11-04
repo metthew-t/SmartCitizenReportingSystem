@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, useNavigate, Navigate, useLocation } from 'react-router-dom'
 import DashboardLayout from './layouts/DashboardLayout'
 import Dashboard from './pages/Dashboard'
 import Reports from './pages/Reports'
@@ -45,8 +45,22 @@ function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const token = useAuthStore(state => state.token)
+  const role = useAuthStore(state => state.role)
   const login = useAuthStore(state => state.login)
   const navigate = useNavigate()
+  const location = useLocation()
+  const isExpired = new URLSearchParams(location.search).get('expired') === '1'
+
+  useEffect(() => {
+    if (token) {
+      if (role === 'mayor') {
+        navigate('/mayor', { replace: true })
+      } else {
+        navigate('/dashboard', { replace: true })
+      }
+    }
+  }, [token, role, navigate])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -149,6 +163,16 @@ function Login() {
           <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 24px' }}>
             Sign in with your email or phone number
           </p>
+
+          {isExpired && (
+            <div style={{
+              padding: '12px 14px', borderRadius: 10, marginBottom: 16,
+              background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)',
+              color: '#b45309', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              <span>⏱️ Your session has expired due to 15 minutes of inactivity. Please sign in again.</span>
+            </div>
+          )}
 
           {error && (
             <div style={{

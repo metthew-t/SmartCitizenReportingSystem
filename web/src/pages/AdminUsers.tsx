@@ -16,6 +16,7 @@ interface UserData {
   is_city_admin: boolean
   is_super_admin: boolean
   is_mayor: boolean
+  is_active?: boolean
   department_name: string | null
   date_joined: string
 }
@@ -53,6 +54,39 @@ export default function AdminUsers() {
   const [resetModal, setResetModal] = useState<{show: boolean, userId: number | null, userName: string}>({show: false, userId: null, userName: ''})
   const [resetPassword, setResetPassword] = useState('')
   const [resetting, setResetting] = useState(false)
+  const [togglingId, setTogglingId] = useState<number | null>(null)
+
+  const handleToggleActive = async (targetUser: UserData) => {
+    const currentActive = targetUser.is_active !== false
+    const newActive = !currentActive
+    const actionLabel = newActive ? 'activate' : 'deactivate'
+    if (!window.confirm(`Are you sure you want to ${actionLabel} account for ${targetUser.full_name || targetUser.email || targetUser.phone_number}? ${newActive ? 'The user will be granted access to sign in.' : 'The user will be immediately blocked from signing in.'}`)) {
+      return
+    }
+
+    setTogglingId(targetUser.id)
+    try {
+      const res = await fetch(`${API}/users/${targetUser.id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ is_active: newActive })
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setUsers(prev => prev.map(u => u.id === targetUser.id ? { ...u, is_active: updated.is_active } : u))
+      } else {
+        const err = await res.json().catch(() => ({}))
+        alert(err.error || `Failed to ${actionLabel} user.`)
+      }
+    } catch {
+      alert(`Network error attempting to ${actionLabel} user.`)
+    } finally {
+      setTogglingId(null)
+    }
+  }
 
   useEffect(() => {
     fetchUsers()
@@ -327,15 +361,16 @@ export default function AdminUsers() {
                 <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Contact</th>
                 <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Role</th>
                 <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Department</th>
+                <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Status</th>
                 <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Date Joined</th>
                 <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 12, fontWeight: 600, textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} style={{ textAlign: 'center', padding: 24, color: '#64748b' }}>Loading users...</td></tr>
+                <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: '#64748b' }}>Loading users...</td></tr>
               ) : filteredUsers.length === 0 ? (
-                <tr><td colSpan={6} style={{ textAlign: 'center', padding: 24, color: '#64748b' }}>No users found.</td></tr>
+                <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: '#64748b' }}>No users found.</td></tr>
               ) : (
                 filteredUsers.map(user => (
                   <tr key={user.id} style={{ borderBottom: '1px solid rgba(148,163,184,0.04)', transition: 'background 0.2s' }}
@@ -372,13 +407,43 @@ export default function AdminUsers() {
                     <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 13 }}>
                       {user.department_name || '-'}
                     </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                        background: user.is_active !== false ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
+                        color: user.is_active !== false ? '#34d399' : '#f87171',
+                        border: `1px solid ${user.is_active !== false ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`,
+                      }}>
+                        <span style={{
+                          width: 6, height: 6, borderRadius: '50%',
+                          background: user.is_active !== false ? '#10b981' : '#ef4444'
+                        }} />
+                        {user.is_active !== false ? 'Active' : 'Deactivated'}
+                      </span>
+                    </td>
                     <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 13 }}>
                       {new Date(user.date_joined).toLocaleDateString()}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       {/* Only super_admin can manage admin/super_admin/mayor accounts */}
                       {(role === 'super_admin' || (!user.is_super_admin && !user.is_city_admin && !user.is_mayor)) && (
-                      <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <button
+                          onClick={() => handleToggleActive(user)}
+                          disabled={togglingId === user.id}
+                          title={user.is_active !== false ? 'Deactivate user (block login)' : 'Activate user (allow login)'}
+                          style={{
+                            background: user.is_active !== false ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)',
+                            border: `1px solid ${user.is_active !== false ? 'rgba(239,68,68,0.25)' : 'rgba(16,185,129,0.25)'}`,
+                            color: user.is_active !== false ? '#f87171' : '#34d399',
+                            cursor: togglingId === user.id ? 'not-allowed' : 'pointer',
+                            padding: '4px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          {togglingId === user.id ? '...' : user.is_active !== false ? 'Deactivate' : 'Activate'}
+                        </button>
                         <button 
                           onClick={() => openEditModal(user)}
                           title="Edit User Details"

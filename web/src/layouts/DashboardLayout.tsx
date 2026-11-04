@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useLanguageStore } from '../store/languageStore'
+import SessionTimeoutManager from '../components/SessionTimeoutManager'
 import {
   LayoutDashboard, FileText, Map, Users, Settings, LogOut,
   Bell, Menu, X, Building2, ShieldCheck, Clock, AlertTriangle, MessageSquare, ScrollText, Crown, ShieldAlert
@@ -337,6 +338,7 @@ export default function DashboardLayout() {
       fontFamily: "'Inter', 'Segoe UI', sans-serif",
       color: '#e2e8f0',
     }}>
+      <SessionTimeoutManager />
       {/* Sidebar */}
       <aside style={{
         width: sidebarCollapsed ? 72 : 264,

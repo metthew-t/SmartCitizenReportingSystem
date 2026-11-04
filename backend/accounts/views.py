@@ -531,6 +531,11 @@ class UserListView(APIView):
                     target_user.citizen_profile.full_name = name
                     target_user.citizen_profile.save()
 
+        if 'is_active' in data:
+            if target_user.id == caller.id:
+                return Response({'error': 'You cannot deactivate your own account.'}, status=status.HTTP_400_BAD_REQUEST)
+            target_user.is_active = bool(data.get('is_active'))
+
         target_user.save()
         return Response(UserSerializer(target_user).data)
 

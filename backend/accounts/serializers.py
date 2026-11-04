@@ -22,7 +22,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ('id', 'phone_number', 'email', 'full_name', 'department_name',
                   'is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin', 'is_super_admin', 'is_mayor',
-                  'date_joined', 'profile_photo_url')
+                  'is_active', 'date_joined', 'profile_photo_url')
         read_only_fields = ('is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin', 'is_super_admin', 'is_mayor')
 
     def to_representation(self, instance):
