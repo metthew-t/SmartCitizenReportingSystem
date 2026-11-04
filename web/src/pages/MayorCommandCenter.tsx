@@ -4,7 +4,7 @@ import {
   Crown, ShieldAlert, CheckCircle2, Clock, AlertTriangle, Building2,
   Send, RefreshCw, Printer, Search, ArrowUpRight, Flame, MapPin,
   FileCheck2, Compass, Award, ExternalLink, BarChart3, ChevronRight,
-  TrendingUp, Users, AlertOctagon, Sparkles, Filter, X
+  TrendingUp, Users, AlertOctagon, Sparkles, Filter, X, ScrollText, FileText
 } from 'lucide-react'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
@@ -100,6 +100,11 @@ export default function MayorCommandCenter() {
   const [sectorSearch, setSectorSearch] = useState('')
   const [sectorFilter, setSectorFilter] = useState<'ALL' | 'CRITICAL' | 'EXCELLENT'>('ALL')
   const [selectedSector, setSelectedSector] = useState<SectorData | null>(null)
+
+  // Activity Intelligence Hub state
+  const [activityTab, setActivityTab] = useState<'ACTIONS' | 'REPORTS'>('ACTIONS')
+  const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null)
+  const [selectedExecReport, setSelectedExecReport] = useState<ExecutiveReportItem | null>(null)
 
   // Directive Modal
   const [showDirectiveModal, setShowDirectiveModal] = useState(false)
@@ -265,7 +270,7 @@ export default function MayorCommandCenter() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'radial-gradient(ellipse at 50% -20%, #172554 0%, #0b1222 45%, #050811 100%)',
+      background: 'radial-gradient(ellipse at 50% -15%, #1a1713 0%, #0d0e13 45%, #050608 100%)',
       color: '#e2e8f0',
       fontFamily: "'Inter', 'Segoe UI', sans-serif",
       padding: '28px 32px 60px',
@@ -274,13 +279,13 @@ export default function MayorCommandCenter() {
 
       {/* ── Top Ceremonial Mayoral Header ────────────────────────────────────────── */}
       <div style={{
-        background: 'linear-gradient(135deg, rgba(30,58,138,0.35) 0%, rgba(15,23,42,0.65) 100%)',
-        border: '1px solid rgba(234,179,8,0.3)',
+        background: 'linear-gradient(135deg, rgba(38, 30, 20, 0.75) 0%, rgba(13, 14, 19, 0.9) 100%)',
+        border: '1px solid rgba(245, 158, 11, 0.35)',
         borderRadius: 20,
         padding: '24px 28px',
         marginBottom: 28,
         backdropFilter: 'blur(16px)',
-        boxShadow: '0 12px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(234,179,8,0.2)',
+        boxShadow: '0 12px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(245, 158, 11, 0.25)',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
           
@@ -386,9 +391,9 @@ export default function MayorCommandCenter() {
       }}>
         {/* Metric 1: Overall Resolution Rate */}
         <div style={{
-          background: 'linear-gradient(135deg, rgba(30,41,59,0.7) 0%, rgba(15,23,42,0.9) 100%)',
+          background: 'linear-gradient(135deg, rgba(28, 24, 19, 0.75) 0%, rgba(13, 14, 19, 0.9) 100%)',
           border: '1px solid rgba(16,185,129,0.3)', borderRadius: 16, padding: '20px 22px',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.35)', position: 'relative', overflow: 'hidden',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
@@ -421,25 +426,25 @@ export default function MayorCommandCenter() {
 
         {/* Metric 2: Total City Incidents Processed */}
         <div style={{
-          background: 'linear-gradient(135deg, rgba(30,41,59,0.7) 0%, rgba(15,23,42,0.9) 100%)',
-          border: '1px solid rgba(59,130,246,0.3)', borderRadius: 16, padding: '20px 22px',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+          background: 'linear-gradient(135deg, rgba(28, 24, 19, 0.75) 0%, rgba(13, 14, 19, 0.9) 100%)',
+          border: '1px solid rgba(245,158,11,0.3)', borderRadius: 16, padding: '20px 22px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <div style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.8 }}>
                 Total Civic Reports
               </div>
-              <div style={{ fontSize: 32, fontWeight: 900, color: '#60a5fa', margin: '6px 0 2px' }}>
+              <div style={{ fontSize: 32, fontWeight: 900, color: '#fbbf24', margin: '6px 0 2px' }}>
                 {telemetry?.total_reports ?? '---'}
               </div>
-              <div style={{ fontSize: 11, color: '#93c5fd' }}>
+              <div style={{ fontSize: 11, color: '#fde68a' }}>
                 {telemetry ? `${telemetry.in_progress_count + telemetry.investigation_count} currently active` : 'Loading...'}
               </div>
             </div>
             <div style={{
-              width: 44, height: 44, borderRadius: 12, background: 'rgba(59,130,246,0.15)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6',
+              width: 44, height: 44, borderRadius: 12, background: 'rgba(245,158,11,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b',
             }}>
               <TrendingUp size={24} />
             </div>
@@ -448,9 +453,9 @@ export default function MayorCommandCenter() {
 
         {/* Metric 3: Critical Hotspots Needing Intervention */}
         <div style={{
-          background: 'linear-gradient(135deg, rgba(30,41,59,0.7) 0%, rgba(15,23,42,0.9) 100%)',
+          background: 'linear-gradient(135deg, rgba(28, 24, 19, 0.75) 0%, rgba(13, 14, 19, 0.9) 100%)',
           border: '1px solid rgba(239,68,68,0.35)', borderRadius: 16, padding: '20px 22px',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
@@ -475,9 +480,9 @@ export default function MayorCommandCenter() {
 
         {/* Metric 4: Municipal Sectors Operating */}
         <div style={{
-          background: 'linear-gradient(135deg, rgba(30,41,59,0.7) 0%, rgba(15,23,42,0.9) 100%)',
+          background: 'linear-gradient(135deg, rgba(28, 24, 19, 0.75) 0%, rgba(13, 14, 19, 0.9) 100%)',
           border: '1px solid rgba(168,85,247,0.3)', borderRadius: 16, padding: '20px 22px',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
@@ -502,9 +507,9 @@ export default function MayorCommandCenter() {
 
         {/* Metric 5: Citizen Satisfaction Index */}
         <div style={{
-          background: 'linear-gradient(135deg, rgba(30,41,59,0.7) 0%, rgba(15,23,42,0.9) 100%)',
+          background: 'linear-gradient(135deg, rgba(28, 24, 19, 0.75) 0%, rgba(13, 14, 19, 0.9) 100%)',
           border: '1px solid rgba(245,158,11,0.3)', borderRadius: 16, padding: '20px 22px',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
@@ -533,9 +538,10 @@ export default function MayorCommandCenter() {
 
         {/* ── LEFT: All Sectors Municipal Oversight Matrix ────────────────────────── */}
         <div style={{
-          background: 'rgba(15,23,42,0.7)',
-          border: '1px solid rgba(148,163,184,0.12)',
+          background: 'rgba(18,19,26,0.85)',
+          border: '1px solid rgba(245,158,11,0.22)',
           borderRadius: 20, padding: 24, backdropFilter: 'blur(16px)',
+          boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
             <div>
@@ -697,93 +703,197 @@ export default function MayorCommandCenter() {
           </div>
         </div>
 
-        {/* ── RIGHT: Real-Time Cross-Sector Activity Stream ──────────────────────── */}
+        {/* ── RIGHT: Real-Time Mayoral Intelligence & Action Feed ───────────────── */}
         <div style={{
-          background: 'rgba(15,23,42,0.7)',
-          border: '1px solid rgba(148,163,184,0.12)',
+          background: 'rgba(18,19,26,0.85)',
+          border: '1px solid rgba(245,158,11,0.22)',
           borderRadius: 20, padding: 24, backdropFilter: 'blur(16px)',
           display: 'flex', flexDirection: 'column',
+          boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-            <div>
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Flame size={20} color="#f59e0b" />
-                Live City Action Feed
-              </h2>
-              <p style={{ margin: '4px 0 0', color: '#94a3b8', fontSize: 12 }}>
-                Real-time operational audit trail of what sectors are executing
-              </p>
+          {/* Header & Sub-tabs */}
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Flame size={20} color="#f59e0b" />
+                  Mayoral Intelligence Hub
+                </h2>
+                <p style={{ margin: '4px 0 0', color: '#94a3b8', fontSize: 12 }}>
+                  Live operational audit trail and official sector submissions
+                </p>
+              </div>
+              <span style={{
+                fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
+                background: 'rgba(245,158,11,0.15)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.3)',
+              }}>
+                LIVE TELEMETRY
+              </span>
             </div>
-            <span style={{
-              fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
-              background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)',
-            }}>
-              LIVE AUDIT
-            </span>
+
+            {/* Toggle Tabs */}
+            <div style={{ display: 'flex', gap: 8, background: 'rgba(10,11,15,0.7)', padding: 4, borderRadius: 10, border: '1px solid rgba(245,158,11,0.15)' }}>
+              <button
+                onClick={() => setActivityTab('ACTIONS')}
+                style={{
+                  flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                  background: activityTab === 'ACTIONS' ? 'linear-gradient(135deg, rgba(245,158,11,0.25), rgba(180,83,9,0.25))' : 'transparent',
+                  color: activityTab === 'ACTIONS' ? '#fbbf24' : '#94a3b8',
+                  border: activityTab === 'ACTIONS' ? '1px solid rgba(245,158,11,0.4)' : '1px solid transparent',
+                  cursor: 'pointer', transition: 'all 0.2s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                }}
+              >
+                <Flame size={14} /> Live City Actions ({activity.length})
+              </button>
+              <button
+                onClick={() => setActivityTab('REPORTS')}
+                style={{
+                  flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                  background: activityTab === 'REPORTS' ? 'linear-gradient(135deg, rgba(245,158,11,0.25), rgba(180,83,9,0.25))' : 'transparent',
+                  color: activityTab === 'REPORTS' ? '#fbbf24' : '#94a3b8',
+                  border: activityTab === 'REPORTS' ? '1px solid rgba(245,158,11,0.4)' : '1px solid transparent',
+                  cursor: 'pointer', transition: 'all 0.2s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                }}
+              >
+                <ScrollText size={14} /> Sector Briefings ({execReports.length})
+              </button>
+            </div>
           </div>
 
           <div style={{
             display: 'flex', flexDirection: 'column', gap: 12,
             maxHeight: 520, overflowY: 'auto', paddingRight: 4, flex: 1,
           }}>
-            {activity.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>
-                No recent municipal activity recorded yet.
-              </div>
-            ) : (
-              activity.map(act => (
-                <div
-                  key={act.id}
-                  style={{
-                    background: 'rgba(30,41,59,0.4)',
-                    border: '1px solid rgba(148,163,184,0.08)',
-                    borderRadius: 12, padding: '12px 14px',
-                    display: 'flex', flexDirection: 'column', gap: 6,
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{
-                      color: '#f59e0b', fontSize: 11, fontWeight: 700,
-                      fontFamily: 'monospace',
-                    }}>
-                      {act.case_number}
-                    </span>
-                    <span style={{ fontSize: 10, color: '#64748b' }}>
-                      {new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-
-                  <div style={{ fontSize: 12, color: '#cbd5e1', fontWeight: 600 }}>
-                    {act.actor_name} &bull; <span style={{ color: '#94a3b8' }}>{act.department_name}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
-                    <span style={{
-                      padding: '2px 6px', borderRadius: 4,
-                      background: 'rgba(148,163,184,0.1)', color: '#94a3b8',
-                    }}>
-                      {act.old_status}
-                    </span>
-                    <span style={{ color: '#64748b' }}>&rarr;</span>
-                    <span style={{
-                      padding: '2px 6px', borderRadius: 4, fontWeight: 700,
-                      background: act.new_status === 'RESOLVED' ? 'rgba(16,185,129,0.2)' : 'rgba(59,130,246,0.2)',
-                      color: act.new_status === 'RESOLVED' ? '#34d399' : '#60a5fa',
-                    }}>
-                      {act.new_status}
-                    </span>
-                  </div>
-
-                  {act.note && (
-                    <div style={{
-                      fontSize: 11, color: '#94a3b8', fontStyle: 'italic',
-                      background: 'rgba(15,23,42,0.3)', padding: '6px 8px', borderRadius: 6,
-                    }}>
-                      "{act.note}"
-                    </div>
-                  )}
+            {activityTab === 'ACTIONS' ? (
+              activity.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>
+                  No recent municipal activity recorded yet.
                 </div>
-              ))
+              ) : (
+                activity.map(act => (
+                  <div
+                    key={act.id}
+                    onClick={() => setSelectedActivity(act)}
+                    style={{
+                      background: 'rgba(28,24,20,0.6)',
+                      border: '1px solid rgba(245,158,11,0.15)',
+                      borderRadius: 12, padding: '12px 14px',
+                      display: 'flex', flexDirection: 'column', gap: 6,
+                      cursor: 'pointer', transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = 'rgba(245,158,11,0.45)'
+                      e.currentTarget.style.background = 'rgba(38,30,22,0.7)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = 'rgba(245,158,11,0.15)'
+                      e.currentTarget.style.background = 'rgba(28,24,20,0.6)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{
+                        color: '#fbbf24', fontSize: 11, fontWeight: 700,
+                        fontFamily: 'monospace',
+                      }}>
+                        {act.case_number}
+                      </span>
+                      <span style={{ fontSize: 10, color: '#94a3b8' }}>
+                        {new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: 12, color: '#e2e8f0', fontWeight: 600 }}>
+                      {act.actor_name} &bull; <span style={{ color: '#fbbf24' }}>{act.department_name}</span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
+                      <span style={{
+                        padding: '2px 6px', borderRadius: 4,
+                        background: 'rgba(148,163,184,0.1)', color: '#94a3b8',
+                      }}>
+                        {act.old_status}
+                      </span>
+                      <span style={{ color: '#64748b' }}>&rarr;</span>
+                      <span style={{
+                        padding: '2px 6px', borderRadius: 4, fontWeight: 700,
+                        background: act.new_status === 'RESOLVED' ? 'rgba(16,185,129,0.2)' : 'rgba(59,130,246,0.2)',
+                        color: act.new_status === 'RESOLVED' ? '#34d399' : '#60a5fa',
+                      }}>
+                        {act.new_status}
+                      </span>
+                    </div>
+
+                    {act.note && (
+                      <div style={{
+                        fontSize: 11, color: '#94a3b8', fontStyle: 'italic',
+                        background: 'rgba(10,11,15,0.4)', padding: '6px 8px', borderRadius: 6,
+                      }}>
+                        "{act.note}"
+                      </div>
+                    )}
+                  </div>
+                ))
+              )
+            ) : (
+              execReports.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>
+                  No official sector reports submitted to the Mayor yet.
+                </div>
+              ) : (
+                execReports.map(rep => (
+                  <div
+                    key={rep.id}
+                    onClick={() => setSelectedExecReport(rep)}
+                    style={{
+                      background: 'rgba(28,24,20,0.6)',
+                      border: '1px solid rgba(245,158,11,0.15)',
+                      borderRadius: 12, padding: '14px 16px',
+                      display: 'flex', flexDirection: 'column', gap: 6,
+                      cursor: 'pointer', transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = 'rgba(245,158,11,0.45)'
+                      e.currentTarget.style.background = 'rgba(38,30,22,0.7)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = 'rgba(245,158,11,0.15)'
+                      e.currentTarget.style.background = 'rgba(28,24,20,0.6)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: '#fbbf24', fontSize: 11, fontWeight: 700, fontFamily: 'monospace' }}>
+                        {rep.reference_number}
+                      </span>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                        background: rep.priority === 'CRITICAL' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)',
+                        color: rep.priority === 'CRITICAL' ? '#f87171' : '#fbbf24',
+                      }}>
+                        {rep.priority}
+                      </span>
+                    </div>
+
+                    <div style={{ color: '#ffffff', fontSize: 13, fontWeight: 700 }}>
+                      {rep.title}
+                    </div>
+
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                      Submitted by: <strong style={{ color: '#cbd5e1' }}>{rep.sender_name}</strong> &bull; {rep.department_name}
+                    </div>
+
+                    {rep.executive_summary && (
+                      <div style={{
+                        fontSize: 11, color: '#94a3b8',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {rep.executive_summary}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )
             )}
           </div>
         </div>
@@ -795,9 +905,10 @@ export default function MayorCommandCenter() {
 
         {/* Mayoral Directives Center */}
         <div style={{
-          background: 'rgba(15,23,42,0.7)',
-          border: '1px solid rgba(245,158,11,0.2)',
+          background: 'rgba(18,19,26,0.85)',
+          border: '1px solid rgba(245,158,11,0.25)',
           borderRadius: 20, padding: 24, backdropFilter: 'blur(16px)',
+          boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <div>
@@ -862,9 +973,10 @@ export default function MayorCommandCenter() {
 
         {/* Kebele Spatial Distribution */}
         <div style={{
-          background: 'rgba(15,23,42,0.7)',
-          border: '1px solid rgba(148,163,184,0.12)',
+          background: 'rgba(18,19,26,0.85)',
+          border: '1px solid rgba(245,158,11,0.22)',
           borderRadius: 20, padding: 24, backdropFilter: 'blur(16px)',
+          boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
         }}>
           <h3 style={{ margin: '0 0 4px', fontSize: 17, fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: 8 }}>
             <MapPin size={18} color="#f59e0b" />
@@ -1037,6 +1149,221 @@ export default function MayorCommandCenter() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Live Activity Inspection & Mayoral Action ──────────────────── */}
+      {selectedActivity && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 110,
+          background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #181922 0%, #0d0e14 100%)',
+            border: '1px solid rgba(245,158,11,0.4)', borderRadius: 20,
+            padding: 32, width: '100%', maxWidth: 580,
+            boxShadow: '0 25px 60px rgba(0,0,0,0.8), 0 0 30px rgba(245,158,11,0.2)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+              <div>
+                <span style={{
+                  fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
+                  background: 'rgba(245,158,11,0.2)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.4)',
+                }}>
+                  MAYORAL INCIDENT AUDIT
+                </span>
+                <h3 style={{ margin: '8px 0 2px', color: '#ffffff', fontSize: 20, fontWeight: 800 }}>
+                  Case {selectedActivity.case_number}
+                </h3>
+                <p style={{ margin: 0, color: '#94a3b8', fontSize: 12 }}>
+                  Sector in charge: <strong style={{ color: '#fbbf24' }}>{selectedActivity.department_name}</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedActivity(null)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 4 }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 24 }}>
+              <div style={{ background: 'rgba(28,24,20,0.6)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 12, padding: '14px 16px' }}>
+                <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>STATUS TRANSITION RECORDED:</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+                  <span style={{ padding: '3px 8px', borderRadius: 6, background: 'rgba(148,163,184,0.15)', color: '#cbd5e1' }}>
+                    {selectedActivity.old_status}
+                  </span>
+                  <span style={{ color: '#f59e0b', fontWeight: 800 }}>&rarr;</span>
+                  <span style={{
+                    padding: '3px 8px', borderRadius: 6, fontWeight: 700,
+                    background: selectedActivity.new_status === 'RESOLVED' ? 'rgba(16,185,129,0.2)' : 'rgba(59,130,246,0.2)',
+                    color: selectedActivity.new_status === 'RESOLVED' ? '#34d399' : '#60a5fa',
+                  }}>
+                    {selectedActivity.new_status}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(28,24,20,0.6)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 12, padding: '14px 16px' }}>
+                <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>ACTOR / OFFICER:</div>
+                <div style={{ color: '#ffffff', fontSize: 13, fontWeight: 600 }}>
+                  {selectedActivity.actor_name} &bull; {new Date(selectedActivity.timestamp).toLocaleString()}
+                </div>
+              </div>
+
+              {selectedActivity.note && (
+                <div style={{ background: 'rgba(28,24,20,0.6)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 12, padding: '14px 16px' }}>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>OPERATIONAL AUDIT NOTE:</div>
+                  <div style={{ color: '#e2e8f0', fontSize: 13, lineHeight: 1.6, fontStyle: 'italic' }}>
+                    "{selectedActivity.note}"
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setSelectedActivity(null)}
+                style={{
+                  padding: '10px 18px', borderRadius: 10, border: '1px solid rgba(148,163,184,0.2)',
+                  background: 'transparent', color: '#94a3b8', cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const targetDept = sectors.find(s => s.name === selectedActivity.department_name)
+                  setDirectiveForm({
+                    title: `Mayoral Directive: Expedite Case ${selectedActivity.case_number}`,
+                    target_department_id: targetDept ? String(targetDept.id) : '',
+                    priority: 'CRITICAL',
+                    instructions: `Following mayoral audit on case ${selectedActivity.case_number} handled by ${selectedActivity.department_name}. Current status: ${selectedActivity.new_status}. Officer note: "${selectedActivity.note}". Executive order mandates immediate full resolution within 24 hours.`,
+                    deadline: '',
+                  })
+                  setSelectedActivity(null)
+                  setShowDirectiveModal(true)
+                }}
+                style={{
+                  padding: '10px 20px', borderRadius: 10, border: 'none',
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                  color: '#000000', fontWeight: 800, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  boxShadow: '0 4px 15px rgba(245,158,11,0.3)',
+                }}
+              >
+                <Send size={15} /> Issue Directive for this Case
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Official Sector Briefing Inspection ──────────────────────────── */}
+      {selectedExecReport && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 110,
+          background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #181922 0%, #0d0e14 100%)',
+            border: '1px solid rgba(245,158,11,0.4)', borderRadius: 20,
+            padding: 32, width: '100%', maxWidth: 640,
+            boxShadow: '0 25px 60px rgba(0,0,0,0.8), 0 0 30px rgba(245,158,11,0.2)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+              <div>
+                <span style={{
+                  fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
+                  background: 'rgba(245,158,11,0.2)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.4)',
+                }}>
+                  OFFICIAL SECTOR BRIEFING
+                </span>
+                <h3 style={{ margin: '8px 0 2px', color: '#ffffff', fontSize: 20, fontWeight: 800 }}>
+                  {selectedExecReport.title}
+                </h3>
+                <p style={{ margin: 0, color: '#94a3b8', fontSize: 12 }}>
+                  Ref: <strong style={{ color: '#fbbf24', fontFamily: 'monospace' }}>{selectedExecReport.reference_number}</strong> &bull; Sector: {selectedExecReport.department_name}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedExecReport(null)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 4 }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 24 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                <div style={{ background: 'rgba(28,24,20,0.6)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 10, padding: '10px 14px' }}>
+                  <div style={{ fontSize: 10, color: '#94a3b8' }}>SUBMITTING OFFICIAL</div>
+                  <div style={{ color: '#ffffff', fontSize: 13, fontWeight: 700, marginTop: 2 }}>{selectedExecReport.sender_name}</div>
+                </div>
+                <div style={{ background: 'rgba(28,24,20,0.6)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 10, padding: '10px 14px' }}>
+                  <div style={{ fontSize: 10, color: '#94a3b8' }}>LEVEL</div>
+                  <div style={{ color: '#fbbf24', fontSize: 13, fontWeight: 700, marginTop: 2 }}>{selectedExecReport.level}</div>
+                </div>
+                <div style={{ background: 'rgba(28,24,20,0.6)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 10, padding: '10px 14px' }}>
+                  <div style={{ fontSize: 10, color: '#94a3b8' }}>DATE SUBMITTED</div>
+                  <div style={{ color: '#e2e8f0', fontSize: 12, fontWeight: 600, marginTop: 2 }}>
+                    {new Date(selectedExecReport.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(28,24,20,0.6)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 12, padding: '16px 18px' }}>
+                <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, marginBottom: 8, letterSpacing: 0.5 }}>
+                  EXECUTIVE SUMMARY & BRIEFING:
+                </div>
+                <div style={{ color: '#e2e8f0', fontSize: 13, lineHeight: 1.7 }}>
+                  {selectedExecReport.executive_summary}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setSelectedExecReport(null)}
+                style={{
+                  padding: '10px 18px', borderRadius: 10, border: '1px solid rgba(148,163,184,0.2)',
+                  background: 'transparent', color: '#94a3b8', cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const targetDept = sectors.find(s => s.name === selectedExecReport.department_name)
+                  setDirectiveForm({
+                    title: `Mayoral Mandate: Action on ${selectedExecReport.title}`,
+                    target_department_id: targetDept ? String(targetDept.id) : '',
+                    priority: 'CRITICAL',
+                    instructions: `In response to official briefing [${selectedExecReport.reference_number}] from ${selectedExecReport.department_name}, the Office of the Executive Mayor mandates:`,
+                    deadline: '',
+                  })
+                  setSelectedExecReport(null)
+                  setShowDirectiveModal(true)
+                }}
+                style={{
+                  padding: '10px 20px', borderRadius: 10, border: 'none',
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                  color: '#000000', fontWeight: 800, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  boxShadow: '0 4px 15px rgba(245,158,11,0.3)',
+                }}
+              >
+                <Send size={15} /> Issue Directive in Response
+              </button>
+            </div>
           </div>
         </div>
       )}

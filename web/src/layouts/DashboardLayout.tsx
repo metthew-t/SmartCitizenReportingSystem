@@ -144,28 +144,172 @@ export default function DashboardLayout() {
     setShowNotifications(!showNotifications)
   }
 
-  const baseNavItems = [
-    { path: '/dashboard', label: t('dashboard'), icon: LayoutDashboard },
-    { path: '/reports', label: t('reports'), icon: FileText },
-    { path: '/official-reports', label: t('official_reports'), icon: ScrollText },
-    { path: '/map', label: t('gis_map'), icon: Map },
-  ]
+  // Redirect mayor from /dashboard to /mayor
+  useEffect(() => {
+    if (role === 'mayor' && location.pathname === '/dashboard') {
+      navigate('/mayor', { replace: true })
+    }
+  }, [role, location.pathname, navigate])
 
-  // Add role-specific navigation
-  const navItems = [...baseNavItems]
-  if (role === 'mayor' || role === 'super_admin') {
-    navItems.splice(1, 0, { path: '/mayor', label: t('mayor_command_center'), icon: Crown })
+  // Bespoke world-class themes by role
+  const THEMES = {
+    mayor: {
+      id: 'mayor',
+      appBg: 'radial-gradient(ellipse at 50% -15%, #1a1713 0%, #0d0e13 45%, #050608 100%)',
+      sidebarBg: 'linear-gradient(180deg, #13141a 0%, #07080b 100%)',
+      headerBg: 'rgba(9, 10, 14, 0.88)',
+      borderColor: 'rgba(245, 158, 11, 0.22)',
+      brandGradient: 'linear-gradient(135deg, rgba(245,158,11,0.35), rgba(180,83,9,0.35))',
+      brandShadow: '0 0 25px rgba(245,158,11,0.3)',
+      brandIconColor: '#fbbf24',
+      brandSubtitle: 'Office of the Executive Mayor',
+      badgeBg: 'rgba(245,158,11,0.08)',
+      badgeBorder: 'rgba(245,158,11,0.28)',
+      badgeColor: '#fbbf24',
+      navText: '#a3a3a3',
+      activeNavBg: 'linear-gradient(90deg, rgba(245,158,11,0.22) 0%, rgba(245,158,11,0.02) 100%)',
+      activeNavText: '#fbbf24',
+      activeNavBorder: '3px solid #f59e0b',
+      activeNavGlow: 'inset 0 0 15px rgba(245,158,11,0.1)',
+      hoverNavBg: 'rgba(245,158,11,0.08)',
+      hoverNavText: '#fef08a',
+      accentColor: '#f59e0b',
+      profileAvatarBg: 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
+      profileAvatarShadow: '0 0 20px rgba(245,158,11,0.4)',
+      roleTitle: 'Executive Mayor',
+      notifBtnBg: 'rgba(245,158,11,0.12)',
+      notifBtnBorder: 'rgba(245,158,11,0.25)',
+      notifBtnColor: '#fbbf24',
+      dropdownBg: '#111218',
+    },
+    department_manager: {
+      id: 'department_manager',
+      appBg: 'radial-gradient(ellipse at 50% -15%, #0c1c38 0%, #061022 45%, #020712 100%)',
+      sidebarBg: 'linear-gradient(180deg, #09172e 0%, #040a17 100%)',
+      headerBg: 'rgba(6, 16, 34, 0.88)',
+      borderColor: 'rgba(59, 130, 246, 0.22)',
+      brandGradient: 'linear-gradient(135deg, rgba(59,130,246,0.35), rgba(29,78,216,0.35))',
+      brandShadow: '0 0 25px rgba(59,130,246,0.3)',
+      brandIconColor: '#93c5fd',
+      brandSubtitle: 'Municipal Sector Command',
+      badgeBg: 'rgba(59,130,246,0.08)',
+      badgeBorder: 'rgba(59,130,246,0.28)',
+      badgeColor: '#93c5fd',
+      navText: '#94a3b8',
+      activeNavBg: 'linear-gradient(90deg, rgba(59,130,246,0.22) 0%, rgba(59,130,246,0.02) 100%)',
+      activeNavText: '#93c5fd',
+      activeNavBorder: '3px solid #3b82f6',
+      activeNavGlow: 'inset 0 0 15px rgba(59,130,246,0.1)',
+      hoverNavBg: 'rgba(59,130,246,0.08)',
+      hoverNavText: '#dbeafe',
+      accentColor: '#3b82f6',
+      profileAvatarBg: 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)',
+      profileAvatarShadow: '0 0 20px rgba(59,130,246,0.4)',
+      roleTitle: 'Sector Director',
+      notifBtnBg: 'rgba(59,130,246,0.12)',
+      notifBtnBorder: 'rgba(59,130,246,0.25)',
+      notifBtnColor: '#93c5fd',
+      dropdownBg: '#09162c',
+    },
+    officer: {
+      id: 'officer',
+      appBg: 'radial-gradient(ellipse at 50% -15%, #08211b 0%, #051310 45%, #020706 100%)',
+      sidebarBg: 'linear-gradient(180deg, #061914 0%, #030a08 100%)',
+      headerBg: 'rgba(5, 17, 14, 0.88)',
+      borderColor: 'rgba(16, 185, 129, 0.22)',
+      brandGradient: 'linear-gradient(135deg, rgba(16,185,129,0.35), rgba(4,120,87,0.35))',
+      brandShadow: '0 0 25px rgba(16,185,129,0.3)',
+      brandIconColor: '#6ee7b7',
+      brandSubtitle: 'Field Operations & Dispatch',
+      badgeBg: 'rgba(16,185,129,0.08)',
+      badgeBorder: 'rgba(16,185,129,0.28)',
+      badgeColor: '#6ee7b7',
+      navText: '#94a3b8',
+      activeNavBg: 'linear-gradient(90deg, rgba(16,185,129,0.22) 0%, rgba(16,185,129,0.02) 100%)',
+      activeNavText: '#6ee7b7',
+      activeNavBorder: '3px solid #10b981',
+      activeNavGlow: 'inset 0 0 15px rgba(16,185,129,0.1)',
+      hoverNavBg: 'rgba(16,185,129,0.08)',
+      hoverNavText: '#d1fae5',
+      accentColor: '#10b981',
+      profileAvatarBg: 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
+      profileAvatarShadow: '0 0 20px rgba(16,185,129,0.4)',
+      roleTitle: 'Field Officer',
+      notifBtnBg: 'rgba(16,185,129,0.12)',
+      notifBtnBorder: 'rgba(16,185,129,0.25)',
+      notifBtnColor: '#6ee7b7',
+      dropdownBg: '#081714',
+    },
+    default: {
+      id: 'default',
+      appBg: '#0f172a',
+      sidebarBg: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+      headerBg: 'rgba(15,23,42,0.8)',
+      borderColor: 'rgba(148,163,184,0.08)',
+      brandGradient: 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.3))',
+      brandShadow: '0 0 20px rgba(99,102,241,0.2)',
+      brandIconColor: '#a5b4fc',
+      brandSubtitle: 'City Administration',
+      badgeBg: 'rgba(255,255,255,0.03)',
+      badgeBorder: 'rgba(148,163,184,0.1)',
+      badgeColor: '#e2e8f0',
+      navText: '#94a3b8',
+      activeNavBg: 'linear-gradient(90deg, rgba(99,102,241,0.15) 0%, transparent 100%)',
+      activeNavText: '#a5b4fc',
+      activeNavBorder: '3px solid #818cf8',
+      activeNavGlow: 'none',
+      hoverNavBg: 'rgba(255,255,255,0.03)',
+      hoverNavText: '#e2e8f0',
+      accentColor: '#6366f1',
+      profileAvatarBg: 'linear-gradient(135deg, #10b981 0%, #3b82f6 100%)',
+      profileAvatarShadow: '0 0 15px rgba(16,185,129,0.3)',
+      roleTitle: role === 'super_admin' ? 'Super Administrator' : 'City Administrator',
+      notifBtnBg: 'rgba(255,255,255,0.05)',
+      notifBtnBorder: 'transparent',
+      notifBtnColor: '#94a3b8',
+      dropdownBg: '#1e293b',
+    }
   }
-  if (role === 'super_admin' || role === 'city_admin' || role === 'department_manager' || role === 'mayor') {
-    navItems.push({ path: '/departments', label: t('departments'), icon: Building2 })
+
+  const theme = role === 'mayor'
+    ? THEMES.mayor
+    : role === 'department_manager'
+    ? THEMES.department_manager
+    : role === 'officer'
+    ? THEMES.officer
+    : THEMES.default // Admins and Super Admins retain original dark slate theme
+
+  // Build navigation items
+  let navItems: { path: string; label: string; icon: any }[] = []
+
+  if (role === 'mayor') {
+    // For Mayor: ONLY Mayor Command Center and Settings for account management
+    navItems = [
+      { path: '/mayor', label: t('mayor_command_center') || 'Mayor Command Center', icon: Crown },
+      { path: '/settings', label: t('settings') || 'Settings', icon: Settings },
+    ]
+  } else {
+    const baseNavItems = [
+      { path: '/dashboard', label: t('dashboard'), icon: LayoutDashboard },
+      { path: '/reports', label: t('reports'), icon: FileText },
+      { path: '/official-reports', label: t('official_reports'), icon: ScrollText },
+      { path: '/map', label: t('gis_map'), icon: Map },
+    ]
+    navItems = [...baseNavItems]
+    if (role === 'super_admin') {
+      navItems.splice(1, 0, { path: '/mayor', label: t('mayor_command_center'), icon: Crown })
+    }
+    if (role === 'super_admin' || role === 'city_admin' || role === 'department_manager') {
+      navItems.push({ path: '/departments', label: t('departments'), icon: Building2 })
+    }
+    if (role === 'officer' || role === 'department_manager' || role === 'super_admin') {
+      navItems.push({ path: '/dept-chat', label: t('dept_chat'), icon: MessageSquare })
+    }
+    if (role === 'super_admin' || role === 'city_admin' || role === 'department_manager') {
+      navItems.push({ path: '/users', label: t('user_management'), icon: Users })
+    }
+    navItems.push({ path: '/settings', label: t('settings'), icon: Settings })
   }
-  if (role === 'officer' || role === 'department_manager' || role === 'super_admin') {
-    navItems.push({ path: '/dept-chat', label: t('dept_chat'), icon: MessageSquare })
-  }
-  if (role === 'super_admin' || role === 'city_admin' || role === 'department_manager') {
-    navItems.push({ path: '/users', label: t('user_management'), icon: Users })
-  }
-  navItems.push({ path: '/settings', label: t('settings'), icon: Settings })
 
   const isActive = (path: string) => location.pathname === path
 
@@ -186,14 +330,15 @@ export default function DashboardLayout() {
   return (
     <div style={{
       display: 'flex', height: '100vh',
-      background: '#0f172a',
+      background: theme.appBg,
       fontFamily: "'Inter', 'Segoe UI', sans-serif",
+      color: '#e2e8f0',
     }}>
       {/* Sidebar */}
       <aside style={{
         width: sidebarCollapsed ? 72 : 264,
-        background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
-        borderRight: '1px solid rgba(148,163,184,0.08)',
+        background: theme.sidebarBg,
+        borderRight: `1px solid ${theme.borderColor}`,
         display: 'flex', flexDirection: 'column',
         transition: 'width 0.3s ease',
         flexShrink: 0,
@@ -201,24 +346,32 @@ export default function DashboardLayout() {
         {/* Logo & Department */}
         <div style={{
           padding: sidebarCollapsed ? '16px 12px' : '20px 20px',
-          borderBottom: '1px solid rgba(148,163,184,0.08)',
+          borderBottom: `1px solid ${theme.borderColor}`,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: sidebarCollapsed ? 0 : 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
               <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.3))',
+                width: 38, height: 38, borderRadius: 10,
+                background: theme.brandGradient,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0, boxShadow: '0 0 20px rgba(99,102,241,0.2)',
+                flexShrink: 0, boxShadow: theme.brandShadow,
               }}>
-                <Building2 size={20} color="#a5b4fc" />
+                {role === 'mayor' ? (
+                  <Crown size={22} color={theme.brandIconColor} strokeWidth={2.2} />
+                ) : role === 'officer' ? (
+                  <ShieldCheck size={20} color={theme.brandIconColor} />
+                ) : (
+                  <Building2 size={20} color={theme.brandIconColor} />
+                )}
               </div>
               {!sidebarCollapsed && (
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ color: 'white', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ color: 'white', fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: -0.3 }}>
                     Adama Smart
                   </div>
-                  <div style={{ color: '#64748b', fontSize: 10 }}>City Administration</div>
+                  <div style={{ color: '#94a3b8', fontSize: 10, fontWeight: 500 }}>
+                    {theme.brandSubtitle}
+                  </div>
                 </div>
               )}
             </div>
@@ -226,7 +379,7 @@ export default function DashboardLayout() {
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
-                color: '#64748b', padding: 4,
+                color: '#94a3b8', padding: 4,
               }}
             >
               {sidebarCollapsed ? <Menu size={18} /> : <X size={16} />}
@@ -238,23 +391,25 @@ export default function DashboardLayout() {
             <div
               style={{
                 width: '100%', padding: '8px 12px', borderRadius: 10,
-                border: '1px solid rgba(148,163,184,0.1)',
-                background: 'rgba(255,255,255,0.03)',
-                color: '#e2e8f0',
+                border: `1px solid ${theme.badgeBorder}`,
+                background: theme.badgeBg,
+                color: theme.badgeColor,
                 display: 'flex', alignItems: 'center', gap: 8,
                 fontSize: 12,
               }}
             >
               {role === 'mayor' ? (
-                <Crown size={14} color="#f59e0b" />
+                <Crown size={14} color={theme.brandIconColor} />
               ) : role === 'super_admin' ? (
                 <ShieldCheck size={14} color="#f59e0b" />
               ) : role === 'city_admin' ? (
                 <ShieldCheck size={14} color="#10b981" />
+              ) : role === 'officer' ? (
+                <ShieldCheck size={14} color={theme.brandIconColor} />
               ) : (
-                <Building2 size={14} color="#94a3b8" />
+                <Building2 size={14} color={theme.brandIconColor} />
               )}
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 700 }}>
                 {role === 'mayor' ? 'Office of the Mayor' : role === 'super_admin' ? 'Super Admin' : role === 'city_admin' ? 'City Admin' : departmentName || 'Loading...'}
               </span>
             </div>
@@ -274,27 +429,28 @@ export default function DashboardLayout() {
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: sidebarCollapsed ? '10px' : '10px 14px',
                   margin: '4px 0', borderRadius: 10,
-                  background: active ? 'linear-gradient(90deg, rgba(99,102,241,0.15) 0%, transparent 100%)' : 'transparent',
-                  color: active ? '#a5b4fc' : '#94a3b8',
+                  background: active ? theme.activeNavBg : 'transparent',
+                  color: active ? theme.activeNavText : theme.navText,
                   textDecoration: 'none', transition: 'all 0.2s',
-                  borderLeft: active ? '3px solid #818cf8' : '3px solid transparent',
+                  borderLeft: active ? theme.activeNavBorder : '3px solid transparent',
+                  boxShadow: active ? theme.activeNavGlow : 'none',
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                 }}
                 onMouseEnter={e => {
                   if (!active) {
-                    e.currentTarget.style.color = '#e2e8f0'
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
+                    e.currentTarget.style.color = theme.hoverNavText
+                    e.currentTarget.style.background = theme.hoverNavBg
                   }
                 }}
                 onMouseLeave={e => {
                   if (!active) {
-                    e.currentTarget.style.color = '#94a3b8'
+                    e.currentTarget.style.color = theme.navText
                     e.currentTarget.style.background = 'transparent'
                   }
                 }}
               >
                 <Icon size={18} />
-                {!sidebarCollapsed && <span style={{ fontSize: 13, fontWeight: 500 }}>{item.label}</span>}
+                {!sidebarCollapsed && <span style={{ fontSize: 13, fontWeight: active ? 700 : 500 }}>{item.label}</span>}
               </Link>
             )
           })}
@@ -303,25 +459,26 @@ export default function DashboardLayout() {
         {/* User Profile & Logout */}
         <div style={{
           padding: sidebarCollapsed ? '16px 12px' : '20px 20px',
-          borderTop: '1px solid rgba(148,163,184,0.08)',
+          borderTop: `1px solid ${theme.borderColor}`,
         }}>
           {!sidebarCollapsed && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
               <div style={{
-                width: 36, height: 36, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #10b981 0%, #3b82f6 100%)',
+                width: 38, height: 38, borderRadius: '50%',
+                background: theme.profileAvatarBg,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'white', fontWeight: 700, fontSize: 14,
-                boxShadow: '0 0 15px rgba(16,185,129,0.3)',
+                color: 'white', fontWeight: 800, fontSize: 14,
+                boxShadow: theme.profileAvatarShadow,
+                flexShrink: 0,
               }}>
                 {user?.name?.charAt(0)?.toUpperCase() || 'A'}
               </div>
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {user?.name || 'Loading...'}
                 </div>
-                <div style={{ color: '#64748b', fontSize: 11, textTransform: 'capitalize' }}>
-                  {role === 'mayor' ? 'Executive Mayor' : role?.replace('_', ' ') || 'Officer'}
+                <div style={{ color: '#94a3b8', fontSize: 11, fontWeight: 600 }}>
+                  {theme.roleTitle}
                 </div>
               </div>
             </div>
@@ -336,7 +493,7 @@ export default function DashboardLayout() {
               justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
               gap: 8, cursor: 'pointer', transition: 'all 0.2s',
             }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.15)'}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.18)'}
             onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
           >
             <LogOut size={16} />
@@ -352,14 +509,23 @@ export default function DashboardLayout() {
       }}>
         {/* Top Header */}
         <header style={{
-          height: 64, background: 'rgba(15,23,42,0.8)',
+          height: 64, background: theme.headerBg,
           backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid rgba(148,163,184,0.08)',
+          borderBottom: `1px solid ${theme.borderColor}`,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '0 24px', flexShrink: 0, zIndex: 50,
         }}>
           <div>
-            {/* Can put page title or breadcrumbs here in future */}
+            {/* Contextual role identifier */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{
+                display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
+                background: theme.accentColor, boxShadow: `0 0 8px ${theme.accentColor}`
+              }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', letterSpacing: 0.5 }}>
+                {theme.brandSubtitle.toUpperCase()}
+              </span>
+            </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }} ref={notifRef}>
             {/* Notification Bell */}
@@ -367,22 +533,22 @@ export default function DashboardLayout() {
               <button
                 onClick={handleBellClick}
                 style={{
-                  background: showNotifications ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)',
-                  border: showNotifications ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent',
+                  background: showNotifications ? theme.activeNavBg : theme.notifBtnBg,
+                  border: `1px solid ${showNotifications ? theme.accentColor : theme.notifBtnBorder}`,
                   width: 40, height: 40, borderRadius: '50%',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: showNotifications ? '#a5b4fc' : '#94a3b8',
+                  color: showNotifications ? theme.activeNavText : theme.notifBtnColor,
                   cursor: 'pointer', position: 'relative',
                   transition: 'all 0.2s',
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.background = 'rgba(99,102,241,0.15)'
-                  e.currentTarget.style.color = '#a5b4fc'
+                  e.currentTarget.style.background = theme.activeNavBg
+                  e.currentTarget.style.color = theme.activeNavText
                 }}
                 onMouseLeave={e => {
                   if (!showNotifications) {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
-                    e.currentTarget.style.color = '#94a3b8'
+                    e.currentTarget.style.background = theme.notifBtnBg
+                    e.currentTarget.style.color = theme.notifBtnColor
                   }
                 }}
               >
@@ -408,13 +574,13 @@ export default function DashboardLayout() {
                 <div style={{
                   position: 'absolute', top: 50, right: 0,
                   width: 380, maxHeight: 480,
-                  background: '#1e293b', border: '1px solid rgba(148,163,184,0.15)',
-                  borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                  background: theme.dropdownBg, border: `1px solid ${theme.borderColor}`,
+                  borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
                   zIndex: 100, overflow: 'hidden',
                 }}>
                   {/* Header */}
                   <div style={{
-                    padding: '16px 20px', borderBottom: '1px solid rgba(148,163,184,0.1)',
+                    padding: '16px 20px', borderBottom: `1px solid ${theme.borderColor}`,
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   }}>
                     <div>
@@ -431,12 +597,12 @@ export default function DashboardLayout() {
                             markAllAsViewed()
                           }}
                           style={{
-                            background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)',
-                            color: '#a5b4fc', fontSize: 11, fontWeight: 600, padding: '4px 10px',
+                            background: theme.activeNavBg, border: `1px solid ${theme.accentColor}40`,
+                            color: theme.activeNavText, fontSize: 11, fontWeight: 600, padding: '4px 10px',
                             borderRadius: 8, cursor: 'pointer', transition: 'all 0.2s',
                           }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.25)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(99,102,241,0.15)'}
+                          onMouseEnter={e => e.currentTarget.style.background = `${theme.accentColor}30`}
+                          onMouseLeave={e => e.currentTarget.style.background = theme.activeNavBg}
                         >
                           Mark all read
                         </button>
@@ -470,34 +636,34 @@ export default function DashboardLayout() {
                           style={{
                             padding: '14px 20px', cursor: 'pointer',
                             borderBottom: '1px solid rgba(148,163,184,0.06)',
-                            background: isUnread ? 'rgba(99,102,241,0.08)' : 'transparent',
+                            background: isUnread ? `${theme.accentColor}12` : 'transparent',
                             transition: 'background 0.2s',
                           }}
-                          onMouseEnter={e => e.currentTarget.style.background = isUnread ? 'rgba(99,102,241,0.14)' : 'rgba(99,102,241,0.05)'}
-                          onMouseLeave={e => e.currentTarget.style.background = isUnread ? 'rgba(99,102,241,0.08)' : 'transparent'}
+                          onMouseEnter={e => e.currentTarget.style.background = isUnread ? `${theme.accentColor}20` : 'rgba(255,255,255,0.03)'}
+                          onMouseLeave={e => e.currentTarget.style.background = isUnread ? `${theme.accentColor}12` : 'transparent'}
                         >
                           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                             <div style={{
                               width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                              background: `${PRIORITY_COLORS[notif.priority] || '#6366f1'}15`,
+                              background: `${PRIORITY_COLORS[notif.priority] || theme.accentColor}15`,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
                               {notif.priority === 'CRITICAL' ? (
                                 <AlertTriangle size={16} color="#ef4444" />
                               ) : (
-                                <FileText size={16} color={PRIORITY_COLORS[notif.priority] || '#6366f1'} />
+                                <FileText size={16} color={PRIORITY_COLORS[notif.priority] || theme.accentColor} />
                               )}
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                  <span style={{ color: isUnread ? '#c7d2fe' : '#94a3b8', fontSize: 12, fontWeight: isUnread ? 800 : 600 }}>
+                                  <span style={{ color: isUnread ? '#ffffff' : '#94a3b8', fontSize: 12, fontWeight: isUnread ? 800 : 600 }}>
                                     {notif.case_number}
                                   </span>
                                   {isUnread && (
                                     <span style={{
                                       padding: '1px 6px', borderRadius: 8, fontSize: 9, fontWeight: 700,
-                                      background: '#3b82f6', color: 'white',
+                                      background: theme.accentColor, color: '#000000',
                                     }}>
                                       NEW
                                     </span>
@@ -512,7 +678,7 @@ export default function DashboardLayout() {
                                 </span>
                               </div>
                               <div style={{
-                                color: isUnread ? '#f1f5f9' : '#64748b', fontSize: 12, marginTop: 4,
+                                color: isUnread ? '#f1f5f9' : '#94a3b8', fontSize: 12, marginTop: 4,
                                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                                 fontWeight: isUnread ? 600 : 400,
                               }}>
@@ -522,7 +688,7 @@ export default function DashboardLayout() {
                                 <Clock size={10} />
                                 {timeAgo(notif.created_at)}
                                 {isUnread ? (
-                                  <span style={{ color: '#60a5fa', marginLeft: 6, fontWeight: 600 }}>• Unread</span>
+                                  <span style={{ color: theme.activeNavText, marginLeft: 6, fontWeight: 600 }}>• Unread</span>
                                 ) : (
                                   <span style={{ color: '#475569', marginLeft: 6 }}>• Viewed</span>
                                 )}
@@ -536,17 +702,17 @@ export default function DashboardLayout() {
 
                   {/* Footer */}
                   <div style={{
-                    padding: '12px 20px', borderTop: '1px solid rgba(148,163,184,0.1)',
+                    padding: '12px 20px', borderTop: `1px solid ${theme.borderColor}`,
                     textAlign: 'center',
                   }}>
                     <button
-                      onClick={() => { setShowNotifications(false); navigate('/reports') }}
+                      onClick={() => { setShowNotifications(false); navigate(role === 'mayor' ? '/mayor' : '/reports') }}
                       style={{
-                        background: 'none', border: 'none', color: '#818cf8',
-                        fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                        background: 'none', border: 'none', color: theme.activeNavText,
+                        fontSize: 12, fontWeight: 700, cursor: 'pointer',
                       }}
                     >
-                      View All Reports →
+                      {role === 'mayor' ? 'View Mayor Command Center →' : 'View All Reports →'}
                     </button>
                   </div>
                 </div>
