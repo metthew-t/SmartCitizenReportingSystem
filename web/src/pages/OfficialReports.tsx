@@ -316,7 +316,7 @@ export default function OfficialReports() {
   // Check if current user can review the selected report
   const canReviewSelected = () => {
     if (!selectedReport) return false
-    if (role === 'city_admin') return true
+    if (role === 'city_admin' || role === 'super_admin') return true
     if (role === 'department_manager' && selectedReport.level === 'OFFICER_TO_MANAGER') return true
     return false
   }
@@ -495,7 +495,7 @@ export default function OfficialReports() {
           </>
         )}
 
-        {role === 'city_admin' && (
+        {(role === 'city_admin' || role === 'super_admin') && (
           <>
             <button
               onClick={() => setActiveTab('manager_reports')}
@@ -1010,7 +1010,7 @@ export default function OfficialReports() {
                         ✓ Approve / Endorse
                       </button>
 
-                      {role === 'city_admin' && (
+                      {(role === 'city_admin' || role === 'super_admin') && (
                         <button
                           type="button"
                           onClick={() => setReviewStatus('DIRECTIVE_ISSUED')}

@@ -78,7 +78,8 @@ function Login() {
           profile_photo_url: me?.profile_photo_url || null,
           department_name: me?.department_name || null,
           is_city_admin: me?.is_city_admin || false,
-        }, me?.department_name || (me?.is_city_admin ? 'City Administration' : null), me?.is_city_admin ? 'city_admin' : (me?.is_department_manager ? 'department_manager' : 'officer'))
+          is_super_admin: me?.is_super_admin || false,
+        }, me?.department_name || (me?.is_city_admin ? 'City Administration' : null), me?.is_super_admin ? 'super_admin' : (me?.is_city_admin ? 'city_admin' : (me?.is_department_manager ? 'department_manager' : 'officer')))
         navigate('/dashboard')
       } else {
         setError('Invalid email/phone number or password.')

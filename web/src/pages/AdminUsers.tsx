@@ -14,6 +14,7 @@ interface UserData {
   is_officer: boolean
   is_department_manager: boolean
   is_city_admin: boolean
+  is_super_admin: boolean
   department_name: string | null
   date_joined: string
 }
@@ -25,7 +26,7 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [filterRole, setFilterRole] = useState<'ALL' | 'CITIZEN' | 'OFFICER' | 'ADMIN'>('ALL')
+  const [filterRole, setFilterRole] = useState<'ALL' | 'CITIZEN' | 'OFFICER' | 'MANAGER' | 'ADMIN' | 'SUPER_ADMIN'>('ALL')
   
   // Modal state
   const [showModal, setShowModal] = useState(false)
@@ -38,6 +39,7 @@ export default function AdminUsers() {
     department_name: '',
     is_manager: false,
     is_city_admin: false,
+    is_super_admin: false,
   })
 
   // Edit User modal state
@@ -52,7 +54,7 @@ export default function AdminUsers() {
 
   useEffect(() => {
     fetchUsers()
-    if (role === 'city_admin') {
+    if (role === 'city_admin' || role === 'super_admin') {
       fetchDepartments()
     }
   }, [])
@@ -115,6 +117,12 @@ export default function AdminUsers() {
       if (role === 'department_manager') {
         payload.is_manager = false
         payload.is_city_admin = false
+        payload.is_super_admin = false
+      }
+      // Only super admin can create city admins or super admins
+      if (role !== 'super_admin') {
+        payload.is_city_admin = false
+        payload.is_super_admin = false
       }
 
       const res = await fetch(`${API}/auth/officer-register/`, {
@@ -132,7 +140,7 @@ export default function AdminUsers() {
         alert('User created successfully!')
         setShowModal(false)
         fetchUsers() // Refresh list
-        setFormData({ email: '', phone_number: '', password: '', full_name: '', department_name: '', is_manager: false, is_city_admin: false })
+        setFormData({ email: '', phone_number: '', password: '', full_name: '', department_name: '', is_manager: false, is_city_admin: false, is_super_admin: false })
       } else {
         alert('Error: ' + JSON.stringify(data))
       }
@@ -213,7 +221,7 @@ export default function AdminUsers() {
     }
   }
 
-  if (role !== 'city_admin' && role !== 'department_manager') {
+  if (role !== 'super_admin' && role !== 'city_admin' && role !== 'department_manager') {
     return <div style={{ color: 'red' }}>Access Denied. You must be an Admin or Department Manager to view this page.</div>
   }
 
@@ -226,8 +234,10 @@ export default function AdminUsers() {
     
     const roleMatch = filterRole === 'ALL' ||
       (filterRole === 'CITIZEN' && u.is_citizen) ||
-      (filterRole === 'OFFICER' && u.is_officer) ||
-      (filterRole === 'ADMIN' && u.is_city_admin)
+      (filterRole === 'OFFICER' && u.is_officer && !u.is_department_manager && !u.is_city_admin) ||
+      (filterRole === 'MANAGER' && u.is_department_manager) ||
+      (filterRole === 'ADMIN' && u.is_city_admin && !u.is_super_admin) ||
+      (filterRole === 'SUPER_ADMIN' && u.is_super_admin)
 
     return searchMatch && roleMatch
   })
@@ -238,7 +248,7 @@ export default function AdminUsers() {
         <div>
           <h2 style={{ color: '#e2e8f0', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>User Management</h2>
           <p style={{ color: '#64748b', fontSize: 13, margin: 0 }}>
-            {role === 'city_admin' ? 'View and manage all system users.' : 'Manage officers in your department.'}
+            {role === 'super_admin' ? 'Full system user management. Create and manage all users including City Admins.' : role === 'city_admin' ? 'View and manage all system users.' : 'Manage officers in your department.'}
           </p>
         </div>
         <button 
@@ -252,7 +262,7 @@ export default function AdminUsers() {
           }}
         >
           <Plus size={18} />
-          Add {role === 'city_admin' ? 'Official' : 'Officer'}
+          Add {role === 'city_admin' || role === 'super_admin' ? 'Official' : 'Officer'}
         </button>
       </div>
 
@@ -285,10 +295,10 @@ export default function AdminUsers() {
           </div>
 
           <div style={{ display: 'flex', gap: 8 }}>
-            {(['ALL', 'CITIZEN', 'OFFICER', 'ADMIN'] as const).map(r => (
+            {(['ALL', 'CITIZEN', 'OFFICER', 'MANAGER', 'ADMIN', ...(role === 'super_admin' ? ['SUPER_ADMIN'] : [])] as const).map(r => (
               <button
                 key={r}
-                onClick={() => setFilterRole(r)}
+                onClick={() => setFilterRole(r as any)}
                 style={{
                   padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
                   background: filterRole === r ? 'rgba(99,102,241,0.15)' : 'transparent',
@@ -297,7 +307,7 @@ export default function AdminUsers() {
                   cursor: 'pointer', transition: 'all 0.2s',
                 }}
               >
-                {r.charAt(0) + r.slice(1).toLowerCase()}
+                {r === 'SUPER_ADMIN' ? 'Super Admin' : r.charAt(0) + r.slice(1).toLowerCase()}
               </button>
             ))}
           </div>
@@ -346,7 +356,8 @@ export default function AdminUsers() {
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {user.is_city_admin && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(16,185,129,0.1)', color: '#10b981', fontSize: 10, fontWeight: 600 }}><Shield size={10} style={{ display: 'inline', marginRight: 2 }} /> ADMIN</span>}
+                        {user.is_super_admin && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', fontSize: 10, fontWeight: 600 }}><Shield size={10} style={{ display: 'inline', marginRight: 2 }} /> SUPER ADMIN</span>}
+                        {user.is_city_admin && !user.is_super_admin && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(16,185,129,0.1)', color: '#10b981', fontSize: 10, fontWeight: 600 }}><Shield size={10} style={{ display: 'inline', marginRight: 2 }} /> ADMIN</span>}
                         {user.is_department_manager && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(236,72,153,0.1)', color: '#ec4899', fontSize: 10, fontWeight: 600 }}><Building2 size={10} style={{ display: 'inline', marginRight: 2 }} /> MANAGER</span>}
                         {user.is_officer && !user.is_department_manager && !user.is_city_admin && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(99,102,241,0.1)', color: '#818cf8', fontSize: 10, fontWeight: 600 }}><Building2 size={10} style={{ display: 'inline', marginRight: 2 }} /> OFFICER</span>}
                         {user.is_citizen && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', fontSize: 10, fontWeight: 600 }}><User size={10} style={{ display: 'inline', marginRight: 2 }} /> CITIZEN</span>}
@@ -359,6 +370,8 @@ export default function AdminUsers() {
                       {new Date(user.date_joined).toLocaleDateString()}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                      {/* Only super_admin can manage admin/super_admin accounts */}
+                      {(role === 'super_admin' || (!user.is_super_admin && !user.is_city_admin)) && (
                       <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
                         <button 
                           onClick={() => openEditModal(user)}
@@ -397,6 +410,7 @@ export default function AdminUsers() {
                           <Trash2 size={16} />
                         </button>
                       </div>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -420,7 +434,7 @@ export default function AdminUsers() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h3 style={{ margin: 0, color: '#e2e8f0', fontSize: 18 }}>
-                Add New {role === 'city_admin' ? 'Official' : 'Officer'}
+                Add New {role === 'city_admin' || role === 'super_admin' ? 'Official' : 'Officer'}
               </h3>
               <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
                 <X size={20} />
@@ -469,7 +483,7 @@ export default function AdminUsers() {
                 />
               </div>
 
-              {role === 'city_admin' && (
+              {(role === 'city_admin' || role === 'super_admin') && (
                 <>
                   <div>
                     <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Department</label>
@@ -478,14 +492,14 @@ export default function AdminUsers() {
                       onChange={e => setFormData({...formData, department_name: e.target.value})}
                       style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none' }}
                     >
-                      <option value="">None (City Admin)</option>
+                      <option value="">None (City Admin / Super Admin)</option>
                       {departments.map(d => (
                         <option key={d.id} value={d.name}>{d.name}</option>
                       ))}
                     </select>
                   </div>
 
-                  <div style={{ display: 'flex', gap: 16 }}>
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e2e8f0', fontSize: 14 }}>
                       <input 
                         type="checkbox" 
@@ -494,14 +508,26 @@ export default function AdminUsers() {
                       />
                       Is Manager
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e2e8f0', fontSize: 14 }}>
-                      <input 
-                        type="checkbox" 
-                        checked={formData.is_city_admin}
-                        onChange={e => setFormData({...formData, is_city_admin: e.target.checked})}
-                      />
-                      Is City Admin
-                    </label>
+                    {role === 'super_admin' && (
+                      <>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e2e8f0', fontSize: 14 }}>
+                          <input 
+                            type="checkbox" 
+                            checked={formData.is_city_admin}
+                            onChange={e => setFormData({...formData, is_city_admin: e.target.checked})}
+                          />
+                          Is City Admin
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e2e8f0', fontSize: 14 }}>
+                          <input 
+                            type="checkbox" 
+                            checked={formData.is_super_admin}
+                            onChange={e => setFormData({...formData, is_super_admin: e.target.checked})}
+                          />
+                          Is Super Admin
+                        </label>
+                      </>
+                    )}
                   </div>
                 </>
               )}

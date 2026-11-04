@@ -153,13 +153,13 @@ export default function DashboardLayout() {
 
   // Add role-specific navigation
   const navItems = [...baseNavItems]
-  if (role === 'city_admin' || role === 'department_manager') {
+  if (role === 'super_admin' || role === 'city_admin' || role === 'department_manager') {
     navItems.push({ path: '/departments', label: t('departments'), icon: Building2 })
   }
-  if (role !== 'city_admin') {
+  if (role === 'officer' || role === 'department_manager' || role === 'super_admin') {
     navItems.push({ path: '/dept-chat', label: t('dept_chat'), icon: MessageSquare })
   }
-  if (role === 'city_admin' || role === 'department_manager') {
+  if (role === 'super_admin' || role === 'city_admin' || role === 'department_manager') {
     navItems.push({ path: '/users', label: t('user_management'), icon: Users })
   }
   navItems.push({ path: '/settings', label: t('settings'), icon: Settings })
@@ -242,13 +242,15 @@ export default function DashboardLayout() {
                 fontSize: 12,
               }}
             >
-              {role === 'city_admin' ? (
+              {role === 'super_admin' ? (
+                <ShieldCheck size={14} color="#f59e0b" />
+              ) : role === 'city_admin' ? (
                 <ShieldCheck size={14} color="#10b981" />
               ) : (
                 <Building2 size={14} color="#94a3b8" />
               )}
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
-                {role === 'city_admin' ? 'City Admin' : departmentName || 'Loading...'}
+                {role === 'super_admin' ? 'Super Admin' : role === 'city_admin' ? 'City Admin' : departmentName || 'Loading...'}
               </span>
             </div>
           )}

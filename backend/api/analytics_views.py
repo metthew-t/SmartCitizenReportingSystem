@@ -17,7 +17,7 @@ def _safe_hasattr(obj, attr):
 def _scoped_reports(user):
     """Return a Report queryset scoped to what the requesting user is allowed to see."""
     base_qs = Report.objects.select_related('primary_department', 'category')
-    if user.is_city_admin or user.is_superuser:
+    if user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False):
         return base_qs.all()
     elif (user.is_department_manager or user.is_officer) and _safe_hasattr(user, 'officer_profile'):
         if user.officer_profile.department:
@@ -203,7 +203,7 @@ class DepartmentPerformanceView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if not (request.user.is_city_admin or request.user.is_superuser):
+        if not (request.user.is_city_admin or request.user.is_superuser or getattr(request.user, 'is_super_admin', False)):
             return Response({'error': 'Only city admins can view performance analytics'}, status=403)
 
         now = timezone.now()
@@ -266,7 +266,7 @@ class AuditLogView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if not (request.user.is_city_admin or request.user.is_superuser):
+        if not (request.user.is_city_admin or request.user.is_superuser or getattr(request.user, 'is_super_admin', False)):
             return Response({'error': 'Only city admins can view audit logs'}, status=403)
 
         from core.models import AuditLog

@@ -13,6 +13,8 @@ class UserManager(BaseUserManager):
     def create_superuser(self, phone_number=None, email=None, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('is_super_admin', True)
+        extra_fields.setdefault('is_city_admin', True)
         return self.create_user(phone_number=phone_number, email=email, password=password, **extra_fields)
 
 class User(AbstractUser):
@@ -24,6 +26,7 @@ class User(AbstractUser):
     is_officer = models.BooleanField(default=False)
     is_department_manager = models.BooleanField(default=False)
     is_city_admin = models.BooleanField(default=False)
+    is_super_admin = models.BooleanField(default=False)
     profile_photo = models.ImageField(upload_to='profiles/', null=True, blank=True)
 
     USERNAME_FIELD = 'phone_number'

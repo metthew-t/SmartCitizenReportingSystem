@@ -15,13 +15,14 @@ class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     department_name = serializers.SerializerMethodField()
     profile_photo_url = serializers.SerializerMethodField()
+    is_super_admin = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = ('id', 'phone_number', 'email', 'full_name', 'department_name',
-                  'is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin',
+                  'is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin', 'is_super_admin',
                   'date_joined', 'profile_photo_url')
-        read_only_fields = ('is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin')
+        read_only_fields = ('is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin', 'is_super_admin')
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)
@@ -33,6 +34,9 @@ class UserSerializer(serializers.ModelSerializer):
                 ret['email'] = phone
             ret['phone_number'] = None
         return ret
+
+    def get_is_super_admin(self, obj):
+        return bool(obj.is_superuser or getattr(obj, 'is_super_admin', False))
 
     def get_full_name(self, obj):
         # Try model field first
@@ -66,12 +70,15 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token = super().get_token(user)
 
         # Add custom claims
+        is_super = bool(user.is_superuser or getattr(user, 'is_super_admin', False))
         token['phone_number'] = user.phone_number
         token['email'] = user.email
         token['is_citizen'] = user.is_citizen
         token['is_officer'] = user.is_officer
         token['is_department_manager'] = user.is_department_manager
-        token['is_city_admin'] = user.is_city_admin
+        token['is_city_admin'] = is_super or user.is_city_admin
+        token['is_super_admin'] = is_super
+        token['role'] = 'super_admin' if is_super else ('city_admin' if user.is_city_admin else ('department_manager' if user.is_department_manager else ('officer' if user.is_officer else 'citizen')))
 
         return token
 
@@ -125,6 +132,7 @@ class OfficerRegisterSerializer(serializers.Serializer):
     department_name = serializers.CharField(max_length=255, required=False, allow_blank=True, default='')
     is_manager = serializers.BooleanField(default=False)
     is_city_admin = serializers.BooleanField(default=False)
+    is_super_admin = serializers.BooleanField(default=False)
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
@@ -150,9 +158,10 @@ class OfficerRegisterSerializer(serializers.Serializer):
     def create(self, validated_data):
         from core.models import Department, OfficerProfile
         dept_name = validated_data.get('department_name', '')
-        is_city_admin = validated_data.get('is_city_admin', False) or dept_name in ['City Administration', 'All Departments', 'Bulchiinsa Magaalaa']
+        is_super_admin = validated_data.get('is_super_admin', False)
+        is_city_admin = validated_data.get('is_city_admin', False) or is_super_admin or dept_name in ['City Administration', 'All Departments', 'Bulchiinsa Magaalaa']
         dept = Department.objects.filter(name__iexact=dept_name).first() if dept_name else None
-        is_manager = validated_data.get('is_manager', False)
+        is_manager = validated_data.get('is_manager', False) or is_super_admin
         phone = validated_data.get('phone_number', '').strip() or None
 
         user = User.objects.create_user(
@@ -162,6 +171,9 @@ class OfficerRegisterSerializer(serializers.Serializer):
             is_officer=True,
             is_department_manager=is_manager or is_city_admin,
             is_city_admin=is_city_admin,
+            is_super_admin=is_super_admin,
+            is_staff=is_city_admin or is_super_admin,
+            is_superuser=is_super_admin,
         )
         OfficerProfile.objects.create(
             user=user,

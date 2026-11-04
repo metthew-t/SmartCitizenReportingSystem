@@ -23,6 +23,8 @@ export const translations: TranslationDictionary = {
   sign_out: { en: 'Sign Out', om: 'Ba\'i', am: 'ውጣ' },
   adama_smart: { en: 'Adama Smart', om: 'Adaamaa Ismaart', am: 'አዳማ ስማርት' },
   city_administration: { en: 'City Administration', om: 'Bulchiinsa Magaalaa', am: 'ከተማ አስተዳደር' },
+  super_admin: { en: 'Super Admin', om: "Bulchaa Ol'aanaa", am: 'ከፍተኛ አስተዳዳሪ' },
+  city_admin: { en: 'City Admin', om: 'Bulchaa Magaalaa', am: 'የከተማ አስተዳዳሪ' },
 
   // Settings Page
   settings_title: { en: 'Settings', om: 'Qindaa\'inoota', am: 'ቅንብሮች' },
@@ -107,3 +109,4 @@ export const useLanguageStore = create<LanguageState>((set, get) => ({
     return entry[currentLang] || entry['en'] || key
   },
 }))
+

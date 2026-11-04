@@ -684,7 +684,7 @@ export default function ReportDetails() {
       )}
 
       {/* Officer Update Status Panel — shown to assigned officer, managers, admins */}
-      {(useAuthStore.getState().role === 'officer' || useAuthStore.getState().role === 'department_manager' || useAuthStore.getState().role === 'city_admin') && (
+      {(useAuthStore.getState().role === 'officer' || useAuthStore.getState().role === 'department_manager' || useAuthStore.getState().role === 'city_admin' || useAuthStore.getState().role === 'super_admin') && (
         <div style={{
           background: 'linear-gradient(135deg, rgba(30,41,59,0.8), rgba(59,130,246,0.06))',
           backdropFilter: 'blur(12px)',

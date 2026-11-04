@@ -264,18 +264,25 @@ class OfficerRegisterView(APIView):
 
     def post(self, request):
         user = request.user
-        if not (user.is_city_admin or user.is_superuser or user.is_department_manager):
+        is_super = bool(user.is_superuser or getattr(user, 'is_super_admin', False))
+        if not (user.is_city_admin or is_super or user.is_department_manager):
             return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
             
         data = request.data.copy()
         
         # Enforce department restriction for department managers
-        if user.is_department_manager and not (user.is_city_admin or user.is_superuser):
+        if user.is_department_manager and not (user.is_city_admin or is_super):
             dept = user.officer_profile.department
             if dept:
                 data['department_name'] = dept.name
             data['is_manager'] = False # Managers cannot create other managers
             data['is_city_admin'] = False
+            data['is_super_admin'] = False
+
+        # Only super admin can create city admins or other super admins
+        if not is_super:
+            data['is_city_admin'] = False
+            data['is_super_admin'] = False
 
         serializer = OfficerRegisterSerializer(data=data)
         if serializer.is_valid():
@@ -305,11 +312,11 @@ class CurrentUserView(generics.RetrieveAPIView):
         user = request.user
         data = request.data
 
-        # Only City Admin can edit their email
+        # Only City Admin / Super Admin can edit their email
         if 'email' in data:
             new_email = (data.get('email') or '').strip().lower()
             if new_email and new_email != (user.email or '').lower():
-                if not (user.is_city_admin or user.is_superuser):
+                if not (user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False)):
                     return Response(
                         {'error': 'Officers and Department Managers cannot change their own email. Please contact City Admin.'},
                         status=status.HTTP_403_FORBIDDEN
@@ -380,8 +387,13 @@ class AdminResetPasswordView(APIView):
         except User.DoesNotExist:
             return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # City admin / superuser can reset anyone
-        if requester.is_city_admin or requester.is_superuser:
+        # City admin / superuser can reset anyone (but city admin cannot reset super admin)
+        if requester.is_city_admin or requester.is_superuser or getattr(requester, 'is_super_admin', False):
+            # City admin cannot reset super admin passwords
+            requester_is_super = bool(requester.is_superuser or getattr(requester, 'is_super_admin', False))
+            target_is_super = bool(target_user.is_superuser or getattr(target_user, 'is_super_admin', False))
+            if target_is_super and not requester_is_super:
+                return Response({'error': 'Only Super Admin can reset another Super Admin password.'}, status=status.HTTP_403_FORBIDDEN)
             target_user.set_password(new_password)
             target_user.save()
             return Response({'message': f'Password for {target_user.email or target_user.phone_number} has been reset.'})
@@ -410,10 +422,11 @@ class UserListView(APIView):
 
     def get(self, request):
         user = request.user
-        if not (user.is_city_admin or user.is_superuser or user.is_department_manager):
+        is_super = bool(user.is_superuser or getattr(user, 'is_super_admin', False))
+        if not (user.is_city_admin or is_super or user.is_department_manager):
             return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         
-        if user.is_city_admin or user.is_superuser:
+        if user.is_city_admin or is_super:
             users = User.objects.all().order_by('-date_joined')
         else:
             # Department manager can only see users in their department
@@ -425,7 +438,8 @@ class UserListView(APIView):
 
     def delete(self, request, pk=None):
         user = request.user
-        if not (user.is_city_admin or user.is_superuser or user.is_department_manager):
+        is_super = bool(user.is_superuser or getattr(user, 'is_super_admin', False))
+        if not (user.is_city_admin or is_super or user.is_department_manager):
             return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         user_id = pk or request.data.get('user_id')
         if not user_id:
@@ -435,7 +449,16 @@ class UserListView(APIView):
             if target_user.id == user.id:
                 return Response({'error': 'Cannot delete your own account'}, status=status.HTTP_400_BAD_REQUEST)
             
-            if user.is_department_manager and not (user.is_city_admin or user.is_superuser):
+            # Super admin accounts can only be deleted by another super admin
+            target_is_super = bool(target_user.is_superuser or getattr(target_user, 'is_super_admin', False))
+            if target_is_super and not is_super:
+                return Response({'error': 'Only Super Admin can delete a Super Admin account.'}, status=status.HTTP_403_FORBIDDEN)
+            
+            # City admin accounts can only be deleted by super admin
+            if target_user.is_city_admin and not is_super:
+                return Response({'error': 'Only Super Admin can delete a City Admin account.'}, status=status.HTTP_403_FORBIDDEN)
+
+            if user.is_department_manager and not (user.is_city_admin or is_super):
                 dept = user.officer_profile.department
                 if not target_user.is_officer or target_user.officer_profile.department != dept:
                     return Response({'error': 'You can only delete officers in your department'}, status=status.HTTP_403_FORBIDDEN)
@@ -447,7 +470,8 @@ class UserListView(APIView):
 
     def patch(self, request, pk=None):
         caller = request.user
-        if not (caller.is_city_admin or caller.is_superuser or caller.is_department_manager):
+        caller_is_super = bool(caller.is_superuser or getattr(caller, 'is_super_admin', False))
+        if not (caller.is_city_admin or caller_is_super or caller.is_department_manager):
             return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
         user_id = pk or request.data.get('user_id')
@@ -459,8 +483,17 @@ class UserListView(APIView):
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
+        # Super admin accounts can only be edited by another super admin
+        target_is_super = bool(target_user.is_superuser or getattr(target_user, 'is_super_admin', False))
+        if target_is_super and not caller_is_super:
+            return Response({'error': 'Only Super Admin can edit a Super Admin account.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # City admin accounts can only be edited by super admin
+        if target_user.is_city_admin and not caller_is_super:
+            return Response({'error': 'Only Super Admin can edit a City Admin account.'}, status=status.HTTP_403_FORBIDDEN)
+
         # Department manager can only edit officers in their own department
-        if caller.is_department_manager and not (caller.is_city_admin or caller.is_superuser):
+        if caller.is_department_manager and not (caller.is_city_admin or caller_is_super):
             dept = caller.officer_profile.department if _safe_hasattr(caller, 'officer_profile') else None
             if not target_user.is_officer or not _safe_hasattr(target_user, 'officer_profile') or target_user.officer_profile.department != dept:
                 return Response({'error': 'You can only edit officers in your department'}, status=status.HTTP_403_FORBIDDEN)
@@ -526,7 +559,7 @@ class StatsView(APIView):
 
         user = request.user
 
-        if user.is_city_admin or user.is_superuser:
+        if user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False):
             reports = Report.objects.all()
         elif (user.is_department_manager or user.is_officer) and _safe_hasattr(user, 'officer_profile'):
             if user.officer_profile.department:

@@ -52,7 +52,7 @@ class ReportViewSet(viewsets.ModelViewSet):
             'ai_suggested_department',
         ).prefetch_related('media', 'shared_with', 'status_history')
 
-        if user.is_city_admin or user.is_superuser:
+        if user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False):
             return base_qs.order_by('-created_at')
         elif (user.is_department_manager or user.is_officer) and _safe_hasattr(user, 'officer_profile'):
             if user.officer_profile.department:
@@ -280,6 +280,7 @@ class ReportViewSet(viewsets.ModelViewSet):
                 'is_citizen': 'BOOLEAN DEFAULT FALSE',
                 'is_officer': 'BOOLEAN DEFAULT FALSE',
                 'is_department_manager': 'BOOLEAN DEFAULT FALSE',
+                'is_super_admin': 'BOOLEAN DEFAULT FALSE',
                 'full_name': "VARCHAR(255) DEFAULT ''",
                 'profile_photo': 'VARCHAR(100) NULL',
                 'email': 'VARCHAR(254) UNIQUE NULL',
@@ -423,7 +424,7 @@ class ReportViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def setup_admin(self, request):
         """One-time endpoint to create the master City Admin account."""
-        if not (request.user.is_superuser or request.user.is_city_admin):
+        if not (request.user.is_superuser or request.user.is_city_admin or getattr(request.user, 'is_super_admin', False)):
             return Response({'error': 'Superuser or city admin access required.'}, status=status.HTTP_403_FORBIDDEN)
             
         from django.contrib.auth import get_user_model
@@ -435,12 +436,16 @@ class ReportViewSet(viewsets.ModelViewSet):
         if admin:
             admin.email = email
             admin.set_password(password)
+            admin.is_super_admin = True
+            admin.is_superuser = True
+            admin.is_staff = True
             admin.save()
-            return Response({'message': f'Existing master admin updated! You can now log in with Email: {email} and Password: {password}'})
+            return Response({'message': f'Existing master admin updated as Super Admin! You can now log in with Email: {email} and Password: {password}'})
             
         user = User(
             email=email,
             is_city_admin=True,
+            is_super_admin=True,
             is_staff=True,
             is_superuser=True
         )
@@ -450,8 +455,7 @@ class ReportViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def init_departments(self, request):
-        if not (request.user.is_superuser or request.user.is_city_admin):
-            return Response({'error': 'Superuser or city admin access required.'}, status=status.HTTP_403_FORBIDDEN)
+        if not (request.user.is_superuser or request.user.is_city_admin or getattr(request.user, 'is_super_admin', False)):            return Response({'error': 'Superuser or city admin access required.'}, status=status.HTTP_403_FORBIDDEN)
         
         departments = [
             "Galmeessa Siivilii", "Waajjira Invastimantii", "Bulchiinsaa fi Nageenya",
@@ -492,7 +496,7 @@ class ReportViewSet(viewsets.ModelViewSet):
         # City admins and superusers: full access
         # Department managers: can update reports in their department
         # Officers: can only update reports assigned to them
-        is_admin = user.is_city_admin or user.is_superuser
+        is_admin = user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False)
         is_manager = user.is_department_manager and _safe_hasattr(user, 'officer_profile')
         is_assigned_officer = (
             user.is_officer
@@ -565,7 +569,7 @@ class ReportViewSet(viewsets.ModelViewSet):
 
         # Notify all city admins
         try:
-            admins = User.objects.filter(is_city_admin=True)
+            admins = User.objects.filter(Q(is_city_admin=True) | Q(is_super_admin=True) | Q(is_superuser=True))
             for admin in admins:
                 if admin != user and admin != report.citizen:
                     send_push_notification(
@@ -640,7 +644,7 @@ class ReportViewSet(viewsets.ModelViewSet):
         
         if officer_id:
             # Manager assigning to someone
-            if not user.is_department_manager and not user.is_city_admin:
+            if not user.is_department_manager and not user.is_city_admin and not getattr(user, 'is_super_admin', False) and not user.is_superuser:
                 return Response({'error': 'Not authorized to assign others'}, status=status.HTTP_403_FORBIDDEN)
             officer = OfficerProfile.objects.filter(id=officer_id).first()
             if not officer:
@@ -679,7 +683,7 @@ class ReportViewSet(viewsets.ModelViewSet):
     def share_report(self, request, pk=None):
         # Only department managers and city admins may share reports
         user = request.user
-        if not (user.is_department_manager or user.is_city_admin or user.is_superuser):
+        if not (user.is_department_manager or user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False)):
             return Response(
                 {'error': 'Only department managers or city admins can share reports.'},
                 status=status.HTTP_403_FORBIDDEN,
@@ -763,7 +767,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         user = self.request.user
         
         # Check if user is an officer (and not the citizen who created it)
-        if user.is_officer and not user.is_city_admin and report.citizen != user:
+        if user.is_officer and not user.is_city_admin and not getattr(user, 'is_super_admin', False) and not user.is_superuser and report.citizen != user:
             # Department managers can chat on any report in their department
             if user.is_department_manager:
                 dept = user.officer_profile.department
@@ -846,7 +850,7 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
         status_filter = self.request.query_params.get('status')
         dept_filter = self.request.query_params.get('department')
 
-        if user.is_city_admin or user.is_superuser:
+        if user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False):
             qs = OfficialReport.objects.select_related('department', 'linked_citizen_report', 'sender', 'reviewer').all()
         elif user.is_department_manager:
             dept = user.officer_profile.department if _safe_hasattr(user, 'officer_profile') else None
@@ -876,13 +880,13 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
         self._ensure_table()
         user = self.request.user
 
-        if not (user.is_officer or user.is_department_manager or user.is_city_admin or user.is_superuser):
+        if not (user.is_officer or user.is_department_manager or user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False)):
             raise PermissionDenied("Only government personnel can file official reports.")
 
         # Determine level & department
         dept = None
         sender_role = 'Officer'
-        if user.is_city_admin or user.is_superuser:
+        if user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False):
             sender_role = 'City Admin'
             dept_id = self.request.data.get('department')
             if dept_id:
@@ -931,10 +935,10 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
         # Officer cannot review reports.
         # Department Manager can review reports submitted to their department (level='OFFICER_TO_MANAGER').
         # City Admin can review all reports (especially level='MANAGER_TO_ADMIN').
-        if user.is_officer and not user.is_department_manager and not user.is_city_admin and not user.is_superuser:
+        if user.is_officer and not user.is_department_manager and not user.is_city_admin and not user.is_superuser and not getattr(user, 'is_super_admin', False):
             raise PermissionDenied("Officers cannot review official government reports.")
 
-        if user.is_department_manager and not (user.is_city_admin or user.is_superuser):
+        if user.is_department_manager and not (user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False)):
             dept = user.officer_profile.department if _safe_hasattr(user, 'officer_profile') else None
             if official_report.department != dept or official_report.level != 'OFFICER_TO_MANAGER':
                 raise PermissionDenied("You can only review officer reports submitted within your department.")
