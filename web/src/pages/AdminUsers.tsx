@@ -519,30 +519,43 @@ export default function AdminUsers() {
                         <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e2e8f0', fontSize: 14 }}>
                           <input 
                             type="checkbox" 
-                            checked={formData.is_city_admin}
-                            onChange={e => setFormData({...formData, is_city_admin: e.target.checked})}
+                            checked={formData.is_city_admin && !formData.is_super_admin && !formData.is_mayor}
+                            onChange={e => setFormData({
+                              ...formData,
+                              is_city_admin: e.target.checked,
+                              is_super_admin: false,
+                              is_mayor: false
+                            })}
                           />
                           Is City Admin
                         </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e2e8f0', fontSize: 14 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#818cf8', fontSize: 14, fontWeight: 600 }}>
                           <input 
                             type="checkbox" 
                             checked={formData.is_super_admin}
-                            onChange={e => setFormData({...formData, is_super_admin: e.target.checked})}
+                            onChange={e => setFormData({
+                              ...formData,
+                              is_super_admin: e.target.checked,
+                              is_city_admin: e.target.checked,
+                              is_mayor: false
+                            })}
                           />
                           Is Super Admin
                         </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#eab308', fontSize: 14, fontWeight: 600 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#eab308', fontSize: 14, fontWeight: 700 }}>
                           <input 
                             type="checkbox" 
                             checked={formData.is_mayor}
                             onChange={e => setFormData({
                               ...formData,
                               is_mayor: e.target.checked,
+                              is_super_admin: false,
+                              is_city_admin: false,
+                              is_manager: e.target.checked,
                               department_name: e.target.checked ? 'Waajjira Kantiibaa' : formData.department_name
                             })}
                           />
-                          Is Mayor (Office of the Mayor)
+                          <Crown size={14} style={{ display: 'inline' }} /> Is Mayor (Office of the Mayor)
                         </label>
                       </>
                     )}

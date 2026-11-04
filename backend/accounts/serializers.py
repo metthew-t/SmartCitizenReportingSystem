@@ -74,8 +74,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token = super().get_token(user)
 
         # Add custom claims
-        is_super = bool(user.is_superuser or getattr(user, 'is_super_admin', False))
         is_mayor = bool(getattr(user, 'is_mayor', False))
+        is_super = bool((user.is_superuser or getattr(user, 'is_super_admin', False)) and not is_mayor)
         token['phone_number'] = user.phone_number
         token['email'] = user.email
         token['is_citizen'] = user.is_citizen
@@ -84,7 +84,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['is_city_admin'] = is_super or user.is_city_admin
         token['is_super_admin'] = is_super
         token['is_mayor'] = is_mayor
-        token['role'] = 'super_admin' if is_super else ('mayor' if is_mayor else ('city_admin' if user.is_city_admin else ('department_manager' if user.is_department_manager else ('officer' if user.is_officer else 'citizen'))))
+        token['role'] = 'mayor' if is_mayor else ('super_admin' if is_super else ('city_admin' if user.is_city_admin else ('department_manager' if user.is_department_manager else ('officer' if user.is_officer else 'citizen'))))
 
         return token
 
@@ -165,11 +165,22 @@ class OfficerRegisterSerializer(serializers.Serializer):
     def create(self, validated_data):
         from core.models import Department, OfficerProfile
         dept_name = validated_data.get('department_name', '')
-        is_super_admin = validated_data.get('is_super_admin', False)
         is_mayor = validated_data.get('is_mayor', False)
-        is_city_admin = validated_data.get('is_city_admin', False) or is_super_admin or is_mayor or dept_name in ['City Administration', 'All Departments', 'Bulchiinsa Magaalaa', 'Waajjira Kantiibaa']
+        is_super_admin = validated_data.get('is_super_admin', False) and not is_mayor
+        
+        if is_mayor:
+            dept_name = 'Waajjira Kantiibaa'
+            is_city_admin = False
+            is_manager = True
+            is_staff = True
+            is_superuser = False
+        else:
+            is_city_admin = validated_data.get('is_city_admin', False) or is_super_admin or dept_name in ['City Administration', 'All Departments', 'Bulchiinsa Magaalaa']
+            is_manager = validated_data.get('is_manager', False) or is_super_admin
+            is_staff = is_city_admin or is_super_admin
+            is_superuser = is_super_admin
+
         dept = Department.objects.filter(name__iexact=dept_name).first() if dept_name else None
-        is_manager = validated_data.get('is_manager', False) or is_super_admin or is_mayor
         phone = validated_data.get('phone_number', '').strip() or None
 
         user = User.objects.create_user(
@@ -181,8 +192,8 @@ class OfficerRegisterSerializer(serializers.Serializer):
             is_city_admin=is_city_admin,
             is_super_admin=is_super_admin,
             is_mayor=is_mayor,
-            is_staff=is_city_admin or is_super_admin or is_mayor,
-            is_superuser=is_super_admin,
+            is_staff=is_staff,
+            is_superuser=is_superuser,
         )
         OfficerProfile.objects.create(
             user=user,

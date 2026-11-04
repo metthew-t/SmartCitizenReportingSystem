@@ -71,9 +71,9 @@ function Login() {
         const cleanEmail = rawEmail || (rawPhone.includes('@') ? rawPhone : (phone.includes('@') ? phone : ''))
         const cleanName = me?.full_name || cleanEmail || cleanPhone || 'User'
 
-        const isSuperAdmin = me?.is_super_admin || false
-        const isMayor = me?.is_mayor || false
-        const role = isSuperAdmin ? 'super_admin' : (isMayor ? 'mayor' : (me?.is_city_admin ? 'city_admin' : (me?.is_department_manager ? 'department_manager' : 'officer')))
+        const isMayor = Boolean(me?.is_mayor)
+        const isSuperAdmin = Boolean(me?.is_super_admin && !isMayor)
+        const role = isMayor ? 'mayor' : (isSuperAdmin ? 'super_admin' : (me?.is_city_admin ? 'city_admin' : (me?.is_department_manager ? 'department_manager' : 'officer')))
         const deptName = isMayor ? 'Office of the Mayor' : (me?.department_name || (me?.is_city_admin ? 'City Administration' : null))
 
         login(data.access, {
@@ -82,12 +82,13 @@ function Login() {
           email: cleanEmail,
           name: cleanName,
           profile_photo_url: me?.profile_photo_url || null,
-          department_name: me?.department_name || null,
+          department_name: isMayor ? 'Waajjira Kantiibaa' : me?.department_name || null,
           is_city_admin: me?.is_city_admin || false,
           is_super_admin: isSuperAdmin,
           is_mayor: isMayor,
         }, deptName, role)
-        if (isMayor) {
+
+        if (role === 'mayor') {
           navigate('/mayor')
         } else {
           navigate('/dashboard')

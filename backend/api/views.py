@@ -433,36 +433,74 @@ class ReportViewSet(viewsets.ModelViewSet):
             except Exception as e:
                 results[f'table:{table_name}'] = f'error: {e}'
 
-        # Ensure master executive administrator exists with Super Admin and Mayor credentials
+        # Ensure separate Super Admin and Mayor accounts exist
         try:
             from django.contrib.auth import get_user_model
+            from core.models import Department, OfficerProfile
             User = get_user_model()
-            admin = User.objects.filter(is_city_admin=True).first()
-            if admin:
-                if not admin.email:
-                    admin.email = 'admin@adama.gov.et'
-                admin.is_super_admin = True
-                admin.is_mayor = True
-                admin.is_superuser = True
-                admin.is_staff = True
-                admin.set_password('Admin@123')
-                admin.save()
-                results['master_admin'] = f'updated ({admin.email})'
+
+            # 1. Dedicated Super Admin (admin@adama.gov.et / Admin@123)
+            super_admin = User.objects.filter(email__iexact='admin@adama.gov.et').first() or User.objects.filter(is_city_admin=True, is_mayor=False).first()
+            if super_admin:
+                super_admin.email = 'admin@adama.gov.et'
+                super_admin.full_name = 'City Super Administrator'
+                super_admin.is_super_admin = True
+                super_admin.is_city_admin = True
+                super_admin.is_mayor = False
+                super_admin.is_superuser = True
+                super_admin.is_staff = True
+                super_admin.set_password('Admin@123')
+                super_admin.save()
+                results['super_admin'] = 'configured (admin@adama.gov.et / Admin@123)'
             else:
-                admin = User(
+                super_admin = User(
                     email='admin@adama.gov.et',
-                    full_name='Executive Master Administrator',
-                    is_city_admin=True,
+                    full_name='City Super Administrator',
                     is_super_admin=True,
-                    is_mayor=True,
+                    is_city_admin=True,
+                    is_mayor=False,
                     is_staff=True,
                     is_superuser=True
                 )
-                admin.set_password('Admin@123')
-                admin.save()
-                results['master_admin'] = 'created (admin@adama.gov.et)'
+                super_admin.set_password('Admin@123')
+                super_admin.save()
+                results['super_admin'] = 'created (admin@adama.gov.et / Admin@123)'
+
+            # 2. Dedicated Mayor Account (mayor@adama.gov.et / Mayor@123)
+            mayor_dept = Department.objects.filter(name__iexact='Waajjira Kantiibaa').first()
+            mayor = User.objects.filter(email__iexact='mayor@adama.gov.et').first()
+            if mayor:
+                mayor.full_name = 'H.E. Mayor of Adama City'
+                mayor.is_mayor = True
+                mayor.is_super_admin = False
+                mayor.is_city_admin = False
+                mayor.is_department_manager = True
+                mayor.is_staff = True
+                mayor.set_password('Mayor@123')
+                mayor.save()
+                results['mayor_account'] = 'configured (mayor@adama.gov.et / Mayor@123)'
+            else:
+                mayor = User(
+                    email='mayor@adama.gov.et',
+                    full_name='H.E. Mayor of Adama City',
+                    is_mayor=True,
+                    is_super_admin=False,
+                    is_city_admin=False,
+                    is_department_manager=True,
+                    is_staff=True,
+                    is_officer=True,
+                )
+                mayor.set_password('Mayor@123')
+                mayor.save()
+                results['mayor_account'] = 'created (mayor@adama.gov.et / Mayor@123)'
+
+            if mayor_dept:
+                prof, _ = OfficerProfile.objects.get_or_create(user=mayor, defaults={'full_name': 'H.E. Mayor of Adama City'})
+                prof.department = mayor_dept
+                prof.is_manager = True
+                prof.save()
         except Exception as e:
-            results['master_admin'] = f'error: {e}'
+            results['accounts_bootstrap'] = f'error: {e}'
         
         return Response({"status": "done", "columns": results})
 
@@ -470,34 +508,59 @@ class ReportViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post', 'get'], permission_classes=[permissions.AllowAny])
     def setup_admin(self, request):
-        """One-time endpoint to bootstrap/recover the master Super Admin & Mayor account."""
+        """Bootstrap or recover both dedicated Super Admin and Mayor accounts."""
         from django.contrib.auth import get_user_model
+        from core.models import Department, OfficerProfile
         User = get_user_model()
-        email = request.data.get('email', 'admin@adama.gov.et') if request.method == 'POST' else 'admin@adama.gov.et'
-        password = request.data.get('password', 'Admin@123') if request.method == 'POST' else 'Admin@123'
-        
-        admin = User.objects.filter(is_city_admin=True).first()
-        if admin:
-            admin.email = email
-            admin.set_password(password)
-            admin.is_super_admin = True
-            admin.is_mayor = True
-            admin.is_superuser = True
-            admin.is_staff = True
-            admin.save()
-            return Response({'message': f'Existing master admin updated as Super Admin & Mayor! You can now log in with Email: {email} and Password: {password}'})
-            
-        user = User(
-            email=email,
-            is_city_admin=True,
-            is_super_admin=True,
-            is_mayor=True,
-            is_staff=True,
-            is_superuser=True
-        )
-        user.set_password(password)
-        user.save()
-        return Response({'message': f'Master admin created! You can now log in with Email: {email} and Password: {password}'})
+
+        # Super Admin
+        super_admin = User.objects.filter(email__iexact='admin@adama.gov.et').first()
+        if not super_admin:
+            super_admin = User(email='admin@adama.gov.et')
+        super_admin.full_name = 'City Super Administrator'
+        super_admin.is_super_admin = True
+        super_admin.is_city_admin = True
+        super_admin.is_mayor = False
+        super_admin.is_superuser = True
+        super_admin.is_staff = True
+        super_admin.set_password('Admin@123')
+        super_admin.save()
+
+        # Mayor
+        mayor_dept = Department.objects.filter(name__iexact='Waajjira Kantiibaa').first()
+        mayor = User.objects.filter(email__iexact='mayor@adama.gov.et').first()
+        if not mayor:
+            mayor = User(email='mayor@adama.gov.et')
+        mayor.full_name = 'H.E. Mayor of Adama City'
+        mayor.is_mayor = True
+        mayor.is_super_admin = False
+        mayor.is_city_admin = False
+        mayor.is_department_manager = True
+        mayor.is_staff = True
+        mayor.is_officer = True
+        mayor.set_password('Mayor@123')
+        mayor.save()
+        if mayor_dept:
+            prof, _ = OfficerProfile.objects.get_or_create(user=mayor, defaults={'full_name': 'H.E. Mayor of Adama City'})
+            prof.department = mayor_dept
+            prof.is_manager = True
+            prof.save()
+
+        return Response({
+            'status': 'success',
+            'super_admin': {
+                'email': 'admin@adama.gov.et',
+                'password': 'Admin@123',
+                'role': 'super_admin',
+                'dashboard': '/dashboard'
+            },
+            'mayor': {
+                'email': 'mayor@adama.gov.et',
+                'password': 'Mayor@123',
+                'role': 'mayor',
+                'command_center': '/mayor'
+            }
+        })
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def init_departments(self, request):
