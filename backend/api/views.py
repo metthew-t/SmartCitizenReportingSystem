@@ -626,19 +626,38 @@ class ReportViewSet(viewsets.ModelViewSet):
         # ── Permission check ──────────────────────────────────────────────────
         # City admins and superusers: full access
         # Department managers: can update reports in their department
-        # Officers: can only update reports assigned to them
+        # Officers: can only update reports officially assigned to them by manager, and cannot reject
         is_admin = user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False)
         is_manager = user.is_department_manager and _safe_hasattr(user, 'officer_profile')
         is_assigned_officer = (
             user.is_officer
+            and not is_manager
             and _safe_hasattr(user, 'officer_profile')
             and report.assigned_officer is not None
             and report.assigned_officer == user.officer_profile
         )
 
-        if not (is_admin or is_manager or is_assigned_officer):
+        # Officers cannot reject cases under any circumstances (Manager/Admin only)
+        if new_status == 'REJECTED' and not (is_admin or is_manager):
             return Response(
-                {'error': 'Only the assigned officer, department manager, or city admin can update this report status.'},
+                {'error': 'Officers are not permitted to reject cases. Case rejection is restricted to Department Managers and City Administration.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if not (is_admin or is_manager or is_assigned_officer):
+            if user.is_officer and not is_manager:
+                if report.assigned_officer is None:
+                    return Response(
+                        {'error': 'This case is currently unassigned. You cannot take action until your Department Manager assigns this case to you.'},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+                else:
+                    return Response(
+                        {'error': 'This case is assigned to another officer. You cannot take action on it.'},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+            return Response(
+                {'error': 'Only the designated assigned officer, department manager, or city admin can update this report status.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -784,22 +803,38 @@ class ReportViewSet(viewsets.ModelViewSet):
         
         from core.models import OfficerProfile
         
-        if officer_id:
-            # Manager assigning to someone
-            if not user.is_department_manager and not user.is_city_admin and not getattr(user, 'is_super_admin', False) and not user.is_superuser:
-                return Response({'error': 'Not authorized to assign others'}, status=status.HTTP_403_FORBIDDEN)
-            officer = OfficerProfile.objects.filter(id=officer_id).first()
-            if not officer:
-                return Response({'error': 'Officer not found'}, status=status.HTTP_404_NOT_FOUND)
-        else:
-            # Officer assigning to self
-            if not _safe_hasattr(user, 'officer_profile'):
-                return Response({'error': 'Only officers can self-assign'}, status=status.HTTP_403_FORBIDDEN)
-            officer = user.officer_profile
+        # Officers cannot assign cases (neither to others nor to self)
+        if not (user.is_department_manager or user.is_city_admin or getattr(user, 'is_super_admin', False) or user.is_superuser):
+            return Response(
+                {'error': 'Case assignment is restricted to Department Managers and City Administrators. Officers cannot self-assign or assign cases.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        if not officer_id:
+            return Response({'error': 'officer_id is required. Please select an officer to assign this case to.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        officer = OfficerProfile.objects.filter(id=officer_id).first()
+        if not officer:
+            return Response({'error': 'Designated officer not found.'}, status=status.HTTP_404_NOT_FOUND)
             
         report.assigned_officer = officer
         report.status = 'ASSIGNED'
         report.save()
+
+        # Log assignment history
+        try:
+            from core.models import ReportStatusHistory
+            ReportStatusHistory.objects.create(
+                report=report,
+                old_status=report.status,
+                new_status='ASSIGNED',
+                changed_by=user,
+                changed_by_name=user.full_name or user.email,
+                note=f"Officially assigned to Officer {officer.full_name} by {user.full_name or 'Department Manager'}"
+            )
+        except Exception:
+            pass
+
         return Response({'status': 'assigned', 'officer_name': officer.full_name})
 
     @action(detail=True, methods=['get'], url_path='status_history')
@@ -917,8 +952,8 @@ class MessageViewSet(viewsets.ModelViewSet):
                     raise PermissionDenied("You can only chat on reports within your department.")
             else:
                 # Regular officers must be assigned
-                if report.assigned_officer != user.officer_profile:
-                    raise PermissionDenied("You cannot communicate with the citizen before being assigned to this case.")
+                if not report.assigned_officer or report.assigned_officer != getattr(user, 'officer_profile', None):
+                    raise PermissionDenied("You cannot communicate on this report until your Department Manager assigns it to you.")
                     
         serializer.save(sender=user)
 

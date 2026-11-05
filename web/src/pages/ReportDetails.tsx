@@ -1,6 +1,6 @@
 import React from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, Clock, User, FileText, Building2, Tag, AlertTriangle, ExternalLink, CheckCircle, XCircle, Navigation, Calendar, Phone, MapPinned, Home, Star, Scale, ShieldAlert, Check, X } from 'lucide-react'
+import { ArrowLeft, MapPin, Clock, User, FileText, Building2, Tag, AlertTriangle, ExternalLink, CheckCircle, XCircle, Navigation, Calendar, Phone, MapPinned, Home, Star, Scale, ShieldAlert, Check, X, Lock } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -399,6 +399,17 @@ export default function ReportDetails() {
 
   const workflowStatuses = ['SUBMITTED', 'RECEIVED', 'ASSIGNED', 'UNDER_INVESTIGATION', 'IN_PROGRESS', 'RESOLVED', 'CLOSED']
   const currentIdx = workflowStatuses.indexOf(report.status)
+
+  const currentUser = useAuthStore.getState().user
+  const currentRole = useAuthStore.getState().role
+  const isOfficer = currentRole === 'officer'
+  const isManagerOrAdmin = currentRole === 'department_manager' || currentRole === 'city_admin' || currentRole === 'super_admin'
+  const isAssignedToCurrentOfficer = Boolean(
+    report.is_assigned_to_me ||
+    (report.assigned_officer_user_id && report.assigned_officer_user_id === currentUser?.id) ||
+    (report.assigned_officer && (report.assigned_officer === currentUser?.id || report.assigned_officer === (currentUser as any)?.officer_profile_id))
+  )
+  const canPerformCaseActions = isManagerOrAdmin || (isOfficer && isAssignedToCurrentOfficer)
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", maxWidth: 900 }}>
@@ -806,8 +817,31 @@ export default function ReportDetails() {
         </div>
       )}
 
-      {/* Officer Update Status Panel — shown to assigned officer, managers, admins */}
-      {(useAuthStore.getState().role === 'officer' || useAuthStore.getState().role === 'department_manager' || useAuthStore.getState().role === 'city_admin' || useAuthStore.getState().role === 'super_admin') && (
+      {/* Officer Update Status Panel or Locked Banner */}
+      {isOfficer && !isAssignedToCurrentOfficer ? (
+        <div style={{
+          background: 'rgba(30,41,59,0.7)',
+          border: '1px solid rgba(245,158,11,0.25)',
+          borderRadius: 16, padding: '20px 24px', marginBottom: 20,
+          display: 'flex', alignItems: 'center', gap: 16,
+        }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12,
+            background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24', flexShrink: 0
+          }}>
+            <Lock size={22} color="#f59e0b" />
+          </div>
+          <div>
+            <div style={{ color: '#fbbf24', fontSize: 15, fontWeight: 700 }}>
+              Operational Actions Locked — Awaiting Department Manager Assignment
+            </div>
+            <div style={{ color: '#94a3b8', fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>
+              You have read access to inspect this citizen report on your dashboard. However, status transitions, resolving issues, and citizen communications remain locked until your Department Manager officially designates and assigns this case to you.
+            </div>
+          </div>
+        </div>
+      ) : canPerformCaseActions ? (
         <div style={{
           background: 'linear-gradient(135deg, rgba(30,41,59,0.8), rgba(59,130,246,0.06))',
           backdropFilter: 'blur(12px)',
@@ -819,7 +853,10 @@ export default function ReportDetails() {
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {(['RECEIVED', 'UNDER_INVESTIGATION', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REJECTED'] as string[]).map(s => (
+              {(isOfficer
+                ? ['RECEIVED', 'UNDER_INVESTIGATION', 'IN_PROGRESS', 'RESOLVED']
+                : ['RECEIVED', 'UNDER_INVESTIGATION', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REJECTED']
+              ).map(s => (
                 <button
                   key={s}
                   disabled={statusUpdating || report.status === s}
@@ -856,7 +893,7 @@ export default function ReportDetails() {
             />
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Status History Timeline */}
       {statusHistory.length > 0 && (
@@ -948,7 +985,7 @@ export default function ReportDetails() {
                   })
                   const data = await res.json()
                   if (res.ok) {
-                    setReport((prev: any) => ({ ...prev, assigned_officer: Number(selectedOfficer), assignedOfficerName: data.officer_name, status: 'ASSIGNED' }))
+                    setReport((prev: any) => ({ ...prev, assigned_officer: Number(selectedOfficer), assignedOfficerName: data.officer_name, status: 'ASSIGNED', is_assigned_to_me: true }))
                   }
                 } finally {
                   setStatusUpdating(false)
@@ -965,83 +1002,57 @@ export default function ReportDetails() {
           </div>
         )}
 
-        {/* Officer self-assignment */}
-        {!report.assigned_officer && useAuthStore.getState().role === 'officer' && (
+        {/* Reject Report — Strictly for Department Managers and City Admins */}
+        {isManagerOrAdmin && (
           <button
-            onClick={async () => {
-              setStatusUpdating(true)
-              try {
-                const token = useAuthStore.getState().token
-                const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/assign_officer/`, {
-                  method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                  body: JSON.stringify({})
-                })
-                const data = await res.json()
-                if (res.ok) {
-                  setReport((prev: any) => ({ ...prev, assigned_officer: useAuthStore.getState().user?.id, assignedOfficerName: data.officer_name, status: 'ASSIGNED' }))
-                }
-              } finally {
-                setStatusUpdating(false)
-              }
-            }}
+            onClick={() => updateStatus('REJECTED')}
             disabled={statusUpdating}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '12px 24px', borderRadius: 12, border: 'none', cursor: 'pointer',
-              background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+              background: 'linear-gradient(135deg, #f43f5e, #e11d48)',
               color: 'white', fontSize: 14, fontWeight: 700,
-              transition: 'all 0.3s', boxShadow: '0 4px 15px rgba(139,92,246,0.3)',
+              transition: 'all 0.3s', boxShadow: '0 4px 15px rgba(225,29,72,0.3)',
               opacity: statusUpdating ? 0.5 : 1,
             }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-2px)'
+              e.currentTarget.style.boxShadow = '0 8px 25px rgba(225,29,72,0.5)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = '0 4px 15px rgba(225,29,72,0.3)'
+            }}
           >
-            Assign to Me
+            <XCircle size={18} /> Reject Report
           </button>
         )}
-        
-        <button
-          onClick={() => updateStatus('REJECTED')}
-          disabled={statusUpdating}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '12px 24px', borderRadius: 12, border: 'none', cursor: 'pointer',
-            background: 'linear-gradient(135deg, #f43f5e, #e11d48)',
-            color: 'white', fontSize: 14, fontWeight: 700,
-            transition: 'all 0.3s', boxShadow: '0 4px 15px rgba(225,29,72,0.3)',
-            opacity: statusUpdating ? 0.5 : 1,
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.transform = 'translateY(-2px)'
-            e.currentTarget.style.boxShadow = '0 8px 25px rgba(225,29,72,0.5)'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.transform = 'translateY(0)'
-            e.currentTarget.style.boxShadow = '0 4px 15px rgba(225,29,72,0.3)'
-          }}
-        >
-          <XCircle size={18} /> Reject Report
-        </button>
-        <button
-          onClick={() => updateStatus('RESOLVED')}
-          disabled={statusUpdating}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '12px 24px', borderRadius: 12, border: 'none', cursor: 'pointer',
-            background: 'linear-gradient(135deg, #10b981, #059669)',
-            color: 'white', fontSize: 14, fontWeight: 700,
-            transition: 'all 0.3s', boxShadow: '0 4px 15px rgba(16,185,129,0.3)',
-            opacity: statusUpdating ? 0.5 : 1,
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.transform = 'translateY(-2px)'
-            e.currentTarget.style.boxShadow = '0 8px 25px rgba(16,185,129,0.5)'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.transform = 'translateY(0)'
-            e.currentTarget.style.boxShadow = '0 4px 15px rgba(16,185,129,0.3)'
-          }}
-        >
-          <CheckCircle size={18} /> Resolve Issue
-        </button>
+
+        {/* Resolve Issue — for Managers/Admins, or Assigned Officer */}
+        {canPerformCaseActions && (
+          <button
+            onClick={() => updateStatus('RESOLVED')}
+            disabled={statusUpdating}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '12px 24px', borderRadius: 12, border: 'none', cursor: 'pointer',
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              color: 'white', fontSize: 14, fontWeight: 700,
+              transition: 'all 0.3s', boxShadow: '0 4px 15px rgba(16,185,129,0.3)',
+              opacity: statusUpdating ? 0.5 : 1,
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-2px)'
+              e.currentTarget.style.boxShadow = '0 8px 25px rgba(16,185,129,0.5)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = '0 4px 15px rgba(16,185,129,0.3)'
+            }}
+          >
+            <CheckCircle size={18} /> Resolve Issue
+          </button>
+        )}
       </div>
 
       {/* Chat Section */}
@@ -1074,29 +1085,42 @@ export default function ReportDetails() {
             )
           })}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input
-            type="text"
-            placeholder="Type a message..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-            style={{
-              flex: 1, padding: '12px 16px', borderRadius: 12,
-              background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)',
-              color: 'white', outline: 'none', fontSize: 14,
+        {isOfficer && !isAssignedToCurrentOfficer ? (
+          <div style={{
+            display: 'flex', gap: 10, alignItems: 'center',
+            background: 'rgba(15,23,42,0.6)', padding: '14px 18px', borderRadius: 12,
+            border: '1px solid rgba(245,158,11,0.2)'
+          }}>
+            <Lock size={16} color="#fbbf24" />
+            <span style={{ color: '#fbbf24', fontSize: 13, fontWeight: 600 }}>
+              Communications locked. Only the designated assigned officer can send messages to the citizen on this case.
+            </span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="text"
+              placeholder="Type a message..."
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+              style={{
+                flex: 1, padding: '12px 16px', borderRadius: 12,
+                background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)',
+                color: 'white', outline: 'none', fontSize: 14,
+              }}
+            />
+            <button onClick={sendMessage} style={{
+              padding: '12px 24px', borderRadius: 12, border: 'none',
+              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: 14,
+              transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(99,102,241,0.3)',
             }}
-          />
-          <button onClick={sendMessage} style={{
-            padding: '12px 24px', borderRadius: 12, border: 'none',
-            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-            color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: 14,
-            transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(99,102,241,0.3)',
-          }}
-          onMouseEnter={e => e.currentTarget.style.boxShadow = '0 6px 20px rgba(99,102,241,0.5)'}
-          onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(99,102,241,0.3)'}
-          >Send</button>
-        </div>
+            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 6px 20px rgba(99,102,241,0.5)'}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(99,102,241,0.3)'}
+            >Send</button>
+          </div>
+        )}
       </div>
 
       {/* Citizen Feedback & Satisfaction Card */}

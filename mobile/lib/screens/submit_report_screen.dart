@@ -22,7 +22,6 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   
-  String _selectedCategory = 'Infrastructure Issue';
   String _selectedPriority = 'MEDIUM';
   String? _selectedDepartment;
   bool _isSubmitting = false;
@@ -62,15 +61,6 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
   bool _hasAudio = false;
   int _recordDuration = 0;
   Timer? _timer;
-
-  final List<Map<String, String>> _categories = [
-    {'en': 'Infrastructure Issue', 'om': "Rakkoo Bu'uuraa"},
-    {'en': 'Water & Sanitation', 'om': "Bishaan fi Dhangala'aa"},
-    {'en': 'Public Safety', 'om': 'Nageenya Hawaasaa'},
-    {'en': 'Environment & Cleanliness', 'om': 'Naannoo fi Qulqullinaa'},
-    {'en': 'Transport & Traffic', 'om': 'Geejjibaa fi Tiraafikaa'},
-    {'en': 'Social Services', 'om': 'Tajaajila Hawaasummaa'},
-  ];
 
   final List<String> _departments = [
     "Galmeessa Siivilii", "Waajjira Invastimantii", "Bulchiinsaa fi Nageenya", 
@@ -291,15 +281,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
     }
 
     if (recommended == null) {
-      switch (_selectedCategory) {
-        case 'Water & Sanitation': recommended = "Waajjira Bishaan Dhugaatii fi Dhangala'aa"; break;
-        case 'Public Safety': recommended = 'Qajeelcha Poolisii'; break;
-        case 'Environment & Cleanliness': recommended = 'Abbaa Taayitaa Eegumsa Naannoo'; break;
-        case 'Transport & Traffic': recommended = 'Ejansii Geejjibaa'; break;
-        case 'Infrastructure Issue': recommended = 'Abbaa Taayitaa Konistiraakshinii'; break;
-        case 'Social Services': recommended = 'Waajjira Hojjataa fi Hawaasummaa'; break;
-        default: recommended = 'Giddu-gala Tajaajilaa';
-      }
+      recommended = 'Giddu-gala Tajaajilaa';
     }
 
     if (recommended != null) {
@@ -368,7 +350,6 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
           'kebele': _selectedKebele ?? '',
           'iddoo_addaa': _iddooAddaaController.text.trim(),
           'department_name': _selectedDepartment,
-          'category_name': _selectedCategory,
           'priority': _selectedPriority,
         }),
       );
@@ -415,7 +396,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
         status: 'SUBMITTED',
         priority: _selectedPriority,
         department: _selectedDepartment ?? 'Unassigned',
-        category: _selectedCategory,
+        category: 'General',
         createdAt: DateTime.now(),
       );
 
@@ -608,23 +589,6 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     validator: (value) => value!.isEmpty ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Category
-                  _SectionHeader(title: 'Category / Ramaddii / ምድብ', icon: Icons.category),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8, runSpacing: 8,
-                    children: _categories.map((cat) {
-                      final isSelected = _selectedCategory == cat['en'];
-                      return ChoiceChip(
-                        label: Text(cat['en']!),
-                        selected: isSelected,
-                        selectedColor: Colors.green[100],
-                        onSelected: (selected) => setState(() => _selectedCategory = cat['en']!),
-                      );
-                    }).toList(),
                   ),
                   const SizedBox(height: 24),
 

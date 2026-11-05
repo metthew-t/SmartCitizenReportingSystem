@@ -17,13 +17,20 @@ class UserSerializer(serializers.ModelSerializer):
     profile_photo_url = serializers.SerializerMethodField()
     is_super_admin = serializers.SerializerMethodField()
     is_mayor = serializers.SerializerMethodField()
+    officer_profile_id = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = ('id', 'phone_number', 'email', 'full_name', 'department_name',
                   'is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin', 'is_super_admin', 'is_mayor',
-                  'is_active', 'must_change_password', 'date_joined', 'profile_photo_url')
-        read_only_fields = ('is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin', 'is_super_admin', 'is_mayor')
+                  'is_active', 'must_change_password', 'date_joined', 'profile_photo_url', 'officer_profile_id')
+        read_only_fields = ('is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin', 'is_super_admin', 'is_mayor', 'officer_profile_id')
+
+    def get_officer_profile_id(self, obj):
+        try:
+            return obj.officer_profile.id if hasattr(obj, 'officer_profile') else None
+        except Exception:
+            return None
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)

@@ -162,7 +162,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
             _createdAt = DateTime.tryParse(data['created_at'] ?? '') ?? DateTime.now();
             _isLoadingReport = false;
             _assignedOfficerName = data['assigned_officer_name'] ?? '';
-            _isAssignedOfficer = assignedOfficer != null;
+            _isAssignedOfficer = data['is_assigned_to_me'] == true;
             if (data['feedback'] != null) {
               _existingFeedback = data['feedback'];
               _feedbackSubmitted = true;
@@ -1159,7 +1159,43 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                 _DetailSection(title: 'Report Progress', icon: Icons.timeline, child: _StatusWorkflow(currentStatus: _status)),
 
                 // ── Officer Status Update Panel ──
-                if (_canShareOrViewDeptChannel) ...[
+                // If officer but NOT assigned: show locked banner
+                if (_isOfficer && !_isAssignedOfficer) ...[
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.amber[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.amber[300]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.lock_outline, color: Colors.amber[800], size: 22),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Operational Actions Locked',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.amber[900]),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'This case has not been assigned to you. A Department Manager must assign this case before you can perform any actions.',
+                                style: TextStyle(fontSize: 12, color: Colors.amber[800]),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Show update panel only to managers/admins or the assigned officer
+                if (_isDeptManager || _isCityAdmin || (_isOfficer && _isAssignedOfficer)) ...[
                   const SizedBox(height: 24),
                   _DetailSection(
                     title: 'Update Case Status',
@@ -1183,11 +1219,10 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              'UNDER_INVESTIGATION',
-                              'IN_PROGRESS',
-                              'RESOLVED',
-                              'CLOSED',
-                              'REJECTED',
+                              // Officers (even when assigned) cannot REJECT — only managers/admins
+                              ...(_isDeptManager || _isCityAdmin
+                                  ? ['UNDER_INVESTIGATION', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REJECTED']
+                                  : ['UNDER_INVESTIGATION', 'IN_PROGRESS', 'RESOLVED']),
                             ].map((st) {
                               final isSelected = _selectedStatus == st;
                               return ChoiceChip(
@@ -1347,6 +1382,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
   // ── Citizen chat tab ──────────────────────────────────────────────────────
 
   Widget _buildChatTab() {
+    final bool chatLocked = _isOfficer && !_isAssignedOfficer;
     return Column(
       children: [
         Expanded(
@@ -1358,7 +1394,30 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                   itemBuilder: (_, i) => _ChatBubble(msg: _messages[i], myKey: 'me'),
                 ),
         ),
-        _ChatInputBar(controller: _chatController, onSend: _sendCitizenMessage, hint: 'Message the department officer...'),
+        if (chatLocked)
+          Container(
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.amber[50],
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.amber[300]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.lock_outline, color: Colors.amber[800], size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Messaging is locked. You must be assigned to this case by a Department Manager before you can send messages.',
+                    style: TextStyle(fontSize: 12, color: Colors.amber[800]),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          _ChatInputBar(controller: _chatController, onSend: _sendCitizenMessage, hint: 'Message the department officer...'),
       ],
     );
   }

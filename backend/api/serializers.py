@@ -78,6 +78,8 @@ class ReportSerializer(serializers.ModelSerializer):
     citizen_name = serializers.SerializerMethodField()
     citizen_phone = serializers.SerializerMethodField()
     assigned_officer_name = serializers.SerializerMethodField()
+    assigned_officer_user_id = serializers.SerializerMethodField()
+    is_assigned_to_me = serializers.SerializerMethodField()
     ai_suggested_department_name = serializers.SerializerMethodField()
     feedback = serializers.SerializerMethodField()
     appeals = serializers.SerializerMethodField()
@@ -89,12 +91,29 @@ class ReportSerializer(serializers.ModelSerializer):
             'is_anonymous', 'category', 'category_name', 
             'description', 'latitude', 'longitude', 'status', 'priority', 
             'primary_department', 'department_name', 'shared_with', 'assigned_officer', 'assigned_officer_name',
+            'assigned_officer_user_id', 'is_assigned_to_me',
             'created_at', 'updated_at', 'resolved_at', 'closed_at', 'media', 'status_history',
             'aanaa', 'kuta_magaalaa', 'kebele', 'iddoo_addaa', 'resolution_notes', 'rejection_reason',
             'ai_confidence_score', 'ai_suggested_department', 'ai_suggested_department_name', 'ai_summary', 'is_public',
             'feedback', 'appeals'
         ]
-        read_only_fields = ['case_number', 'status', 'citizen']
+        read_only_fields = ['case_number', 'status', 'citizen', 'assigned_officer_user_id', 'is_assigned_to_me']
+
+    def get_assigned_officer_user_id(self, obj):
+        try:
+            return obj.assigned_officer.user_id if obj.assigned_officer else None
+        except Exception:
+            return None
+
+    def get_is_assigned_to_me(self, obj):
+        try:
+            request = self.context.get('request')
+            if request and request.user and request.user.is_authenticated:
+                if obj.assigned_officer and hasattr(request.user, 'officer_profile'):
+                    return obj.assigned_officer_id == request.user.officer_profile.id
+            return False
+        except Exception:
+            return False
 
     def get_feedback(self, obj):
         try:
