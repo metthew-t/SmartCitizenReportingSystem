@@ -34,6 +34,17 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
   DateTime _createdAt = DateTime.now();
   bool _isLoadingReport = true;
 
+  // Robust Civic Tech state
+  String _resolutionProofUrl = '';
+  int _affectedCount = 1;
+  bool _isEscalated = false;
+  String _escalationReason = '';
+  int? _slaHoursRemaining;
+  bool _isSlaBreached = false;
+  bool _isWithinGeofence = true;
+  bool _citizenConfirmedResolution = false;
+  bool _isUpvoting = false;
+
   // Shared-with departments (names for display)
   List<String> _sharedWithNames = [];
 
@@ -163,6 +174,16 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
             _isLoadingReport = false;
             _assignedOfficerName = data['assigned_officer_name'] ?? '';
             _isAssignedOfficer = data['is_assigned_to_me'] == true;
+            _resolutionProofUrl = (data['resolution_proof_url'] ?? '').toString();
+            _affectedCount = data['affected_count'] ?? 1;
+            _isEscalated = data['is_escalated'] == true;
+            _escalationReason = (data['escalation_reason'] ?? '').toString();
+            if (data['sla_metrics'] != null) {
+              _slaHoursRemaining = data['sla_metrics']['hours_remaining'];
+              _isSlaBreached = data['sla_metrics']['is_breached'] == true;
+            }
+            _isWithinGeofence = data['is_within_geofence'] != false;
+            _citizenConfirmedResolution = data['citizen_confirmed_resolution'] == true;
             if (data['feedback'] != null) {
               _existingFeedback = data['feedback'];
               _feedbackSubmitted = true;
@@ -525,6 +546,57 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
     );
   }
 
+  Future<void> _upvoteAffected() async {
+    if (_isUpvoting) return;
+    setState(() => _isUpvoting = true);
+    try {
+      final headers = await _authHeaders();
+      final res = await http.post(
+        Uri.parse('$_baseUrl/reports/${widget.reportId}/upvote_affected/'),
+        headers: headers,
+      );
+      if (res.statusCode == 200) {
+        final d = jsonDecode(res.body);
+        setState(() {
+          _affectedCount = d['affected_count'] ?? (_affectedCount + 1);
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Support recorded! +1 Affected Citizen'), backgroundColor: Colors.amber),
+          );
+        }
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isUpvoting = false);
+    }
+  }
+
+  Future<void> _confirmResolution(bool confirmed) async {
+    try {
+      final headers = await _authHeaders();
+      final res = await http.post(
+        Uri.parse('$_baseUrl/reports/${widget.reportId}/confirm_resolution/'),
+        headers: headers,
+        body: jsonEncode({
+          'confirmed': confirmed,
+          'notes': confirmed ? 'Citizen confirmed successful fix.' : 'Citizen disputed resolution.',
+        }),
+      );
+      if (res.statusCode == 200) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(confirmed ? 'Resolution verified by citizen!' : 'Dispute filed; case reopened.'),
+              backgroundColor: confirmed ? Colors.green : Colors.orange,
+            ),
+          );
+          _fetchReportDetails();
+        }
+      }
+    } catch (_) {}
+  }
+
   Future<void> _submitFeedback() async {
     if (_rating == 0 || _isSatisfied == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -885,6 +957,234 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // ── Auto-Escalation Alert Banner ──
+                if (_isEscalated) ...[
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red[300]!, width: 1.5),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: Colors.red[800], size: 28),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'ESCALATED CASE - ADMINISTRATIVE ALERT',
+                                style: TextStyle(color: Colors.red[900], fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _escalationReason.isNotEmpty ? _escalationReason : 'Breached SLA resolution window. Escalated to Department Head & Mayor Command Center.',
+                                style: TextStyle(color: Colors.red[800], fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // ── SLA & Geofence Status Chips ──
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (_slaHoursRemaining != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _isSlaBreached ? Colors.red[100] : Colors.blue[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: _isSlaBreached ? Colors.red[300]! : Colors.blue[300]!),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.timer_outlined, size: 14, color: _isSlaBreached ? Colors.red[800] : Colors.blue[800]),
+                            const SizedBox(width: 6),
+                            Text(
+                              _isSlaBreached ? 'SLA BREACHED' : 'SLA: ${_slaHoursRemaining}h remaining',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: _isSlaBreached ? Colors.red[900] : Colors.blue[900],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _isWithinGeofence ? Colors.teal[50] : Colors.orange[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: _isWithinGeofence ? Colors.teal[300]! : Colors.orange[300]!),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _isWithinGeofence ? Icons.verified_outlined : Icons.location_off_outlined,
+                            size: 14,
+                            color: _isWithinGeofence ? Colors.teal[800] : Colors.orange[800],
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _isWithinGeofence ? 'Adama Boundary Verified' : 'Outside Boundary',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: _isWithinGeofence ? Colors.teal[900] : Colors.orange[900],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Community Support Upvote
+                    InkWell(
+                      onTap: _upvoteAffected,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.amber[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.amber[400]!),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.people_outline, size: 14, color: Colors.amber[900]),
+                            const SizedBox(width: 6),
+                            Text(
+                              '$_affectedCount Affected (+1)',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber[900],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // ── Officer Resolution Proof & Citizen Verification ──
+                if (_resolutionProofUrl.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.green[50],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.green[300]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.fact_check_outlined, color: Colors.green[800], size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Officer Resolution Proof & Verification',
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green[900]),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            _resolutionProofUrl.startsWith('http') ? _resolutionProofUrl : '$_baseUrl$_resolutionProofUrl',
+                            height: 180,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              height: 100,
+                              color: Colors.grey[200],
+                              alignment: Alignment.center,
+                              child: const Text('Evidence photo uploaded by field team', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (_citizenConfirmedResolution)
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.green[100],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.check_circle, color: Colors.green[800], size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Citizen verified resolution on-site',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green[900]),
+                                ),
+                              ],
+                            ),
+                          )
+                        else if (_status == 'RESOLVED')
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Please verify if the issue was satisfactorily resolved:',
+                                style: TextStyle(fontSize: 12, color: Colors.green[900]),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () => _confirmResolution(true),
+                                      icon: const Icon(Icons.check, size: 16),
+                                      label: const Text('Confirm Fix'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green[700],
+                                        foregroundColor: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => _confirmResolution(false),
+                                      icon: const Icon(Icons.close, size: 16),
+                                      label: const Text('Dispute & Reopen'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: Colors.red[700],
+                                        side: BorderSide(color: Colors.red[300]!),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 // ── Shared-with section ──────────────────────────────────
                 if (_sharedWithNames.isNotEmpty) ...[
                   Container(

@@ -99,6 +99,28 @@ class Report(models.Model):
     
     rejection_reason = models.TextField(blank=True, null=True)
     resolution_notes = models.TextField(blank=True, null=True)
+    
+    # ── SLA & Auto-Escalation Engine ──────────────────────────────────────────
+    sla_deadline = models.DateTimeField(null=True, blank=True)
+    sla_hours = models.IntegerField(default=48)
+    is_escalated = models.BooleanField(default=False)
+    escalation_level = models.CharField(
+        max_length=30, 
+        choices=[('NONE', 'None'), ('MANAGER', 'Manager Attention'), ('MAYOR', 'Mayor Escalated Queue')],
+        default='NONE'
+    )
+    escalation_reason = models.TextField(blank=True, null=True)
+
+    # ── Officer Field Verification: Before & After Proof ──────────────────────
+    resolution_proof_url = models.URLField(max_length=1000, blank=True, null=True)
+    citizen_confirmed_resolution = models.BooleanField(null=True, blank=True)
+    citizen_confirmation_notes = models.TextField(blank=True, null=True)
+
+    # ── Public Transparency & "I am also affected" (+1) ───────────────────────
+    affected_count = models.PositiveIntegerField(default=1)
+
+    # ── Geofencing Municipal Boundary ─────────────────────────────────────────
+    is_within_geofence = models.BooleanField(default=True)
 
     def __str__(self):
         return self.case_number
@@ -147,12 +169,59 @@ class DepartmentMessage(models.Model):
         return f"[{self.department.name}] {self.sender} - {self.content[:40]}"
 
 class AuditLog(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    actor_name = models.CharField(max_length=255, blank=True, null=True)
+    actor_role = models.CharField(max_length=50, blank=True, null=True)
+    ip_address = models.CharField(max_length=60, blank=True, null=True)
     action = models.CharField(max_length=100)
     entity_type = models.CharField(max_length=100)
     entity_id = models.CharField(max_length=100)
     changes = models.JSONField(blank=True, null=True)
+    tamper_hash = models.CharField(max_length=64, blank=True, null=True)
+    prev_hash = models.CharField(max_length=64, blank=True, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"[{self.timestamp.strftime('%Y-%m-%d %H:%M')}] {self.actor_name or 'System'} - {self.action} on {self.entity_type} #{self.entity_id}"
+
+class ReportAffectedCitizen(models.Model):
+    """Tracks 'I am also affected' (+1) community upvotes per report without duplicate tickets"""
+    report = models.ForeignKey(Report, on_delete=models.CASCADE, related_name='affected_citizens')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    ip_address = models.CharField(max_length=60, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Affected: {self.report.case_number} by {self.user or self.ip_address}"
+
+class NotificationLog(models.Model):
+    """Audit and dispatch log for multi-channel notifications (SMS, Telegram, Push, System)"""
+    CHANNEL_CHOICES = [
+        ('SMS', 'TextBee SMS Gateway'),
+        ('TELEGRAM', 'Telegram Bot'),
+        ('PUSH', 'FCM Push Notification'),
+        ('SYSTEM', 'System Alert'),
+    ]
+    recipient_phone = models.CharField(max_length=50, blank=True, null=True)
+    recipient_name = models.CharField(max_length=255, blank=True, null=True)
+    channel = models.CharField(max_length=30, choices=CHANNEL_CHOICES, default='SMS')
+    event_type = models.CharField(max_length=60) # SUBMITTED, ASSIGNED, RESOLVED, ESCALATED, SLA_BREACH
+    report = models.ForeignKey(Report, on_delete=models.SET_NULL, null=True, blank=True, related_name='notification_logs')
+    message_body = models.TextField()
+    status = models.CharField(max_length=20, default='SENT') # SENT, SIMULATED, FAILED
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-sent_at']
+
+    def __str__(self):
+        return f"[{self.channel}] {self.event_type} to {self.recipient_phone or self.recipient_name}: {self.status}"
 
 class Feedback(models.Model):
     report = models.OneToOneField(Report, on_delete=models.CASCADE, related_name='feedback')

@@ -113,7 +113,8 @@ export default function MayorCommandCenter() {
   const [selectedSector, setSelectedSector] = useState<SectorData | null>(null)
 
   // Activity Intelligence Hub state
-  const [activityTab, setActivityTab] = useState<'ACTIONS' | 'REPORTS' | 'APPEALS'>('ACTIONS')
+  const [activityTab, setActivityTab] = useState<'ACTIONS' | 'REPORTS' | 'APPEALS' | 'ESCALATIONS'>('ACTIONS')
+  const [escalatedCases, setEscalatedCases] = useState<any[]>([])
   const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null)
   const [selectedExecReport, setSelectedExecReport] = useState<ExecutiveReportItem | null>(null)
 
@@ -791,6 +792,29 @@ export default function MayorCommandCenter() {
                 }}
               >
                 <Scale size={13} /> Citizen Appeals ({appealsSummary?.total ?? recentAppeals.length})
+              </button>
+              <button
+                onClick={() => setActivityTab('ESCALATIONS')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '7px 14px', borderRadius: 10, cursor: 'pointer',
+                  background: activityTab === 'ESCALATIONS' ? 'linear-gradient(135deg, rgba(239,68,68,0.25), rgba(185,28,28,0.25))' : 'transparent',
+                  color: activityTab === 'ESCALATIONS' ? '#f87171' : '#94a3b8',
+                  border: activityTab === 'ESCALATIONS' ? '1px solid rgba(239,68,68,0.5)' : '1px solid transparent',
+                  fontWeight: activityTab === 'ESCALATIONS' ? 700 : 500, fontSize: 13,
+                  transition: 'all 0.2s'
+                }}
+              >
+                <ShieldAlert size={14} color={activityTab === 'ESCALATIONS' ? '#ef4444' : '#64748b'} />
+                <span>Mayor Escalations</span>
+                {escalatedCases.length > 0 && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 10,
+                    background: '#ef4444', color: '#fff'
+                  }}>
+                    {escalatedCases.length}
+                  </span>
+                )}
               </button>
             </div>
           </div>

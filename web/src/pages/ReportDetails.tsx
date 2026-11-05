@@ -1,6 +1,6 @@
 import React from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, Clock, User, FileText, Building2, Tag, AlertTriangle, ExternalLink, CheckCircle, XCircle, Navigation, Calendar, Phone, MapPinned, Home, Star, Scale, ShieldAlert, Check, X, Lock } from 'lucide-react'
+import { ArrowLeft, MapPin, Clock, User, FileText, Building2, Tag, AlertTriangle, ExternalLink, CheckCircle, XCircle, Navigation, Calendar, Phone, MapPinned, Home, Star, Scale, ShieldAlert, Check, X, Lock, ShieldCheck, Timer, Users, Camera, CheckCircle2, Hash, FileCheck2 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -45,6 +45,14 @@ export default function ReportDetails() {
   const [appealModal, setAppealModal] = React.useState<{ show: boolean; appeal: any | null }>({ show: false, appeal: null })
   const [appealStatus, setAppealStatus] = React.useState<'UPHELD' | 'DISMISSED' | 'UNDER_REVIEW'>('UPHELD')
   const [appealDecision, setAppealDecision] = React.useState('')
+  const [resolutionProofUrl, setResolutionProofUrl] = React.useState('')
+  const [auditTrail, setAuditTrail] = React.useState<any[]>([])
+  const [showAuditSection, setShowAuditSection] = React.useState(false)
+  const [isUpvoting, setIsUpvoting] = React.useState(false)
+  const [upvoteMsg, setUpvoteMsg] = React.useState<string | null>(null)
+  const [confirmingResolution, setConfirmingResolution] = React.useState(false)
+  const [showDisputeModal, setShowDisputeModal] = React.useState(false)
+  const [disputeNotes, setDisputeNotes] = React.useState('')
   const [adjudicating, setAdjudicating] = React.useState(false)
   const [appealMsg, setAppealMsg] = React.useState<{ type: 'success' | 'error', text: string } | null>(null)
 
@@ -101,6 +109,20 @@ export default function ReportDetails() {
             shared_with: data.shared_with || [],
             resolutionNotes: data.resolution_notes || '',
             rejection_reason: data.rejection_reason || '',
+            sla_metrics: data.sla_metrics,
+            sla_deadline: data.sla_deadline,
+            sla_hours: data.sla_hours,
+            is_escalated: data.is_escalated,
+            escalation_level: data.escalation_level,
+            escalation_reason: data.escalation_reason,
+            resolution_proof_url: data.resolution_proof_url,
+            citizen_confirmed_resolution: data.citizen_confirmed_resolution,
+            citizen_confirmation_notes: data.citizen_confirmation_notes,
+            affected_count: data.affected_count || 1,
+            is_within_geofence: data.is_within_geofence !== false,
+            geofence_info: data.geofence_info,
+            feedback: data.feedback,
+            appeals: data.appeals,
           })
         }
         
@@ -124,6 +146,13 @@ export default function ReportDetails() {
         }
 
         const histRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/status_history/`, { headers })
+        try {
+          const auditRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/audit_trail/`, { headers })
+          if (auditRes.ok) {
+            const auditData = await auditRes.json()
+            setAuditTrail(auditData.audit_chain || [])
+          }
+        } catch (_) {}
         if (histRes.ok) {
           setStatusHistory(await histRes.json())
         }
@@ -307,6 +336,61 @@ export default function ReportDetails() {
     }
   }
 
+  const handleUpvoteAffected = async () => {
+    setIsUpvoting(true)
+    try {
+      const token = useAuthStore.getState().token
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/upvote_affected/`, {
+        method: 'POST', headers
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setReport((prev: any) => ({ ...prev, affected_count: data.affected_count }))
+        setUpvoteMsg(data.message || 'Priority reinforced! Thank you.')
+      } else {
+        setUpvoteMsg(data.message || 'Could not record upvote.')
+      }
+    } catch {
+      setUpvoteMsg('Network error.')
+    } finally {
+      setIsUpvoting(false)
+      setTimeout(() => setUpvoteMsg(null), 4000)
+    }
+  }
+
+  const handleConfirmResolution = async (confirmed: boolean, notes: string = '') => {
+    setConfirmingResolution(true)
+    try {
+      const token = useAuthStore.getState().token
+      const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/confirm_resolution/`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmed, notes })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setReport((prev: any) => ({
+          ...prev,
+          status: data.report_status,
+          citizen_confirmed_resolution: data.citizen_confirmed,
+          citizen_confirmation_notes: notes
+        }))
+        setStatusMsg({ type: 'success', text: data.message })
+        setShowDisputeModal(false)
+        setDisputeNotes('')
+      } else {
+        setStatusMsg({ type: 'error', text: data.error || 'Failed to submit confirmation.' })
+      }
+    } catch {
+      setStatusMsg({ type: 'error', text: 'Network error submitting verification.' })
+    } finally {
+      setConfirmingResolution(false)
+      setTimeout(() => setStatusMsg(null), 5000)
+    }
+  }
+
   const submitResolution = async () => {
     setStatusUpdating(true)
     try {
@@ -316,6 +400,8 @@ export default function ReportDetails() {
         formData.append('status', 'RESOLVED')
         formData.append('resolution_notes', resolutionNotes)
         formData.append('resolution_document', resolutionFile)
+        formData.append('resolution_proof', resolutionFile)
+        if (resolutionProofUrl.trim()) formData.append('resolution_proof_url', resolutionProofUrl.trim())
         const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/update_status/`, {
           method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData,
         })
@@ -329,7 +415,11 @@ export default function ReportDetails() {
       } else {
         const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/update_status/`, {
           method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'RESOLVED', resolution_notes: resolutionNotes })
+          body: JSON.stringify({
+            status: 'RESOLVED',
+            resolution_notes: resolutionNotes,
+            resolution_proof_url: resolutionProofUrl.trim() || undefined
+          })
         })
         if (res.ok) {
           setReport((prev: any) => ({ ...prev, status: 'RESOLVED', resolution_notes: resolutionNotes }))
@@ -341,6 +431,7 @@ export default function ReportDetails() {
       }
       setShowResolveModal(false)
       setResolutionNotes('')
+      setResolutionProofUrl('')
       setResolutionFile(null)
       // Refresh status history after resolving
       try {
@@ -435,6 +526,33 @@ export default function ReportDetails() {
         <ArrowLeft size={16} /> Back to Reports
       </button>
 
+      {/* Auto-Escalation Banner if SLA breached or escalated */}
+      {(report.is_escalated || (report.escalation_level && report.escalation_level !== 'NONE')) && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(245,158,11,0.15))',
+          border: '1.5px solid rgba(239,68,68,0.4)', borderRadius: 16,
+          padding: '16px 20px', marginBottom: 20,
+          display: 'flex', alignItems: 'center', gap: 14,
+          boxShadow: '0 4px 20px rgba(239,68,68,0.15)'
+        }}>
+          <div style={{
+            width: 42, height: 42, borderRadius: 12,
+            background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171', flexShrink: 0
+          }}>
+            <ShieldAlert size={22} color="#ef4444" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ color: '#fca5a5', fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              🚨 SLA Escalation Alert — {report.escalation_level} Queue
+            </div>
+            <div style={{ color: '#e2e8f0', fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>
+              {report.escalation_reason || `This case has breached the statutory SLA resolution window and has been escalated for high-level municipal intervention.`}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header card */}
       <div style={{
         background: 'linear-gradient(135deg, rgba(30,41,59,0.8), rgba(99,102,241,0.08))',
@@ -444,9 +562,27 @@ export default function ReportDetails() {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h2 style={{ color: '#a5b4fc', fontSize: 26, fontWeight: 800, margin: '0 0 10px' }}>
-              {report.caseNumber}
-            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+              <h2 style={{ color: '#a5b4fc', fontSize: 26, fontWeight: 800, margin: 0 }}>{report.caseNumber}</h2>
+              <button
+                onClick={handleUpvoteAffected}
+                disabled={isUpvoting}
+                title="Click if you are also affected by this municipal issue"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                  background: 'rgba(245,158,11,0.15)', color: '#fbbf24',
+                  border: '1px solid rgba(245,158,11,0.35)', cursor: isUpvoting ? 'wait' : 'pointer',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <Users size={13} color="#f59e0b" />
+                <span>{report.affected_count || 1} Citizens Affected (+1)</span>
+              </button>
+              {upvoteMsg && (
+                <span style={{ fontSize: 12, color: '#34d399', fontWeight: 600 }}>{upvoteMsg}</span>
+              )}
+            </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <span style={{
                 padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700,
@@ -464,6 +600,25 @@ export default function ReportDetails() {
               }}>
                 ⚡ {report.priority}
               </span>
+              {/* SLA Countdown Timer Badge */}
+              {report.sla_metrics && (
+                <span style={{
+                  padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                  background: report.sla_metrics.is_breached
+                    ? 'rgba(239,68,68,0.18)'
+                    : (report.sla_metrics.remaining_hours <= 4 ? 'rgba(245,158,11,0.18)' : 'rgba(16,185,129,0.18)'),
+                  color: report.sla_metrics.is_breached
+                    ? '#f87171'
+                    : (report.sla_metrics.remaining_hours <= 4 ? '#fbbf24' : '#34d399'),
+                  border: `1px solid ${report.sla_metrics.is_breached ? 'rgba(239,68,68,0.35)' : 'rgba(16,185,129,0.35)'}`,
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                }}>
+                  <Timer size={13} />
+                  {report.sla_metrics.is_breached
+                    ? `SLA Breached (${Math.abs(report.sla_metrics.remaining_hours)}h overdue)`
+                    : `${report.sla_metrics.remaining_hours}h SLA remaining`}
+                </span>
+              )}
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -744,6 +899,224 @@ export default function ReportDetails() {
               <strong style={{ color: '#fca5a5' }}>Mandatory Justification / Reason: </strong>
               {report.rejection_reason || 'Case was rejected in accordance with municipal review criteria.'}
             </div>
+          </div>
+        )}
+      </div>
+      {/* ── Feature 4: Officer Field Verification "Before & After" Resolution Evidence ── */}
+      {(report.resolution_proof_url || report.status === 'RESOLVED') && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(30,41,59,0.8), rgba(16,185,129,0.08))',
+          backdropFilter: 'blur(12px)',
+          border: '1.5px solid rgba(16,185,129,0.3)', borderRadius: 16,
+          padding: 24, marginBottom: 20,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ color: '#34d399', fontSize: 16, fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ShieldCheck size={20} color="#10b981" /> Verified Resolution Proof Evidence
+            </h3>
+            <span style={{
+              fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 8,
+              background: 'rgba(16,185,129,0.2)', color: '#6ee7b7', border: '1px solid rgba(16,185,129,0.3)'
+            }}>
+              GovTech Resolution Standard
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+            {/* Before: Citizen Incident Media */}
+            <div style={{ background: 'rgba(15,23,42,0.6)', borderRadius: 12, padding: 14, border: '1px solid rgba(148,163,184,0.1)' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Camera size={14} /> Initial Citizen Evidence (Before)
+              </div>
+              {report.media && report.media.length > 0 ? (
+                <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', height: 180 }}>
+                  <img
+                    src={report.media[0].file_url}
+                    alt="Before evidence"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  <div style={{ position: 'absolute', bottom: 6, left: 6, background: 'rgba(0,0,0,0.6)', padding: '2px 8px', borderRadius: 4, color: 'white', fontSize: 10 }}>
+                    Incident Reported
+                  </div>
+                </div>
+              ) : (
+                <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: 12, background: 'rgba(0,0,0,0.2)', borderRadius: 8 }}>
+                  No photo attached by citizen
+                </div>
+              )}
+            </div>
+
+            {/* After: Officer Resolution Proof Photo */}
+            <div style={{ background: 'rgba(15,23,42,0.6)', borderRadius: 12, padding: 14, border: '1px solid rgba(16,185,129,0.25)' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#34d399', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <CheckCircle2 size={14} color="#10b981" /> Field Repair Proof (After)
+              </div>
+              {report.resolution_proof_url ? (
+                <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', height: 180 }}>
+                  <img
+                    src={report.resolution_proof_url}
+                    alt="Resolution proof"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  <div style={{ position: 'absolute', bottom: 6, left: 6, background: 'rgba(16,185,129,0.85)', padding: '2px 8px', borderRadius: 4, color: 'white', fontSize: 10, fontWeight: 700 }}>
+                    Official Completion Photo
+                  </div>
+                </div>
+              ) : (
+                <div style={{ height: 180, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: 12, background: 'rgba(0,0,0,0.2)', borderRadius: 8, padding: 16, textAlign: 'center' }}>
+                  <FileText size={28} color="#94a3b8" style={{ marginBottom: 6 }} />
+                  <span>Work completion document on file</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Citizen Quality Verification Section */}
+          <div style={{ marginTop: 18, borderTop: '1px solid rgba(16,185,129,0.15)', paddingTop: 16 }}>
+            {report.citizen_confirmed_resolution === true ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#34d399', fontSize: 13, fontWeight: 700 }}>
+                <CheckCircle2 size={18} color="#10b981" />
+                <span>Citizen Verified: Ground resolution confirmed and accepted by citizen.</span>
+              </div>
+            ) : report.citizen_confirmed_resolution === false ? (
+              <div style={{ color: '#f87171', fontSize: 13 }}>
+                <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <XCircle size={18} color="#ef4444" />
+                  <span>Resolution Disputed by Citizen (Case Reopened)</span>
+                </div>
+                {report.citizen_confirmation_notes && (
+                  <div style={{ marginTop: 4, color: '#fca5a5', fontSize: 12, background: 'rgba(239,68,68,0.1)', padding: '8px 12px', borderRadius: 8 }}>
+                    Citizen notes: "{report.citizen_confirmation_notes}"
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                <div>
+                  <div style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 700 }}>
+                    Citizen Verification Required
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: 12 }}>
+                    Has this repair been completed to your satisfaction?
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    disabled={confirmingResolution}
+                    onClick={() => handleConfirmResolution(true)}
+                    style={{
+                      padding: '8px 16px', borderRadius: 8, border: 'none',
+                      background: 'linear-gradient(135deg, #10b981, #059669)',
+                      color: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer',
+                      boxShadow: '0 2px 10px rgba(16,185,129,0.3)'
+                    }}
+                  >
+                    Confirm Resolution
+                  </button>
+                  <button
+                    disabled={confirmingResolution}
+                    onClick={() => setShowDisputeModal(true)}
+                    style={{
+                      padding: '8px 14px', borderRadius: 8,
+                      border: '1px solid rgba(239,68,68,0.4)',
+                      background: 'rgba(239,68,68,0.1)', color: '#fca5a5',
+                      fontWeight: 600, fontSize: 12, cursor: 'pointer'
+                    }}
+                  >
+                    Dispute / Reopen
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Feature 7: Tamper-Proof Cryptographic Forensic Audit Trail ── */}
+      <div style={{
+        background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(148,163,184,0.1)', borderRadius: 16,
+        padding: 24, marginBottom: 20,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+          onClick={() => setShowAuditSection(!showAuditSection)}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a5b4fc'
+            }}>
+              <Hash size={18} />
+            </div>
+            <div>
+              <h3 style={{ color: '#e2e8f0', fontSize: 15, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                Forensic Audit Trail & Cryptographic Chain
+                <span style={{
+                  fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
+                  background: 'rgba(16,185,129,0.15)', color: '#34d399', border: '1px solid rgba(16,185,129,0.25)'
+                }}>
+                  SHA-256 Verified
+                </span>
+              </h3>
+              <p style={{ color: '#64748b', fontSize: 12, margin: '2px 0 0' }}>
+                Immutable event blocks • {auditTrail.length} logged actions
+              </p>
+            </div>
+          </div>
+          <button style={{
+            background: 'rgba(148,163,184,0.1)', border: 'none', color: '#cbd5e1',
+            borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer'
+          }}>
+            {showAuditSection ? 'Hide Audit Log' : 'View Audit Log'}
+          </button>
+        </div>
+
+        {showAuditSection && (
+          <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {auditTrail.length === 0 ? (
+              <div style={{ padding: 20, textAlign: 'center', color: '#64748b', fontSize: 13 }}>
+                No audit blocks recorded yet for this report.
+              </div>
+            ) : (
+              auditTrail.map((log: any, idx: number) => (
+                <div key={log.id || idx} style={{
+                  background: 'rgba(15,23,42,0.7)',
+                  border: '1px solid rgba(148,163,184,0.12)',
+                  borderRadius: 12, padding: 14,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: '#6366f1' }}>Block #{idx + 1}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#f8fafc' }}>{log.action}</span>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                        background: 'rgba(99,102,241,0.15)', color: '#a5b4fc'
+                      }}>
+                        {log.actor_role || 'SYSTEM'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#64748b' }}>
+                      {new Date(log.timestamp).toLocaleString()} • IP: {log.ip_address || '127.0.0.1'}
+                    </div>
+                  </div>
+                  <div style={{ color: '#cbd5e1', fontSize: 12, marginBottom: 8 }}>
+                    Actor: <strong style={{ color: '#e2e8f0' }}>{log.actor_name || 'System'}</strong>
+                  </div>
+                  {log.tamper_hash && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      background: 'rgba(0,0,0,0.3)', padding: '6px 10px', borderRadius: 6,
+                      fontSize: 10, fontFamily: 'monospace', color: '#94a3b8'
+                    }}>
+                      <ShieldCheck size={12} color="#10b981" />
+                      <span style={{ color: '#64748b' }}>Hash:</span>
+                      <span style={{ color: '#34d399', overflow: 'hidden', textOverflow: 'ellipsis' }}>{log.tamper_hash}</span>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>

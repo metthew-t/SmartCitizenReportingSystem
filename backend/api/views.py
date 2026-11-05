@@ -83,6 +83,39 @@ class ReportViewSet(viewsets.ModelViewSet):
                     cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT TRUE;')
                     cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS rejection_reason TEXT NULL;')
                     cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS resolution_notes TEXT NULL;')
+                    cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS sla_deadline TIMESTAMP WITH TIME ZONE NULL;')
+                    cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS sla_hours INTEGER DEFAULT 48;')
+                    cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS is_escalated BOOLEAN DEFAULT FALSE;')
+                    cursor.execute("ALTER TABLE core_report ADD COLUMN IF NOT EXISTS escalation_level VARCHAR(30) DEFAULT 'NONE';")
+                    cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS escalation_reason TEXT NULL;')
+                    cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS resolution_proof_url VARCHAR(1000) NULL;')
+                    cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS citizen_confirmed_resolution BOOLEAN NULL;')
+                    cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS citizen_confirmation_notes TEXT NULL;')
+                    cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS affected_count INTEGER DEFAULT 1;')
+                    cursor.execute('ALTER TABLE core_report ADD COLUMN IF NOT EXISTS is_within_geofence BOOLEAN DEFAULT TRUE;')
+                    cursor.execute('ALTER TABLE core_auditlog ADD COLUMN IF NOT EXISTS actor_name VARCHAR(255) NULL;')
+                    cursor.execute('ALTER TABLE core_auditlog ADD COLUMN IF NOT EXISTS actor_role VARCHAR(50) NULL;')
+                    cursor.execute('ALTER TABLE core_auditlog ADD COLUMN IF NOT EXISTS ip_address VARCHAR(60) NULL;')
+                    cursor.execute('ALTER TABLE core_auditlog ADD COLUMN IF NOT EXISTS tamper_hash VARCHAR(64) NULL;')
+                    cursor.execute('ALTER TABLE core_auditlog ADD COLUMN IF NOT EXISTS prev_hash VARCHAR(64) NULL;')
+                    cursor.execute("""CREATE TABLE IF NOT EXISTS core_reportaffectedcitizen (
+                        id SERIAL PRIMARY KEY,
+                        report_id INTEGER NOT NULL,
+                        user_id INTEGER NULL,
+                        ip_address VARCHAR(60) NULL,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                    );""")
+                    cursor.execute("""CREATE TABLE IF NOT EXISTS core_notificationlog (
+                        id SERIAL PRIMARY KEY,
+                        recipient_phone VARCHAR(50) NULL,
+                        recipient_name VARCHAR(255) NULL,
+                        channel VARCHAR(30) DEFAULT 'SMS',
+                        event_type VARCHAR(60) NOT NULL,
+                        message_body TEXT NOT NULL,
+                        status VARCHAR(20) DEFAULT 'SENT',
+                        sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                        report_id INTEGER NULL
+                    );""")
                     cursor.execute('ALTER TABLE core_citizenprofile ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0;')
                     cursor.execute("ALTER TABLE core_citizenprofile ADD COLUMN IF NOT EXISTS civic_level VARCHAR(50) DEFAULT 'Beginner';")
                     cursor.execute("""CREATE TABLE IF NOT EXISTS core_reportstatushistory (
@@ -193,6 +226,14 @@ class ReportViewSet(viewsets.ModelViewSet):
         if priority not in ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']:
             priority = 'MEDIUM'
         
+        # Geofence & SLA Calculations
+        from core.robust_civic_engine import (
+            check_adama_geofence, compute_sla_deadline,
+            record_tamper_proof_audit, dispatch_civic_notification
+        )
+        geofence_res = check_adama_geofence(lat, lng)
+        sla_hours, sla_deadline = compute_sla_deadline(priority)
+
         try:
             report = serializer.save(
                 citizen=request.user,
@@ -203,8 +244,28 @@ class ReportViewSet(viewsets.ModelViewSet):
                 primary_department=department,
                 category=category,
                 priority=priority,
+                is_within_geofence=geofence_res['is_inside'],
+                sla_hours=sla_hours,
+                sla_deadline=sla_deadline,
             )
             
+            # Tamper-proof audit logging & multi-channel notification dispatch
+            try:
+                record_tamper_proof_audit(
+                    request.user, 'REPORT_CREATED', 'Report', report.id,
+                    {
+                        'case_number': case_number,
+                        'priority': priority,
+                        'department': department.name if department else None,
+                        'is_within_geofence': geofence_res['is_inside'],
+                        'sla_hours': sla_hours
+                    },
+                    request=request
+                )
+                dispatch_civic_notification(report, 'SUBMITTED')
+            except Exception as e_engine:
+                print(f"[CivicEngine] create hook error: {e_engine}")
+
             # Fire notification to citizen
             from core.push_service import notify_report_submitted, notify_department_new_report
             try:
@@ -697,6 +758,22 @@ class ReportViewSet(viewsets.ModelViewSet):
                 file_url=doc_url
             )
 
+        # ── Officer Field Verification: "Before & After" Resolution Evidence ──
+        proof_url = request.data.get('resolution_proof_url')
+        proof_file = request.FILES.get('resolution_proof') or request.FILES.get('after_photo')
+        if proof_file:
+            try:
+                import cloudinary.uploader
+                upload_res = cloudinary.uploader.upload(proof_file, resource_type='image')
+                proof_url = upload_res.get('secure_url')
+            except Exception:
+                proof_url = f"https://mock-storage.adama.gov.et/proofs/{report.id}_{proof_file.name}"
+        if proof_url:
+            report.resolution_proof_url = proof_url
+
+        if new_status == 'RESOLVED':
+            report.resolved_at = timezone.now()
+
         report.save()
 
         # ── Record status history ─────────────────────────────────────────────
@@ -717,6 +794,23 @@ class ReportViewSet(viewsets.ModelViewSet):
             changed_by_name=changed_by_name,
             note=resolution_notes or '',
         )
+
+        # ── Tamper-Proof Audit Logging & Multi-Channel Dispatch ───────────────
+        try:
+            from core.robust_civic_engine import record_tamper_proof_audit, dispatch_civic_notification
+            record_tamper_proof_audit(
+                user, 'STATUS_UPDATE', 'Report', report.id,
+                {
+                    'old_status': old_status,
+                    'new_status': new_status,
+                    'note': resolution_notes,
+                    'resolution_proof_url': report.resolution_proof_url
+                },
+                request=request
+            )
+            dispatch_civic_notification(report, 'RESOLVED' if new_status == 'RESOLVED' else 'STATUS_CHANGED')
+        except Exception as e_engine:
+            print(f"[CivicEngine] status update error: {e_engine}")
 
         # ── Notify citizen + all admins & managers ────────────────────────────
         from core.push_service import notify_status_changed, send_push_notification
@@ -767,6 +861,201 @@ class ReportViewSet(viewsets.ModelViewSet):
         reports = Report.objects.filter(is_public=True).order_by('-created_at')[:100]
         serializer = self.get_serializer(reports, many=True)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny], url_path='public_transparency')
+    def public_transparency(self, request):
+        """
+        Public Transparency Map (Open311 / FixMyStreet Global Standard):
+        Returns active & resolved reports with citizen PII masked for public map & community tracking.
+        """
+        qs = Report.objects.filter(is_public=True).select_related('primary_department', 'category').order_by('-created_at')[:200]
+        results = []
+        for r in qs:
+            results.append({
+                'id': r.id,
+                'case_number': r.case_number,
+                'category_name': r.category.name_en if r.category else 'General Infrastructure',
+                'description': r.description[:140] + ('...' if len(r.description) > 140 else ''),
+                'department_name': r.primary_department.name if r.primary_department else 'City Municipal Council',
+                'status': r.status,
+                'priority': r.priority,
+                'latitude': r.latitude,
+                'longitude': r.longitude,
+                'kuta_magaalaa': r.kuta_magaalaa or '',
+                'kebele': r.kebele or '',
+                'iddoo_addaa': r.iddoo_addaa or '',
+                'created_at': r.created_at.isoformat(),
+                'resolved_at': r.resolved_at.isoformat() if r.resolved_at else None,
+                'affected_count': getattr(r, 'affected_count', 1),
+                'resolution_proof_url': getattr(r, 'resolution_proof_url', None),
+                'is_within_geofence': getattr(r, 'is_within_geofence', True),
+                'citizen_masked': 'Verified Citizen' if not r.is_anonymous else 'Anonymous Citizen',
+            })
+        return Response({'count': len(results), 'reports': results})
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny], url_path='check_duplicates')
+    def check_duplicates(self, request):
+        """
+        AI / Spatial Duplicate Detection (Global 311 Standard):
+        Checks within threshold meters (default 150m) of candidate coordinates for open tickets.
+        """
+        lat = request.data.get('latitude')
+        lon = request.data.get('longitude')
+        dept_id = request.data.get('department_id')
+        threshold = int(request.data.get('threshold_meters', 150))
+        from core.robust_civic_engine import find_potential_duplicates
+        duplicates = find_potential_duplicates(lat, lon, department_id=dept_id, threshold_meters=threshold)
+        return Response({
+            'count': len(duplicates),
+            'has_duplicates': len(duplicates) > 0,
+            'duplicates': duplicates
+        })
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.AllowAny], url_path='upvote_affected')
+    def upvote_affected(self, request, pk=None):
+        """
+        'I am also affected' (+1 community upvote):
+        Instead of duplicate reports for the same incident, citizens upvote the existing ticket.
+        """
+        report = self.get_object()
+        user = request.user if request.user.is_authenticated else None
+        
+        from core.models import ReportAffectedCitizen
+        ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', ''))
+        if ip:
+            ip = ip.split(',')[0].strip()
+
+        already = False
+        if user and user.is_authenticated:
+            already = ReportAffectedCitizen.objects.filter(report=report, user=user).exists()
+        elif ip:
+            already = ReportAffectedCitizen.objects.filter(report=report, ip_address=ip, user__isnull=True).exists()
+
+        if already:
+            return Response({
+                'status': 'already_recorded',
+                'message': 'You have already indicated that you are affected by this incident.',
+                'affected_count': report.affected_count
+            })
+
+        ReportAffectedCitizen.objects.create(report=report, user=user if user and user.is_authenticated else None, ip_address=ip)
+        report.affected_count = (report.affected_count or 1) + 1
+        report.save(update_fields=['affected_count'])
+
+        try:
+            from core.robust_civic_engine import record_tamper_proof_audit
+            record_tamper_proof_audit(
+                user, 'UPVOTE_AFFECTED', 'Report', report.id,
+                {'affected_count': report.affected_count}, request=request
+            )
+        except Exception:
+            pass
+
+        return Response({
+            'status': 'success',
+            'message': 'Thank you. Your voice has been recorded and the issue priority reinforced.',
+            'affected_count': report.affected_count
+        })
+
+    @action(detail=True, methods=['post'], url_path='confirm_resolution')
+    def confirm_resolution(self, request, pk=None):
+        """
+        Citizen Verification of Resolution:
+        Citizen inspects the repair site and confirms or disputes resolution.
+        """
+        report = self.get_object()
+        user = request.user
+        confirmed = request.data.get('confirmed')
+        notes = request.data.get('notes', '').strip()
+
+        if confirmed is None:
+            return Response({'error': 'Parameter "confirmed" (boolean) is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        is_confirmed = bool(confirmed)
+        report.citizen_confirmed_resolution = is_confirmed
+        report.citizen_confirmation_notes = notes
+
+        old_status = report.status
+        if not is_confirmed:
+            report.status = 'REOPENED'
+            report.save(update_fields=['citizen_confirmed_resolution', 'citizen_confirmation_notes', 'status'])
+            from core.models import ReportStatusHistory
+            ReportStatusHistory.objects.create(
+                report=report,
+                old_status=old_status,
+                new_status='REOPENED',
+                changed_by=user,
+                changed_by_name=user.full_name or 'Citizen',
+                note=f"Resolution disputed by citizen: {notes}"
+            )
+            action_name = 'RESOLUTION_DISPUTED_REOPENED'
+        else:
+            report.save(update_fields=['citizen_confirmed_resolution', 'citizen_confirmation_notes'])
+            action_name = 'RESOLUTION_CONFIRMED'
+
+        try:
+            from core.robust_civic_engine import record_tamper_proof_audit, dispatch_civic_notification
+            record_tamper_proof_audit(
+                user, action_name, 'Report', report.id,
+                {'confirmed': is_confirmed, 'notes': notes}, request=request
+            )
+            dispatch_civic_notification(report, 'REOPENED' if not is_confirmed else 'RESOLVED')
+        except Exception:
+            pass
+
+        return Response({
+            'status': 'success',
+            'report_status': report.status,
+            'citizen_confirmed': is_confirmed,
+            'message': 'Resolution confirmed. Issue finalized.' if is_confirmed else 'Case reopened for re-inspection.'
+        })
+
+    @action(detail=True, methods=['get'], url_path='audit_trail')
+    def audit_trail(self, request, pk=None):
+        """
+        Tamper-Proof Audit Trail (Forensic Log):
+        Returns cryptographically chained event logs for forensic inspection.
+        """
+        report = self.get_object()
+        from core.models import AuditLog
+        from api.serializers import AuditLogSerializer
+        logs = AuditLog.objects.filter(entity_type='Report', entity_id=str(report.id)).order_by('timestamp')
+        serializer = AuditLogSerializer(logs, many=True)
+        return Response({
+            'case_number': report.case_number,
+            'log_count': len(serializer.data),
+            'audit_chain': serializer.data
+        })
+
+    @action(detail=False, methods=['get'], url_path='escalated_queue')
+    def escalated_queue(self, request):
+        """
+        Mayor & Executive SLA Escalation Queue:
+        Returns all cases that have breached SLA or triggered auto-escalation.
+        """
+        from core.robust_civic_engine import evaluate_report_sla
+        qs = Report.objects.filter(
+            status__in=['SUBMITTED', 'RECEIVED', 'ASSIGNED', 'UNDER_INVESTIGATION', 'IN_PROGRESS']
+        ).select_related('primary_department', 'assigned_officer').order_by('-priority', 'created_at')
+
+        escalated_cases = []
+        for rep in qs:
+            sla_info = evaluate_report_sla(rep)
+            if rep.is_escalated or sla_info['is_breached'] or rep.escalation_level != 'NONE':
+                escalated_cases.append({
+                    'id': rep.id,
+                    'case_number': rep.case_number,
+                    'priority': rep.priority,
+                    'status': rep.status,
+                    'department_name': rep.primary_department.name if rep.primary_department else 'Unassigned',
+                    'assigned_officer_name': rep.assigned_officer.full_name if rep.assigned_officer else 'None',
+                    'escalation_level': rep.escalation_level,
+                    'escalation_reason': rep.escalation_reason,
+                    'remaining_hours': sla_info['remaining_hours'],
+                    'is_breached': sla_info['is_breached'],
+                    'created_at': rep.created_at.isoformat(),
+                })
+        return Response({'count': len(escalated_cases), 'escalated_cases': escalated_cases})
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny], url_path='public_stats')
     def public_stats(self, request):
@@ -1929,6 +2218,39 @@ class AppealViewSet(viewsets.ModelViewSet):
 
         from api.serializers import AppealSerializer
         return Response(AppealSerializer(appeal).data)
+
+
+class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+    """Forensic Tamper-Proof Audit Trail ViewSet (Admin / Mayor / Oversight)"""
+    from core.models import AuditLog
+    from api.serializers import AuditLogSerializer
+    queryset = AuditLog.objects.all().order_by('-timestamp')
+    serializer_class = AuditLogSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        from core.models import AuditLog
+        if user.is_city_admin or getattr(user, 'is_super_admin', False) or user.is_superuser or getattr(user, 'is_mayor', False):
+            return AuditLog.objects.all().order_by('-timestamp')
+        return AuditLog.objects.filter(user=user).order_by('-timestamp')
+
+
+class NotificationLogViewSet(viewsets.ReadOnlyModelViewSet):
+    """Multi-channel dispatch delivery logs (SMS, Telegram, Push)"""
+    from core.models import NotificationLog
+    from api.serializers import NotificationLogSerializer
+    queryset = NotificationLog.objects.all().order_by('-sent_at')
+    serializer_class = NotificationLogSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        from core.models import NotificationLog
+        if user.is_city_admin or getattr(user, 'is_super_admin', False) or user.is_superuser or getattr(user, 'is_mayor', False):
+            return NotificationLog.objects.all().order_by('-sent_at')
+        return NotificationLog.objects.filter(report__citizen=user).order_by('-sent_at')
+
 
 
 

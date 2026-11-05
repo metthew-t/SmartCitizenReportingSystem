@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, MapPin, Trophy, Target, ArrowLeft, ShieldCheck, CheckCircle2, Clock, Sparkles, AlertCircle, Search, Filter } from 'lucide-react';
+import { Activity, MapPin, Trophy, Target, ArrowLeft, ShieldCheck, CheckCircle2, Clock, Sparkles, AlertCircle, Search, Filter, Users, ShieldAlert, RefreshCw } from 'lucide-react';
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1';
 
@@ -17,6 +17,8 @@ interface PublicReport {
   kuta_magaalaa?: string;
   kebele?: string;
   ai_confidence_score?: number;
+  affected_count?: number;
+  resolution_proof_url?: string;
 }
 
 interface PublicStats {
@@ -47,6 +49,51 @@ export default function PublicDashboard() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+
+  const [upvotingId, setUpvotingId] = useState<number | null>(null);
+  const [duplicateSearchOpen, setDuplicateSearchOpen] = useState(false);
+  const [searchCoords, setSearchCoords] = useState({ lat: '8.5400', lng: '39.2700' });
+  const [duplicatesFound, setDuplicatesFound] = useState<any[]>([]);
+  const [searchingDuplicates, setSearchingDuplicates] = useState(false);
+
+  const handleUpvote = async (reportId: number) => {
+    setUpvotingId(reportId);
+    try {
+      const res = await fetch(`${API}/reports/${reportId}/upvote_affected/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setReports(prev => prev.map(r => r.id === reportId ? { ...r, affected_count: data.affected_count } : r));
+      }
+    } catch (_) {}
+    finally {
+      setUpvotingId(null);
+    }
+  };
+
+  const handleCheckDuplicates = async () => {
+    setSearchingDuplicates(true);
+    try {
+      const res = await fetch(`${API}/reports/check_duplicates/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          latitude: parseFloat(searchCoords.lat),
+          longitude: parseFloat(searchCoords.lng),
+          threshold_meters: 200
+        })
+      });
+      const data = await res.json();
+      setDuplicatesFound(data.duplicates || []);
+    } catch (_) {
+      setDuplicatesFound([]);
+    } finally {
+      setSearchingDuplicates(false);
+    }
+  };
+
 
   useEffect(() => {
     const fetchPublicData = async () => {
@@ -237,7 +284,78 @@ export default function PublicDashboard() {
                 <option value="RESOLVED">Resolved</option>
               </select>
             </div>
-          </div>
+              <button
+                onClick={() => setDuplicateSearchOpen(!duplicateSearchOpen)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2))',
+                  border: '1px solid rgba(99,102,241,0.4)', borderRadius: 10,
+                  padding: '8px 14px', color: '#c7d2fe', fontSize: 13, fontWeight: 700, cursor: 'pointer'
+                }}
+              >
+                <Sparkles size={14} color="#818cf8" />
+                <span>AI Duplicate Scanner</span>
+              </button>
+            </div>
+
+            {duplicateSearchOpen && (
+              <div style={{
+                background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(99,102,241,0.3)',
+                borderRadius: 16, padding: 18, marginTop: 14, marginBottom: 14
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: '#e0e7ff', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Search size={16} color="#818cf8" />
+                    Spatial Duplicate Detection Tool (150m Haversine Radius)
+                  </div>
+                  <span style={{ fontSize: 11, color: '#94a3b8' }}>Check if your issue is already registered</span>
+                </div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    placeholder="Latitude (e.g. 8.5400)"
+                    value={searchCoords.lat}
+                    onChange={e => setSearchCoords({ ...searchCoords, lat: e.target.value })}
+                    style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(148,163,184,0.2)', color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, width: 140 }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Longitude (e.g. 39.2700)"
+                    value={searchCoords.lng}
+                    onChange={e => setSearchCoords({ ...searchCoords, lng: e.target.value })}
+                    style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(148,163,184,0.2)', color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, width: 140 }}
+                  />
+                  <button
+                    onClick={handleCheckDuplicates}
+                    disabled={searchingDuplicates}
+                    style={{
+                      padding: '8px 16px', borderRadius: 8, border: 'none',
+                      background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: '#fff',
+                      fontSize: 12, fontWeight: 700, cursor: 'pointer'
+                    }}
+                  >
+                    {searchingDuplicates ? 'Scanning 150m...' : 'Scan Nearby Tickets'}
+                  </button>
+                </div>
+                {duplicatesFound.length > 0 && (
+                  <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#fbbf24' }}>
+                      ⚠️ {duplicatesFound.length} Open Incident(s) Found within vicinity:
+                    </div>
+                    {duplicatesFound.map((dup: any) => (
+                      <div key={dup.id} style={{
+                        background: 'rgba(30,41,59,0.5)', padding: '8px 12px', borderRadius: 8,
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12
+                      }}>
+                        <span style={{ color: '#38bdf8', fontWeight: 700 }}>{dup.case_number} ({dup.distance_meters}m away)</span>
+                        <span style={{ color: '#cbd5e1' }}>{dup.description}</span>
+                        <span style={{ color: '#a5b4fc', fontWeight: 600 }}>{dup.status}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
           <div style={{
             background: 'rgba(30, 41, 59, 0.4)',
@@ -303,6 +421,35 @@ export default function PublicDashboard() {
                         </span>
                       ) : (
                         <span>{new Date(r.created_at).toLocaleDateString()}</span>
+                      )}
+                    </div>
+
+                    {/* Community Upvote & Resolution Proof Pill */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                      <button
+                        onClick={() => handleUpvote(r.id)}
+                        disabled={upvotingId === r.id}
+                        title="Click to indicate you are also affected by this incident"
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          background: 'rgba(245,158,11,0.12)', color: '#fbbf24',
+                          border: '1px solid rgba(245,158,11,0.3)', borderRadius: 14,
+                          padding: '4px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <Users size={12} color="#f59e0b" />
+                        <span>{(r as any).affected_count || 1} Affected (+1)</span>
+                      </button>
+
+                      {(r as any).resolution_proof_url && (
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          fontSize: 10, fontWeight: 700, color: '#34d399',
+                          background: 'rgba(16,185,129,0.15)', padding: '3px 8px', borderRadius: 6
+                        }}>
+                          <ShieldCheck size={12} color="#10b981" /> Proof Verified
+                        </span>
                       )}
                     </div>
                   </div>

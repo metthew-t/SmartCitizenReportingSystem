@@ -83,6 +83,8 @@ class ReportSerializer(serializers.ModelSerializer):
     ai_suggested_department_name = serializers.SerializerMethodField()
     feedback = serializers.SerializerMethodField()
     appeals = serializers.SerializerMethodField()
+    sla_metrics = serializers.SerializerMethodField()
+    geofence_info = serializers.SerializerMethodField()
 
     class Meta:
         model = Report
@@ -95,9 +97,12 @@ class ReportSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at', 'resolved_at', 'closed_at', 'media', 'status_history',
             'aanaa', 'kuta_magaalaa', 'kebele', 'iddoo_addaa', 'resolution_notes', 'rejection_reason',
             'ai_confidence_score', 'ai_suggested_department', 'ai_suggested_department_name', 'ai_summary', 'is_public',
-            'feedback', 'appeals'
+            'feedback', 'appeals',
+            'sla_deadline', 'sla_hours', 'is_escalated', 'escalation_level', 'escalation_reason', 'sla_metrics',
+            'resolution_proof_url', 'citizen_confirmed_resolution', 'citizen_confirmation_notes',
+            'affected_count', 'is_within_geofence', 'geofence_info'
         ]
-        read_only_fields = ['case_number', 'status', 'citizen', 'assigned_officer_user_id', 'is_assigned_to_me']
+        read_only_fields = ['case_number', 'status', 'citizen', 'assigned_officer_user_id', 'is_assigned_to_me', 'sla_deadline', 'sla_hours', 'affected_count']
 
     def get_assigned_officer_user_id(self, obj):
         try:
@@ -148,6 +153,20 @@ class ReportSerializer(serializers.ModelSerializer):
             } for a in appeals]
         except Exception:
             return []
+
+    def get_sla_metrics(self, obj):
+        try:
+            from core.robust_civic_engine import evaluate_report_sla
+            return evaluate_report_sla(obj)
+        except Exception:
+            return None
+
+    def get_geofence_info(self, obj):
+        try:
+            from core.robust_civic_engine import check_adama_geofence
+            return check_adama_geofence(obj.latitude, obj.longitude)
+        except Exception:
+            return None
 
     def get_ai_suggested_department_name(self, obj):
         try:
@@ -309,4 +328,31 @@ class AppealSerializer(serializers.ModelSerializer):
                 return obj.citizen.citizen_profile.full_name
             return obj.citizen.full_name or obj.citizen.phone_number or 'Citizen'
         return 'Citizen Appellant'
+
+
+class AuditLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        from core.models import AuditLog
+        model = AuditLog
+        fields = [
+            'id', 'user', 'actor_name', 'actor_role', 'ip_address',
+            'action', 'entity_type', 'entity_id', 'changes',
+            'tamper_hash', 'prev_hash', 'timestamp'
+        ]
+        read_only_fields = fields
+
+
+class NotificationLogSerializer(serializers.ModelSerializer):
+    case_number = serializers.CharField(source='report.case_number', read_only=True)
+
+    class Meta:
+        from core.models import NotificationLog
+        model = NotificationLog
+        fields = [
+            'id', 'recipient_phone', 'recipient_name', 'channel',
+            'event_type', 'report', 'case_number', 'message_body',
+            'status', 'sent_at'
+        ]
+        read_only_fields = fields
+
 

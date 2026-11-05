@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
-import { Search, Filter, ChevronDown, Eye, MapPin, Clock, ExternalLink, Navigation, Phone, User, Building2, Tag, Calendar, X } from 'lucide-react'
+import { Search, Filter, ChevronDown, Eye, MapPin, Clock, ExternalLink, Navigation, Phone, User, Building2, Tag, Calendar, X, Timer, ShieldAlert, Users } from 'lucide-react'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
@@ -40,7 +40,11 @@ interface Report {
   ai_confidence_score?: number
   ai_suggested_department_name?: string
   ai_summary?: string
-  is_public?: boolean
+  is_public?: boolean;
+  affected_count?: number;
+  is_escalated?: boolean;
+  escalation_level?: string;
+  sla_metrics?: any;
 }
 
 export default function Reports() {
@@ -287,14 +291,28 @@ export default function Reports() {
                       {[report.kuta_magaalaa, report.kebele, report.aanaa].filter(Boolean).join(', ') || '—'}
                     </td>
                     <td style={tdStyle}>
-                      <span style={{
-                        padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-                        background: `${STATUS_COLORS[report.status] || '#6366f1'}18`,
-                        color: STATUS_COLORS[report.status] || '#6366f1',
-                        border: `1px solid ${STATUS_COLORS[report.status] || '#6366f1'}25`,
-                      }}>
-                        {STATUS_LABELS[report.status] || report.status.replace('_', ' ')}
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span style={{
+                          padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                          background: `${STATUS_COLORS[report.status] || '#6366f1'}18`,
+                          color: STATUS_COLORS[report.status] || '#6366f1',
+                          border: `1px solid ${STATUS_COLORS[report.status] || '#6366f1'}25`,
+                          display: 'inline-block', textAlign: 'center'
+                        }}>
+                          {STATUS_LABELS[report.status] || report.status.replace('_', ' ')}
+                        </span>
+                        {(report as any).sla_metrics && !(report.status === 'RESOLVED' || report.status === 'CLOSED') && (
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                            background: (report as any).sla_metrics.is_breached ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.15)',
+                            color: (report as any).sla_metrics.is_breached ? '#f87171' : '#34d399',
+                            display: 'inline-flex', alignItems: 'center', gap: 3
+                          }}>
+                            <Timer size={10} />
+                            {(report as any).sla_metrics.is_breached ? `Overdue ${Math.abs((report as any).sla_metrics.remaining_hours)}h` : `${(report as any).sla_metrics.remaining_hours}h SLA`}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td style={tdStyle}>
                       <span style={{

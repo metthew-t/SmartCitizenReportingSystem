@@ -14,7 +14,8 @@ from rest_framework.routers import DefaultRouter
 from api.views import (
     ReportViewSet, DepartmentViewSet, ReportCategoryViewSet, MessageViewSet,
     DepartmentMessageViewSet, PingView, OfficialReportViewSet,
-    MayorOverviewView, MayorDirectiveViewSet, FeedbackViewSet, AppealViewSet
+    MayorOverviewView, MayorDirectiveViewSet, FeedbackViewSet, AppealViewSet,
+    AuditLogViewSet, NotificationLogViewSet
 )
 from api.notification_views import NotificationViewSet, DeviceTokenViewSet
 
@@ -30,6 +31,8 @@ router.register(r'official-reports', OfficialReportViewSet, basename='official-r
 router.register(r'feedback', FeedbackViewSet, basename='feedback')
 router.register(r'appeals', AppealViewSet, basename='appeal')
 router.register(r'mayor/directives', MayorDirectiveViewSet, basename='mayor-directive')
+router.register(r'audit-logs', AuditLogViewSet, basename='audit-log')
+router.register(r'notification-logs', NotificationLogViewSet, basename='notification-log')
 
 urlpatterns = [
     # Auth Endpoints
