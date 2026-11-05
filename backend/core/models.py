@@ -157,13 +157,55 @@ class AuditLog(models.Model):
 class Feedback(models.Model):
     report = models.OneToOneField(Report, on_delete=models.CASCADE, related_name='feedback')
     citizen = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='citizen_feedbacks')
     rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)])
+    timeliness_rating = models.IntegerField(default=4, choices=[(i, i) for i in range(1, 6)])
+    quality_rating = models.IntegerField(default=4, choices=[(i, i) for i in range(1, 6)])
     comment = models.TextField(blank=True, null=True)
     is_satisfied = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ['-created_at']
+
     def __str__(self):
         return f"Feedback for {self.report.case_number} - {self.rating} Stars"
+
+class Appeal(models.Model):
+    """
+    Formal Administrative Appeal Process:
+    Citizens can appeal unresolved, rejected, or unsatisfactorily closed cases.
+    Reviewed by Department Managers, City Administration, and Mayor's Office.
+    """
+    STATUS_CHOICES = [
+        ('SUBMITTED', 'Submitted for Review'),
+        ('UNDER_REVIEW', 'Under Administrative Investigation'),
+        ('UPHELD', 'Upheld / Case Reopened for Redress'),
+        ('DISMISSED', 'Dismissed with Justification'),
+    ]
+
+    appeal_number = models.CharField(max_length=60, unique=True)
+    report = models.ForeignKey(Report, on_delete=models.CASCADE, related_name='appeals')
+    citizen = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='filed_appeals')
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='received_appeals')
+    
+    reason = models.TextField(help_text="Detailed grounds for appealing the decision or handling of the report")
+    desired_outcome = models.TextField(blank=True, null=True, help_text="Specific administrative remedy requested by citizen")
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='SUBMITTED')
+    
+    reviewer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_appeals')
+    reviewer_name = models.CharField(max_length=255, blank=True, null=True)
+    reviewer_decision = models.TextField(blank=True, null=True, help_text="Official administrative decision and explanation")
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.appeal_number}] Appeal for {self.report.case_number} ({self.status})"
 
 class ReportStatusHistory(models.Model):
     """Immutable log of every status change on a report."""
@@ -190,10 +232,12 @@ class OfficialReport(models.Model):
     LEVEL_CHOICES = [
         ('OFFICER_TO_MANAGER', 'Officer to Department Manager'),
         ('MANAGER_TO_ADMIN', 'Department Manager to City Admin'),
+        ('INTER_DEPARTMENT', 'Inter-Department Collaboration'),
     ]
 
     REPORT_TYPE_CHOICES = [
         ('FIELD_INVESTIGATION', 'Field Investigation & Case Finding'),
+        ('INTER_DEPT_COLLABORATION', 'Inter-Department Case Collaboration'),
         ('WEEKLY_ACTIVITY', 'Weekly Departmental Activity Report'),
         ('MONTHLY_SUMMARY', 'Monthly Operations & Performance Report'),
         ('INCIDENT_ESCALATION', 'Urgent Incident / Emergency Escalation'),
@@ -227,6 +271,7 @@ class OfficialReport(models.Model):
     sender_name = models.CharField(max_length=255, blank=True)
     sender_role = models.CharField(max_length=50, blank=True)
     department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='official_reports')
+    target_department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='received_official_reports')
 
     linked_citizen_report = models.ForeignKey(Report, on_delete=models.SET_NULL, null=True, blank=True, related_name='official_reports')
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='ROUTINE')

@@ -13,9 +13,10 @@ import OfficialReports from './pages/OfficialReports'
 import MayorCommandCenter from './pages/MayorCommandCenter'
 import AuditLogs from './pages/AuditLogs'
 import { useAuthStore } from './store/authStore'
-import { Building2, LogIn } from 'lucide-react'
+import { Building2, KeyRound, ShieldAlert, Check, X as CloseIcon } from 'lucide-react'
 import PublicDashboard from './pages/PublicDashboard'
 import { startKeepAlive } from './keepAlive'
+import { validatePasswordRules, isStrongPassword } from './utils/passwordPolicy'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
@@ -91,6 +92,8 @@ function Login() {
         const role = isMayor ? 'mayor' : (isSuperAdmin ? 'super_admin' : (me?.is_city_admin ? 'city_admin' : (me?.is_department_manager ? 'department_manager' : 'officer')))
         const deptName = isMayor ? 'Office of the Mayor' : (me?.department_name || (me?.is_city_admin ? 'City Administration' : null))
 
+        const mustChange = Boolean(data.must_change_password || me?.must_change_password)
+
         login(data.access, {
           id: me?.id || null,
           phone: cleanPhone,
@@ -101,7 +104,8 @@ function Login() {
           is_city_admin: me?.is_city_admin || false,
           is_super_admin: isSuperAdmin,
           is_mayor: isMayor,
-        }, deptName, role)
+          must_change_password: mustChange,
+        }, deptName, role, mustChange)
 
         if (role === 'mayor') {
           navigate('/mayor')
@@ -242,10 +246,209 @@ function Input({ label, value, onChange, placeholder, type = 'text' }: {
   )
 }
 
+function ForcedPasswordChangeModal() {
+  const token = useAuthStore(state => state.token)
+  const setMustChangePassword = useAuthStore(state => state.setMustChangePassword)
+  const [oldPassword, setOldPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const rules = validatePasswordRules(newPassword)
+  const isValid = isStrongPassword(newPassword) && newPassword === confirmPassword && oldPassword.length > 0
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    if (!oldPassword) {
+      setError('Current temporary password is required.')
+      return
+    }
+    if (!isStrongPassword(newPassword)) {
+      setError('Password must meet all 5 government security requirements (minimum 12 characters).')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setError('New passwords do not match.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const res = await fetch(`${API}/auth/change-password/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setMustChangePassword(false)
+      } else {
+        setError(data.error || 'Failed to update password. Please check your current password.')
+      }
+    } catch {
+      setError('Network error. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 99999,
+      background: 'rgba(15, 23, 42, 0.88)', backdropFilter: 'blur(12px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
+    }}>
+      <div style={{
+        background: '#1e293b', border: '1px solid rgba(245, 158, 11, 0.4)',
+        borderRadius: 20, padding: 32, maxWidth: 520, width: '100%',
+        boxShadow: '0 25px 60px rgba(0,0,0,0.5)', color: '#f8fafc'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: 12,
+            background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24'
+          }}>
+            <ShieldAlert size={26} />
+          </div>
+          <div>
+            <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px', color: '#f8fafc' }}>
+              Mandatory Password Change
+            </h2>
+            <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>
+              Government Cyber-Security Standard Enforcement
+            </p>
+          </div>
+        </div>
+
+        <div style={{
+          background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)',
+          borderRadius: 12, padding: '12px 16px', marginBottom: 20, fontSize: 13, color: '#fcd34d', lineHeight: 1.5
+        }}>
+          🛡️ <strong>Initial Login Security Policy:</strong> Your account was provisioned by municipal administration. To comply with Adama City and national government cybersecurity standards, you are <strong>required to establish a private 12-character strong password</strong> before accessing the portal.
+        </div>
+
+        {error && (
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)',
+            color: '#f87171', padding: '10px 14px', borderRadius: 10, fontSize: 13, marginBottom: 16
+          }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#cbd5e1', marginBottom: 6 }}>
+              Current / Temporary Password
+            </label>
+            <input
+              type="password"
+              value={oldPassword}
+              onChange={e => setOldPassword(e.target.value)}
+              placeholder="Enter password assigned by admin"
+              required
+              style={{
+                width: '100%', padding: '10px 14px', borderRadius: 10,
+                border: '1px solid rgba(148, 163, 184, 0.2)', background: 'rgba(15, 23, 42, 0.6)',
+                color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#cbd5e1', marginBottom: 6 }}>
+              New Strong Password (12+ Characters)
+            </label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              placeholder="Enter new 12+ character password"
+              required
+              style={{
+                width: '100%', padding: '10px 14px', borderRadius: 10,
+                border: '1px solid rgba(148, 163, 184, 0.2)', background: 'rgba(15, 23, 42, 0.6)',
+                color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          {/* Real-time 5-point strong password checklist */}
+          <div style={{
+            background: 'rgba(15, 23, 42, 0.5)', border: '1px solid rgba(148, 163, 184, 0.15)',
+            borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>
+              Security Policy Requirements
+            </div>
+            {rules.map(rule => (
+              <div key={rule.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: rule.valid ? '#4ade80' : '#94a3b8' }}>
+                {rule.valid ? <Check size={14} color="#4ade80" /> : <CloseIcon size={14} color="#ef4444" />}
+                <span>{rule.label}</span>
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#cbd5e1', marginBottom: 6 }}>
+              Confirm New Password
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              placeholder="Re-type new password"
+              required
+              style={{
+                width: '100%', padding: '10px 14px', borderRadius: 10,
+                border: '1px solid rgba(148, 163, 184, 0.2)', background: 'rgba(15, 23, 42, 0.6)',
+                color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box'
+              }}
+            />
+            {confirmPassword && newPassword !== confirmPassword && (
+              <span style={{ fontSize: 12, color: '#ef4444', display: 'block', marginTop: 4 }}>
+                Passwords do not match
+              </span>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            disabled={!isValid || loading}
+            style={{
+              width: '100%', padding: 14, borderRadius: 12, border: 'none',
+              background: isValid ? 'linear-gradient(135deg, #f59e0b, #d97706)' : '#334155',
+              color: isValid ? '#000' : '#94a3b8', fontSize: 15, fontWeight: 700,
+              cursor: isValid && !loading ? 'pointer' : 'not-allowed', marginTop: 8,
+              transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              boxShadow: isValid ? '0 4px 20px rgba(245, 158, 11, 0.3)' : 'none'
+            }}
+          >
+            <KeyRound size={18} />
+            {loading ? 'Securing Account...' : 'Set Strong Password & Enter Portal'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore(state => state.token)
+  const mustChangePassword = useAuthStore(state => state.mustChangePassword)
   if (!token) return <Navigate to="/" replace />
-  return <>{children}</>
+  return (
+    <>
+      {mustChangePassword && <ForcedPasswordChangeModal />}
+      {children}
+    </>
+  )
 }
 
 export default function App() {

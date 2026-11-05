@@ -285,6 +285,8 @@ class ReportViewSet(viewsets.ModelViewSet):
                 'full_name': "VARCHAR(255) DEFAULT ''",
                 'profile_photo': 'VARCHAR(100) NULL',
                 'email': 'VARCHAR(254) UNIQUE NULL',
+                'must_change_password': 'BOOLEAN DEFAULT FALSE',
+                'is_active': 'BOOLEAN DEFAULT TRUE',
             },
         }
         for table, columns in columns_to_add.items():
@@ -322,11 +324,30 @@ class ReportViewSet(viewsets.ModelViewSet):
             """CREATE TABLE IF NOT EXISTS core_feedback (
                 id SERIAL PRIMARY KEY,
                 rating INTEGER NOT NULL,
+                timeliness_rating INTEGER DEFAULT 4,
+                quality_rating INTEGER DEFAULT 4,
                 comment TEXT NULL,
                 is_satisfied BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 report_id INTEGER NOT NULL UNIQUE,
-                citizen_id INTEGER NOT NULL
+                citizen_id INTEGER NOT NULL,
+                department_id INTEGER NULL
+            )""",
+            """CREATE TABLE IF NOT EXISTS core_appeal (
+                id SERIAL PRIMARY KEY,
+                appeal_number VARCHAR(60) UNIQUE NOT NULL,
+                reason TEXT NOT NULL,
+                desired_outcome TEXT NULL,
+                status VARCHAR(30) DEFAULT 'SUBMITTED',
+                reviewer_name VARCHAR(255) NULL,
+                reviewer_decision TEXT NULL,
+                reviewed_at TIMESTAMP WITH TIME ZONE NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                report_id INTEGER NOT NULL,
+                citizen_id INTEGER NOT NULL,
+                department_id INTEGER NULL,
+                reviewer_id INTEGER NULL
             )""",
             """CREATE TABLE IF NOT EXISTS core_auditlog (
                 id SERIAL PRIMARY KEY,
@@ -404,6 +425,7 @@ class ReportViewSet(viewsets.ModelViewSet):
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 department_id INTEGER NOT NULL,
+                target_department_id INTEGER NULL,
                 linked_citizen_report_id INTEGER NULL,
                 reviewer_id INTEGER NULL,
                 sender_id INTEGER NOT NULL
@@ -952,11 +974,13 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                     department_id INTEGER NOT NULL,
+                    target_department_id INTEGER NULL,
                     linked_citizen_report_id INTEGER NULL,
                     reviewer_id INTEGER NULL,
                     sender_id INTEGER NOT NULL
                 );
                 """)
+                cursor.execute("ALTER TABLE core_officialreport ADD COLUMN IF NOT EXISTS target_department_id INTEGER NULL;")
         except Exception:
             pass
 
@@ -971,27 +995,27 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
         dept_filter = self.request.query_params.get('department')
 
         if user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False) or getattr(user, 'is_mayor', False):
-            qs = OfficialReport.objects.select_related('department', 'linked_citizen_report', 'sender', 'reviewer').all()
+            qs = OfficialReport.objects.select_related('department', 'target_department', 'linked_citizen_report', 'sender', 'reviewer').all()
         elif user.is_department_manager:
             from core.models import OfficerProfile
             prof = getattr(user, 'officer_profile', None) or OfficerProfile.objects.filter(user=user).select_related('department').first()
             dept = prof.department if prof else None
             if dept:
-                qs = OfficialReport.objects.select_related('department', 'linked_citizen_report', 'sender', 'reviewer').filter(
-                    Q(department=dept) | Q(sender=user)
+                qs = OfficialReport.objects.select_related('department', 'target_department', 'linked_citizen_report', 'sender', 'reviewer').filter(
+                    Q(department=dept) | Q(sender=user) | Q(target_department=dept)
                 )
             else:
-                qs = OfficialReport.objects.select_related('department', 'linked_citizen_report', 'sender', 'reviewer').all()
+                qs = OfficialReport.objects.select_related('department', 'target_department', 'linked_citizen_report', 'sender', 'reviewer').all()
         elif user.is_officer:
             from core.models import OfficerProfile
             prof = getattr(user, 'officer_profile', None) or OfficerProfile.objects.filter(user=user).select_related('department').first()
             dept = prof.department if prof else None
             if dept:
-                qs = OfficialReport.objects.select_related('department', 'linked_citizen_report', 'sender', 'reviewer').filter(
-                    Q(sender=user) | (Q(department=dept) & Q(level='OFFICER_TO_MANAGER'))
+                qs = OfficialReport.objects.select_related('department', 'target_department', 'linked_citizen_report', 'sender', 'reviewer').filter(
+                    Q(sender=user) | (Q(department=dept) & Q(level='OFFICER_TO_MANAGER')) | Q(target_department=dept)
                 )
             else:
-                qs = OfficialReport.objects.select_related('department', 'linked_citizen_report', 'sender', 'reviewer').filter(sender=user)
+                qs = OfficialReport.objects.select_related('department', 'target_department', 'linked_citizen_report', 'sender', 'reviewer').filter(sender=user)
         else:
             return OfficialReport.objects.none()
 
@@ -1015,7 +1039,10 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
 
         # Determine level & department
         dept = None
+        target_dept = None
         sender_role = 'Officer'
+        level = self.request.data.get('level', 'OFFICER_TO_MANAGER')
+
         if user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False):
             sender_role = 'City Admin'
             dept_id = self.request.data.get('department')
@@ -1023,10 +1050,10 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
                 dept = Department.objects.filter(id=dept_id).first()
             if not dept:
                 dept = Department.objects.first()
-            level = self.request.data.get('level', 'MANAGER_TO_ADMIN')
+            if level not in ['OFFICER_TO_MANAGER', 'MANAGER_TO_ADMIN', 'INTER_DEPARTMENT']:
+                level = 'MANAGER_TO_ADMIN'
         elif user.is_department_manager:
             sender_role = 'Department Manager'
-            level = 'MANAGER_TO_ADMIN'
             dept = user.officer_profile.department if _safe_hasattr(user, 'officer_profile') else None
             if not dept:
                 dept_id = self.request.data.get('department')
@@ -1034,6 +1061,8 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
                     dept = Department.objects.filter(id=dept_id).first()
                 if not dept:
                     dept = Department.objects.first()
+            if level not in ['MANAGER_TO_ADMIN', 'INTER_DEPARTMENT']:
+                level = 'MANAGER_TO_ADMIN'
         else:
             sender_role = 'Field Officer'
             level = 'OFFICER_TO_MANAGER'
@@ -1045,11 +1074,24 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
                 if not dept:
                     dept = Department.objects.first()
 
+        # Target department for Inter-Department collaboration
+        target_dept_id = self.request.data.get('target_department')
+        if target_dept_id:
+            target_dept = Department.objects.filter(id=target_dept_id).first()
+
+        if level == 'INTER_DEPARTMENT' and not target_dept:
+            raise ValidationError({'target_department': 'A target collaborating department is required for inter-department reports.'})
+
         if not dept:
             raise ValidationError({'department': 'You must be assigned to an active department to submit an official report.'})
 
-        # Generate standard official reference number: ADM-{OFF|EXEC}-{YYYY}-{RANDOM}
-        prefix = 'OFF' if level == 'OFFICER_TO_MANAGER' else 'EXEC'
+        # Generate standard official reference number: ADM-{OFF|EXEC|COLLAB}-{YYYY}-{RANDOM}
+        if level == 'INTER_DEPARTMENT':
+            prefix = 'COLLAB'
+        elif level == 'OFFICER_TO_MANAGER':
+            prefix = 'OFF'
+        else:
+            prefix = 'EXEC'
         year = datetime.now().year
         ref_num = f"ADM-{prefix}-{year}-{uuid.uuid4().hex[:6].upper()}"
 
@@ -1060,10 +1102,28 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
             sender_name=sender_name,
             sender_role=sender_role,
             department=dept,
+            target_department=target_dept,
             level=level,
             reference_number=ref_num,
             status=self.request.data.get('status', 'SUBMITTED')
         )
+
+        # Notify target department manager if collaboration
+        if target_dept:
+            try:
+                from core.push_service import send_push_notification
+                from django.contrib.auth import get_user_model
+                U = get_user_model()
+                target_mgrs = U.objects.filter(is_department_manager=True, officer_profile__department=target_dept)
+                for tm in target_mgrs:
+                    send_push_notification(
+                        tm,
+                        title=f"New Inter-Department Case: {instance.title}",
+                        body=f"[{dept.name}] requested case collaboration: '{instance.title}' (Ref: {ref_num})",
+                        data={'type': 'OFFICIAL_REPORT', 'report_id': instance.id}
+                    )
+            except Exception as pe:
+                print(f"[Push] Inter-dept notification error: {pe}")
 
         try:
             from api.analytics_views import log_audit_event
@@ -1076,6 +1136,7 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
                     'title': getattr(instance, 'title', ''),
                     'level': level,
                     'department': dept.name if dept else '',
+                    'target_department': target_dept.name if target_dept else None,
                     'priority': getattr(instance, 'priority', 'ROUTINE'),
                     'status': getattr(instance, 'status', 'SUBMITTED'),
                 },
@@ -1094,15 +1155,20 @@ class OfficialReportViewSet(viewsets.ModelViewSet):
 
         # Permission check:
         # Officer cannot review reports.
-        # Department Manager can review reports submitted to their department (level='OFFICER_TO_MANAGER').
-        # City Admin can review all reports (especially level='MANAGER_TO_ADMIN').
-        if user.is_officer and not user.is_department_manager and not user.is_city_admin and not user.is_superuser and not getattr(user, 'is_super_admin', False):
+        # Department Manager can review:
+        # 1. Reports submitted by their officers (level='OFFICER_TO_MANAGER' and department=dept)
+        # 2. Inter-department collaboration reports sent to their department (level='INTER_DEPARTMENT' and target_department=dept)
+        # City Admin / Super Admin / Mayor can review all reports.
+        is_admin = bool(user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False) or getattr(user, 'is_mayor', False))
+        if user.is_officer and not user.is_department_manager and not is_admin:
             raise PermissionDenied("Officers cannot review official government reports.")
 
-        if user.is_department_manager and not (user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False)):
+        if user.is_department_manager and not is_admin:
             dept = user.officer_profile.department if _safe_hasattr(user, 'officer_profile') else None
-            if official_report.department != dept or official_report.level != 'OFFICER_TO_MANAGER':
-                raise PermissionDenied("You can only review officer reports submitted within your department.")
+            is_origin_mgr = (official_report.department == dept and official_report.level == 'OFFICER_TO_MANAGER')
+            is_target_collab_mgr = (official_report.target_department == dept and official_report.level == 'INTER_DEPARTMENT')
+            if not (is_origin_mgr or is_target_collab_mgr):
+                raise PermissionDenied("You can only review officer reports submitted within your department or inter-department collaboration requests sent to your department.")
 
         new_status = request.data.get('status')
         feedback = request.data.get('feedback', '')
@@ -1254,6 +1320,21 @@ class MayorOverviewView(APIView):
             d_done = d_resolved + d_closed
             d_rate = round((d_done / d_total * 100), 1) if d_total > 0 else (100.0 if d_total == 0 else 0.0)
 
+            # Department citizen satisfaction metrics
+            d_fb_count = 0
+            d_fb_avg = 4.0
+            d_fb_satisfaction_pct = 85.0
+            try:
+                dept_feedbacks = Feedback.objects.filter(Q(department=dept) | Q(report__primary_department=dept))
+                d_fb_count = dept_feedbacks.count()
+                if d_fb_count > 0:
+                    d_avg = dept_feedbacks.aggregate(avg=Avg('rating'))['avg']
+                    d_fb_avg = round(float(d_avg), 1) if d_avg else 4.0
+                    satisfied_count = dept_feedbacks.filter(is_satisfied=True).count()
+                    d_fb_satisfaction_pct = round((satisfied_count / d_fb_count) * 100, 1)
+            except Exception:
+                pass
+
             # Performance Tier
             if d_rate >= 80:
                 tier = 'EXCELLENT'
@@ -1273,6 +1354,9 @@ class MayorOverviewView(APIView):
                 'pending': d_pending,
                 'critical_active': d_critical,
                 'resolution_rate': d_rate,
+                'citizen_satisfaction': d_fb_avg,
+                'satisfaction_percentage': d_fb_satisfaction_pct,
+                'feedback_count': d_fb_count,
                 'performance_tier': tier,
             })
 
@@ -1365,6 +1449,38 @@ class MayorOverviewView(APIView):
         except Exception:
             pass
 
+        # ── Citizen Appeals Telemetry ─────────────────────────────────────────
+        appeals_summary = {'total': 0, 'pending': 0, 'upheld': 0, 'dismissed': 0}
+        recent_appeals = []
+        try:
+            from core.models import Appeal
+            total_app = Appeal.objects.count()
+            pending_app = Appeal.objects.filter(status__in=['SUBMITTED', 'UNDER_REVIEW']).count()
+            upheld_app = Appeal.objects.filter(status='UPHELD').count()
+            dismissed_app = Appeal.objects.filter(status='DISMISSED').count()
+            appeals_summary = {
+                'total': total_app,
+                'pending': pending_app,
+                'upheld': upheld_app,
+                'dismissed': dismissed_app,
+            }
+            app_list = Appeal.objects.select_related('report', 'department', 'citizen').order_by('-created_at')[:10]
+            for a in app_list:
+                recent_appeals.append({
+                    'id': a.id,
+                    'appeal_number': a.appeal_number,
+                    'case_number': a.report.case_number if a.report else 'N/A',
+                    'department_name': a.department.name if a.department else 'Municipal Sector',
+                    'reason': a.reason[:100],
+                    'desired_outcome': a.desired_outcome,
+                    'status': a.status,
+                    'reviewer_name': a.reviewer_name,
+                    'reviewer_decision': a.reviewer_decision,
+                    'created_at': a.created_at.isoformat(),
+                })
+        except Exception:
+            pass
+
         return Response({
             'telemetry': {
                 'total_reports': total_reports,
@@ -1378,12 +1494,16 @@ class MayorOverviewView(APIView):
                 'resolution_rate': resolution_rate,
                 'citizen_satisfaction': satisfaction_avg,
                 'total_sectors': len(departments),
+                'total_appeals': appeals_summary['total'],
+                'pending_appeals': appeals_summary['pending'],
             },
             'sectors_matrix': sectors_matrix,
             'recent_activity': recent_activity,
             'executive_reports': executive_reports,
             'directives': directives,
             'kebele_summary': kebele_summary,
+            'appeals_summary': appeals_summary,
+            'recent_appeals': recent_appeals,
         })
 
 
@@ -1451,5 +1571,329 @@ class MayorDirectiveViewSet(viewsets.ModelViewSet):
                 )
         except Exception:
             pass
+
+
+class FeedbackViewSet(viewsets.ModelViewSet):
+    """
+    Citizen Case Satisfaction & Service Quality Feedback:
+    Citizens evaluate municipal service delivery upon case completion.
+    Metrics feed directly into Mayor Executive Telemetry and Department Rankings.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    from api.serializers import FeedbackSerializer
+    serializer_class = FeedbackSerializer
+
+    def _ensure_table(self):
+        from django.db import connection
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS core_feedback (
+                    id SERIAL PRIMARY KEY,
+                    rating INTEGER NOT NULL,
+                    timeliness_rating INTEGER DEFAULT 4,
+                    quality_rating INTEGER DEFAULT 4,
+                    comment TEXT NULL,
+                    is_satisfied BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    report_id INTEGER NOT NULL UNIQUE,
+                    citizen_id INTEGER NOT NULL,
+                    department_id INTEGER NULL
+                );
+                """)
+                cursor.execute("ALTER TABLE core_feedback ADD COLUMN IF NOT EXISTS department_id INTEGER NULL;")
+                cursor.execute("ALTER TABLE core_feedback ADD COLUMN IF NOT EXISTS timeliness_rating INTEGER DEFAULT 4;")
+                cursor.execute("ALTER TABLE core_feedback ADD COLUMN IF NOT EXISTS quality_rating INTEGER DEFAULT 4;")
+        except Exception:
+            pass
+
+    def get_queryset(self):
+        self._ensure_table()
+        from core.models import Feedback
+        user = self.request.user
+        qs = Feedback.objects.select_related('report', 'citizen', 'department').all()
+
+        dept_id = self.request.query_params.get('department')
+        if dept_id:
+            qs = qs.filter(department_id=dept_id)
+
+        if user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False) or getattr(user, 'is_mayor', False):
+            return qs.order_by('-created_at')
+        elif user.is_department_manager:
+            dept = user.officer_profile.department if _safe_hasattr(user, 'officer_profile') else None
+            if dept:
+                return qs.filter(department=dept).order_by('-created_at')
+            return qs.order_by('-created_at')
+        else:
+            return qs.filter(citizen=user).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        self._ensure_table()
+        user = self.request.user
+        report_id = self.request.data.get('report')
+        from core.models import Report, Feedback
+        from rest_framework.exceptions import ValidationError, PermissionDenied
+
+        report = Report.objects.filter(id=report_id).first()
+        if not report:
+            raise ValidationError({'report': 'Valid report ID required.'})
+
+        if report.citizen and report.citizen != user and not (user.is_superuser or getattr(user, 'is_super_admin', False)):
+            raise PermissionDenied("You can only submit feedback for your own reported cases.")
+
+        rating = int(self.request.data.get('rating', 5))
+        timeliness = int(self.request.data.get('timeliness_rating', rating))
+        quality = int(self.request.data.get('quality_rating', rating))
+        is_satisfied = rating >= 4
+
+        # Upsert feedback if already exists
+        existing = Feedback.objects.filter(report=report).first()
+        if existing:
+            existing.rating = rating
+            existing.timeliness_rating = timeliness
+            existing.quality_rating = quality
+            existing.comment = self.request.data.get('comment', existing.comment)
+            existing.is_satisfied = is_satisfied
+            existing.department = report.primary_department
+            existing.save()
+            return existing
+
+        instance = serializer.save(
+            citizen=user,
+            report=report,
+            department=report.primary_department,
+            rating=rating,
+            timeliness_rating=timeliness,
+            quality_rating=quality,
+            is_satisfied=is_satisfied,
+        )
+
+        try:
+            from api.analytics_views import log_audit_event
+            log_audit_event(
+                user=user,
+                action='CITIZEN_FEEDBACK_SUBMITTED',
+                entity_type='FEEDBACK',
+                entity_id=str(report.case_number),
+                changes={
+                    'rating': rating,
+                    'is_satisfied': is_satisfied,
+                    'department': report.primary_department.name if report.primary_department else None,
+                },
+                request=self.request
+            )
+        except Exception:
+            pass
+
+        return instance
+
+
+class AppealViewSet(viewsets.ModelViewSet):
+    """
+    Formal Administrative Appeals Tribunal & Oversight:
+    Citizens can lodge an appeal when a case is rejected, unaddressed, or inadequately resolved.
+    Department Managers, City Administration, and Mayor's Executive Office review appeals.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    from api.serializers import AppealSerializer
+    serializer_class = AppealSerializer
+
+    def _ensure_table(self):
+        from django.db import connection
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS core_appeal (
+                    id SERIAL PRIMARY KEY,
+                    appeal_number VARCHAR(60) UNIQUE NOT NULL,
+                    reason TEXT NOT NULL,
+                    desired_outcome TEXT NULL,
+                    status VARCHAR(30) DEFAULT 'SUBMITTED',
+                    reviewer_name VARCHAR(255) NULL,
+                    reviewer_decision TEXT NULL,
+                    reviewed_at TIMESTAMP WITH TIME ZONE NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    report_id INTEGER NOT NULL,
+                    citizen_id INTEGER NOT NULL,
+                    department_id INTEGER NULL,
+                    reviewer_id INTEGER NULL
+                );
+                """)
+        except Exception:
+            pass
+
+    def get_queryset(self):
+        self._ensure_table()
+        from core.models import Appeal
+        user = self.request.user
+        qs = Appeal.objects.select_related('report', 'citizen', 'department', 'reviewer').all()
+
+        dept_id = self.request.query_params.get('department')
+        status_param = self.request.query_params.get('status')
+        if dept_id:
+            qs = qs.filter(department_id=dept_id)
+        if status_param:
+            qs = qs.filter(status=status_param)
+
+        if user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False) or getattr(user, 'is_mayor', False):
+            return qs.order_by('-created_at')
+        elif user.is_department_manager:
+            dept = user.officer_profile.department if _safe_hasattr(user, 'officer_profile') else None
+            if dept:
+                return qs.filter(department=dept).order_by('-created_at')
+            return qs.order_by('-created_at')
+        else:
+            return qs.filter(citizen=user).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        self._ensure_table()
+        user = self.request.user
+        report_id = self.request.data.get('report')
+        from core.models import Report
+        from rest_framework.exceptions import ValidationError, PermissionDenied
+        from datetime import datetime
+        import uuid
+
+        report = Report.objects.filter(id=report_id).first()
+        if not report:
+            raise ValidationError({'report': 'Valid report ID required.'})
+
+        year = datetime.now().year
+        ref_num = f"ADM-APP-{year}-{uuid.uuid4().hex[:6].upper()}"
+
+        instance = serializer.save(
+            appeal_number=ref_num,
+            citizen=user,
+            report=report,
+            department=report.primary_department,
+            status='SUBMITTED'
+        )
+
+        # Notify department manager & city admin
+        try:
+            from core.push_service import send_push_notification
+            from django.contrib.auth import get_user_model
+            U = get_user_model()
+            admins = U.objects.filter(Q(is_city_admin=True) | Q(is_super_admin=True))
+            for admin in admins:
+                send_push_notification(
+                    admin,
+                    title=f"Citizen Appeal Lodged: {report.case_number}",
+                    body=f"Appeal [{ref_num}] submitted regarding case {report.case_number}.",
+                    data={'type': 'APPEAL_SUBMITTED', 'appeal_id': instance.id, 'report_id': report.id}
+                )
+            if report.primary_department:
+                mgrs = U.objects.filter(is_department_manager=True, officer_profile__department=report.primary_department)
+                for m in mgrs:
+                    send_push_notification(
+                        m,
+                        title=f"Case Appeal: {report.case_number}",
+                        body=f"Citizen filed appeal [{ref_num}] contesting resolution/status.",
+                        data={'type': 'APPEAL_SUBMITTED', 'appeal_id': instance.id, 'report_id': report.id}
+                    )
+        except Exception as pe:
+            print(f"[Push] Appeal notify error: {pe}")
+
+        try:
+            from api.analytics_views import log_audit_event
+            log_audit_event(
+                user=user,
+                action='CITIZEN_APPEAL_LODGED',
+                entity_type='APPEAL',
+                entity_id=ref_num,
+                changes={
+                    'case_number': report.case_number,
+                    'reason': instance.reason,
+                    'department': report.primary_department.name if report.primary_department else None,
+                },
+                request=self.request
+            )
+        except Exception:
+            pass
+
+    @action(detail=True, methods=['post'], url_path='review')
+    def review(self, request, pk=None):
+        self._ensure_table()
+        appeal = self.get_object()
+        user = request.user
+
+        is_admin = bool(user.is_city_admin or user.is_superuser or getattr(user, 'is_super_admin', False) or getattr(user, 'is_mayor', False))
+        is_mgr = bool(user.is_department_manager and _safe_hasattr(user, 'officer_profile') and user.officer_profile.department == appeal.department)
+
+        if not (is_admin or is_mgr):
+            raise PermissionDenied("Only Department Managers, City Administration, or Mayor Office can adjudicate appeals.")
+
+        new_status = request.data.get('status')
+        decision = (request.data.get('reviewer_decision') or request.data.get('decision', '')).strip()
+
+        valid_statuses = ['UNDER_REVIEW', 'UPHELD', 'DISMISSED']
+        if new_status not in valid_statuses:
+            return Response({'error': f"Invalid status. Choose from: {', '.join(valid_statuses)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not decision:
+            return Response({'error': 'Official decision notes are mandatory when adjudicating an appeal.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from django.utils import timezone
+        reviewer_name = user.full_name or (user.officer_profile.full_name if _safe_hasattr(user, 'officer_profile') else '') or user.email
+
+        appeal.status = new_status
+        appeal.reviewer = user
+        appeal.reviewer_name = reviewer_name
+        appeal.reviewer_decision = decision
+        appeal.reviewed_at = timezone.now()
+        appeal.save()
+
+        # If appeal is UPHELD (citizen appeal accepted), automatically reopen the underlying case!
+        if new_status == 'UPHELD' and appeal.report:
+            rep = appeal.report
+            old_st = rep.status
+            rep.status = 'REOPENED'
+            rep.resolution_notes = f"[APPEAL UPHELD - {appeal.appeal_number}]: {decision}"
+            rep.save()
+            from core.models import ReportStatusHistory
+            ReportStatusHistory.objects.create(
+                report=rep,
+                old_status=old_st,
+                new_status='REOPENED',
+                changed_by=user,
+                changed_by_name=f"{reviewer_name} (Appeal Review)",
+                note=f"Appeal {appeal.appeal_number} UPHELD: {decision}",
+            )
+
+        # Notify citizen appellant
+        try:
+            from core.push_service import send_push_notification
+            status_text = "UPHELD / Case Reopened" if new_status == 'UPHELD' else ("DISMISSED" if new_status == 'DISMISSED' else "Under Investigation")
+            send_push_notification(
+                appeal.citizen,
+                title=f"Appeal Decision: {appeal.appeal_number}",
+                body=f"Your appeal regarding {appeal.report.case_number} has been {status_text}.",
+                data={'type': 'APPEAL_DECIDED', 'appeal_id': appeal.id, 'report_id': appeal.report.id}
+            )
+        except Exception:
+            pass
+
+        try:
+            from api.analytics_views import log_audit_event
+            log_audit_event(
+                user=user,
+                action=f'APPEAL_{new_status}',
+                entity_type='APPEAL',
+                entity_id=appeal.appeal_number,
+                changes={
+                    'status': new_status,
+                    'decision': decision,
+                    'reviewer': reviewer_name,
+                    'case_number': appeal.report.case_number,
+                },
+                request=request
+            )
+        except Exception:
+            pass
+
+        from api.serializers import AppealSerializer
+        return Response(AppealSerializer(appeal).data)
+
 
 

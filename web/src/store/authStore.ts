@@ -11,6 +11,7 @@ export interface UserProfile {
   is_city_admin: boolean
   is_super_admin: boolean
   is_mayor: boolean
+  must_change_password?: boolean
 }
 
 interface AuthState {
@@ -18,7 +19,9 @@ interface AuthState {
   user: UserProfile | null
   departmentName: string | null
   role: 'citizen' | 'officer' | 'department_manager' | 'city_admin' | 'super_admin' | 'mayor' | null
-  login: (token: string, user: any, departmentName: string | null, role: string) => void
+  mustChangePassword: boolean
+  login: (token: string, user: any, departmentName: string | null, role: string, mustChangePassword?: boolean) => void
+  setMustChangePassword: (val: boolean) => void
   updateUser: (fields: any) => void
   logout: () => void
 }
@@ -30,13 +33,20 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       departmentName: null,
       role: null,
-      login: (token, user, departmentName, role) =>
+      mustChangePassword: false,
+      login: (token, user, departmentName, role, mustChangePassword = false) =>
         set({
           token,
-          user,
+          user: { ...user, must_change_password: mustChangePassword },
           departmentName,
           role: role as any,
+          mustChangePassword,
         }),
+      setMustChangePassword: (val) =>
+        set((state) => ({
+          mustChangePassword: val,
+          user: state.user ? { ...state.user, must_change_password: val } : null,
+        })),
       updateUser: (fields) =>
         set((state) => ({
           user: state.user ? { ...state.user, ...fields } : null,
@@ -47,6 +57,7 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           departmentName: null,
           role: null,
+          mustChangePassword: false,
         }),
     }),
     {

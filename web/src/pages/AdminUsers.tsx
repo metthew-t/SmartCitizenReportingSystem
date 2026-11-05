@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
-import { Trash2, User, Building2, Shield, Search, Plus, X, KeyRound, Edit2, Phone, Mail, Crown } from 'lucide-react'
+import { Trash2, User, Building2, Shield, Search, Plus, X, KeyRound, Edit2, Phone, Mail, Crown, Sparkles, Check } from 'lucide-react'
+import { validatePasswordRules, isStrongPassword, generateStrongPassword } from '../utils/passwordPolicy'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
@@ -145,6 +146,10 @@ export default function AdminUsers() {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!isStrongPassword(formData.password)) {
+      alert('Government Security Standard: Password must be at least 12 characters and contain uppercase, lowercase, digit, and special character.')
+      return
+    }
     setCreating(true)
     
     try {
@@ -233,8 +238,12 @@ export default function AdminUsers() {
   }
 
   const handleResetPassword = async () => {
-    if (!resetModal.userId || !resetPassword || resetPassword.length < 6) {
-      alert('Password must be at least 6 characters.')
+    if (!resetModal.userId || !resetPassword) {
+      alert('Password is required.')
+      return
+    }
+    if (!isStrongPassword(resetPassword)) {
+      alert('Government Security Standard: Password must be at least 12 characters and contain uppercase, lowercase, digit, and special character.')
       return
     }
     setResetting(true)
@@ -545,13 +554,29 @@ export default function AdminUsers() {
               </div>
 
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Password</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <label style={{ color: '#94a3b8', fontSize: 12 }}>Initial Password (Min 12 Characters)</label>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, password: generateStrongPassword() })}
+                    style={{
+                      background: 'none', border: 'none', color: '#818cf8', fontSize: 11,
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600
+                    }}
+                  >
+                    <Sparkles size={12} /> Auto-Generate
+                  </button>
+                </div>
                 <input 
-                  type="password" required minLength={6}
+                  type="text" required minLength={12}
                   value={formData.password}
+                  placeholder="Click Auto-Generate or enter strong password"
                   onChange={e => setFormData({...formData, password: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none' }}
+                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none', fontFamily: 'monospace' }}
                 />
+                <div style={{ marginTop: 6, fontSize: 11, color: '#f59e0b', background: 'rgba(245,158,11,0.08)', padding: '6px 8px', borderRadius: 6 }}>
+                  ℹ️ User will receive SMS notification and will be <strong>mandated to change this password on first login</strong>.
+                </div>
               </div>
 
               {(role === 'city_admin' || role === 'super_admin') && (
@@ -661,31 +686,60 @@ export default function AdminUsers() {
               </h3>
               <button onClick={() => { setResetModal({show: false, userId: null, userName: ''}); setResetPassword(''); }} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><X size={20} /></button>
             </div>
-            <p style={{ color: '#94a3b8', fontSize: 13, marginBottom: 16 }}>
-              Set a new password for <strong style={{ color: '#e2e8f0' }}>{resetModal.userName}</strong>
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <p style={{ color: '#94a3b8', fontSize: 13, margin: 0 }}>
+                Set new password for <strong style={{ color: '#e2e8f0' }}>{resetModal.userName}</strong>
+              </p>
+              <button
+                type="button"
+                onClick={() => setResetPassword(generateStrongPassword())}
+                style={{
+                  background: 'none', border: 'none', color: '#818cf8', fontSize: 11,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600
+                }}
+              >
+                <Sparkles size={12} /> Auto-Generate
+              </button>
+            </div>
             <input
-              type="password"
-              placeholder="New password (min 6 chars)"
+              type="text"
+              placeholder="12+ character strong password"
               value={resetPassword}
               onChange={e => setResetPassword(e.target.value)}
               style={{
                 width: '100%', padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
                 background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)',
-                color: '#e2e8f0', fontSize: 13, outline: 'none', marginBottom: 16
+                color: '#e2e8f0', fontSize: 13, outline: 'none', marginBottom: 10, fontFamily: 'monospace'
               }}
             />
+            {resetPassword && (
+              <div style={{
+                background: 'rgba(15, 23, 42, 0.4)', border: '1px solid rgba(148, 163, 184, 0.1)',
+                borderRadius: 8, padding: '8px 10px', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 4
+              }}>
+                {validatePasswordRules(resetPassword).map(r => (
+                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: r.valid ? '#4ade80' : '#94a3b8' }}>
+                    <Check size={12} color={r.valid ? '#4ade80' : '#64748b'} />
+                    <span>{r.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ fontSize: 11, color: '#f59e0b', background: 'rgba(245,158,11,0.08)', padding: '6px 8px', borderRadius: 6, marginBottom: 16 }}>
+              ℹ️ User will be notified by SMS and will be forced to change password upon next login.
+            </div>
             <button
               onClick={handleResetPassword}
-              disabled={resetting || resetPassword.length < 6}
+              disabled={resetting || !isStrongPassword(resetPassword)}
               style={{
-                width: '100%', padding: 12, background: '#f59e0b', color: '#1e293b',
+                width: '100%', padding: 12, background: isStrongPassword(resetPassword) ? '#f59e0b' : '#334155',
+                color: isStrongPassword(resetPassword) ? '#1e293b' : '#94a3b8',
                 border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 14,
-                cursor: resetting || resetPassword.length < 6 ? 'not-allowed' : 'pointer',
-                opacity: resetting || resetPassword.length < 6 ? 0.6 : 1,
+                cursor: resetting || !isStrongPassword(resetPassword) ? 'not-allowed' : 'pointer',
+                opacity: resetting ? 0.6 : 1,
               }}
             >
-              {resetting ? 'Resetting...' : 'Reset Password'}
+              {resetting ? 'Resetting...' : 'Reset & Require Change'}
             </button>
           </div>
         </div>

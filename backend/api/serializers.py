@@ -79,6 +79,8 @@ class ReportSerializer(serializers.ModelSerializer):
     citizen_phone = serializers.SerializerMethodField()
     assigned_officer_name = serializers.SerializerMethodField()
     ai_suggested_department_name = serializers.SerializerMethodField()
+    feedback = serializers.SerializerMethodField()
+    appeals = serializers.SerializerMethodField()
 
     class Meta:
         model = Report
@@ -88,10 +90,45 @@ class ReportSerializer(serializers.ModelSerializer):
             'description', 'latitude', 'longitude', 'status', 'priority', 
             'primary_department', 'department_name', 'shared_with', 'assigned_officer', 'assigned_officer_name',
             'created_at', 'updated_at', 'resolved_at', 'closed_at', 'media', 'status_history',
-            'aanaa', 'kuta_magaalaa', 'kebele', 'iddoo_addaa', 'resolution_notes',
-            'ai_confidence_score', 'ai_suggested_department', 'ai_suggested_department_name', 'ai_summary', 'is_public'
+            'aanaa', 'kuta_magaalaa', 'kebele', 'iddoo_addaa', 'resolution_notes', 'rejection_reason',
+            'ai_confidence_score', 'ai_suggested_department', 'ai_suggested_department_name', 'ai_summary', 'is_public',
+            'feedback', 'appeals'
         ]
         read_only_fields = ['case_number', 'status', 'citizen']
+
+    def get_feedback(self, obj):
+        try:
+            fb = getattr(obj, 'feedback', None)
+            if fb:
+                return {
+                    'id': fb.id,
+                    'rating': fb.rating,
+                    'timeliness_rating': getattr(fb, 'timeliness_rating', 4),
+                    'quality_rating': getattr(fb, 'quality_rating', 4),
+                    'comment': fb.comment,
+                    'is_satisfied': fb.is_satisfied,
+                    'created_at': fb.created_at.isoformat(),
+                }
+        except Exception:
+            pass
+        return None
+
+    def get_appeals(self, obj):
+        try:
+            appeals = obj.appeals.all()
+            return [{
+                'id': a.id,
+                'appeal_number': a.appeal_number,
+                'reason': a.reason,
+                'desired_outcome': a.desired_outcome,
+                'status': a.status,
+                'reviewer_name': a.reviewer_name,
+                'reviewer_decision': a.reviewer_decision,
+                'reviewed_at': a.reviewed_at.isoformat() if a.reviewed_at else None,
+                'created_at': a.created_at.isoformat(),
+            } for a in appeals]
+        except Exception:
+            return []
 
     def get_ai_suggested_department_name(self, obj):
         try:
@@ -156,6 +193,7 @@ class ReportSerializer(serializers.ModelSerializer):
 
 class OfficialReportSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source='department.name', read_only=True)
+    target_department_name = serializers.CharField(source='target_department.name', read_only=True, default=None)
     linked_case_number = serializers.CharField(source='linked_citizen_report.case_number', read_only=True, default=None)
     linked_report_title = serializers.CharField(source='linked_citizen_report.title', read_only=True, default=None)
 
@@ -165,6 +203,7 @@ class OfficialReportSerializer(serializers.ModelSerializer):
             'id', 'reference_number', 'title', 'report_type', 'level',
             'sender', 'sender_name', 'sender_role',
             'department', 'department_name',
+            'target_department', 'target_department_name',
             'linked_citizen_report', 'linked_case_number', 'linked_report_title',
             'priority', 'status',
             'executive_summary', 'findings', 'recommendations', 'attachment_url',
@@ -173,11 +212,12 @@ class OfficialReportSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             'id', 'reference_number', 'sender', 'sender_name', 'sender_role',
-            'department_name', 'linked_case_number', 'linked_report_title',
+            'department_name', 'target_department_name', 'linked_case_number', 'linked_report_title',
             'reviewer', 'reviewer_name', 'reviewed_at', 'created_at', 'updated_at'
         ]
         extra_kwargs = {
             'department': {'required': False, 'allow_null': True},
+            'target_department': {'required': False, 'allow_null': True},
             'level': {'required': False},
             'status': {'required': False},
         }
@@ -197,4 +237,57 @@ class MayorDirectiveSerializer(serializers.ModelSerializer):
         if not obj.issued_by:
             return 'Mayor of Adama'
         return obj.issued_by.full_name or obj.issued_by.email or 'Mayor of Adama'
+
+
+class FeedbackSerializer(serializers.ModelSerializer):
+    citizen_name = serializers.SerializerMethodField()
+    case_number = serializers.CharField(source='report.case_number', read_only=True)
+    department_name = serializers.CharField(source='department.name', read_only=True)
+
+    class Meta:
+        from core.models import Feedback
+        model = Feedback
+        fields = [
+            'id', 'report', 'case_number', 'citizen', 'citizen_name',
+            'department', 'department_name',
+            'rating', 'timeliness_rating', 'quality_rating', 'comment',
+            'is_satisfied', 'created_at'
+        ]
+        read_only_fields = ['citizen', 'created_at']
+
+    def get_citizen_name(self, obj):
+        if obj.citizen:
+            if _safe_hasattr(obj.citizen, 'citizen_profile'):
+                return obj.citizen.citizen_profile.full_name
+            return obj.citizen.full_name or obj.citizen.phone_number or 'Citizen'
+        return 'Anonymous Citizen'
+
+
+class AppealSerializer(serializers.ModelSerializer):
+    citizen_name = serializers.SerializerMethodField()
+    case_number = serializers.CharField(source='report.case_number', read_only=True)
+    report_description = serializers.CharField(source='report.description', read_only=True)
+    department_name = serializers.CharField(source='department.name', read_only=True)
+
+    class Meta:
+        from core.models import Appeal
+        model = Appeal
+        fields = [
+            'id', 'appeal_number', 'report', 'case_number', 'report_description',
+            'citizen', 'citizen_name', 'department', 'department_name',
+            'reason', 'desired_outcome', 'status',
+            'reviewer', 'reviewer_name', 'reviewer_decision', 'reviewed_at',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'appeal_number', 'citizen', 'reviewer', 'reviewer_name',
+            'reviewed_at', 'created_at', 'updated_at'
+        ]
+
+    def get_citizen_name(self, obj):
+        if obj.citizen:
+            if _safe_hasattr(obj.citizen, 'citizen_profile'):
+                return obj.citizen.citizen_profile.full_name
+            return obj.citizen.full_name or obj.citizen.phone_number or 'Citizen'
+        return 'Citizen Appellant'
 

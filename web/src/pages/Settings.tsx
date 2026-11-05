@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { useLanguageStore, Language } from '../store/languageStore'
-import { Settings as SettingsIcon, User, Bell, Globe, Shield, Database, Camera, Edit2, Check, X, Lock } from 'lucide-react'
+import { Settings as SettingsIcon, User, Bell, Globe, Shield, Database, Camera, Edit2, Check, X, Lock, KeyRound, ShieldCheck } from 'lucide-react'
+import { validatePasswordRules, isStrongPassword } from '../utils/passwordPolicy'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
@@ -25,6 +26,58 @@ export default function Settings() {
   })
   const [savingProfile, setSavingProfile] = useState(false)
   const [profileMsg, setProfileMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+
+  // Password change state
+  const [oldPassword, setOldPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordMsg, setPasswordMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [savingPassword, setSavingPassword] = useState(false)
+
+  const passwordRules = validatePasswordRules(newPassword)
+  const isPasswordValid = isStrongPassword(newPassword) && newPassword === confirmPassword && oldPassword.length > 0
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPasswordMsg(null)
+    if (!oldPassword) {
+      setPasswordMsg({ type: 'error', text: 'Current password is required.' })
+      return
+    }
+    if (!isStrongPassword(newPassword)) {
+      setPasswordMsg({ type: 'error', text: 'Password must meet all 5 government security requirements.' })
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordMsg({ type: 'error', text: 'New passwords do not match.' })
+      return
+    }
+
+    setSavingPassword(true)
+    try {
+      const res = await fetch(`${API}/auth/change-password/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setPasswordMsg({ type: 'success', text: data.message || 'Password updated successfully!' })
+        setOldPassword('')
+        setNewPassword('')
+        setConfirmPassword('')
+      } else {
+        setPasswordMsg({ type: 'error', text: data.error || 'Failed to change password.' })
+      }
+    } catch {
+      setPasswordMsg({ type: 'error', text: 'Network error. Please try again.' })
+    } finally {
+      setSavingPassword(false)
+    }
+  }
 
   // Fetch fresh profile data on load from backend
   useEffect(() => {
@@ -380,6 +433,110 @@ export default function Settings() {
             )
           })}
         </div>
+      </SettingsCard>
+
+      {/* Security & Password (Government 12-char Standard) */}
+      <SettingsCard title="Security & Password Protection" icon={<ShieldCheck size={18} color="#10b981" />}>
+        {passwordMsg && (
+          <div style={{
+            padding: '10px 14px', borderRadius: 8, marginBottom: 16, fontSize: 13, fontWeight: 600,
+            background: passwordMsg.type === 'success' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+            border: `1px solid ${passwordMsg.type === 'success' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+            color: passwordMsg.type === 'success' ? '#10b981' : '#f87171',
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            {passwordMsg.type === 'success' ? <Check size={16} /> : <X size={16} />}
+            {passwordMsg.text}
+          </div>
+        )}
+
+        <form onSubmit={handlePasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+              Current Password
+            </label>
+            <input
+              type="password"
+              value={oldPassword}
+              onChange={e => setOldPassword(e.target.value)}
+              placeholder="••••••••••••"
+              required
+              style={{
+                width: '100%', maxWidth: 420, padding: '10px 14px', borderRadius: 8,
+                background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)',
+                color: '#e2e8f0', fontSize: 14, outline: 'none', boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+              New Password (12+ Characters Government Standard)
+            </label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              placeholder="••••••••••••"
+              required
+              style={{
+                width: '100%', maxWidth: 420, padding: '10px 14px', borderRadius: 8,
+                background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)',
+                color: '#e2e8f0', fontSize: 14, outline: 'none', boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          {newPassword && (
+            <div style={{
+              maxWidth: 420, background: 'rgba(15, 23, 42, 0.5)', border: '1px solid rgba(148, 163, 184, 0.1)',
+              borderRadius: 8, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4
+            }}>
+              {passwordRules.map(r => (
+                <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: r.valid ? '#4ade80' : '#94a3b8' }}>
+                  <Check size={12} color={r.valid ? '#4ade80' : '#64748b'} />
+                  <span>{r.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div>
+            <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+              Confirm New Password
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              placeholder="••••••••••••"
+              required
+              style={{
+                width: '100%', maxWidth: 420, padding: '10px 14px', borderRadius: 8,
+                background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)',
+                color: '#e2e8f0', fontSize: 14, outline: 'none', boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={savingPassword || !isPasswordValid}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '10px 20px', borderRadius: 8, border: 'none',
+                background: isPasswordValid ? 'linear-gradient(135deg, #10b981, #059669)' : '#334155',
+                color: isPasswordValid ? 'white' : '#94a3b8', fontSize: 13, fontWeight: 600,
+                cursor: isPasswordValid && !savingPassword ? 'pointer' : 'not-allowed',
+                boxShadow: isPasswordValid ? '0 2px 8px rgba(16,185,129,0.3)' : 'none'
+              }}
+            >
+              <KeyRound size={15} />
+              {savingPassword ? 'Updating...' : 'Update Password'}
+            </button>
+          </div>
+        </form>
       </SettingsCard>
 
       {/* System info */}

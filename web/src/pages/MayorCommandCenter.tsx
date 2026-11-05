@@ -4,7 +4,8 @@ import {
   Crown, ShieldAlert, CheckCircle2, Clock, AlertTriangle, Building2,
   Send, RefreshCw, Printer, Search, ArrowUpRight, Flame, MapPin,
   FileCheck2, Compass, Award, ExternalLink, BarChart3, ChevronRight,
-  TrendingUp, Users, AlertOctagon, Sparkles, Filter, X, ScrollText, FileText
+  TrendingUp, Users, AlertOctagon, Sparkles, Filter, X, ScrollText, FileText,
+  Scale, Star
 } from 'lucide-react'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
@@ -20,6 +21,9 @@ interface SectorData {
   pending: number
   critical_active: number
   resolution_rate: number
+  citizen_satisfaction?: number
+  satisfaction_percentage?: number
+  feedback_count?: number
   performance_tier: 'EXCELLENT' | 'SATISFACTORY' | 'ATTENTION_REQUIRED'
 }
 
@@ -81,6 +85,8 @@ interface Telemetry {
   resolution_rate: number
   citizen_satisfaction: number
   total_sectors: number
+  total_appeals?: number
+  pending_appeals?: number
 }
 
 export default function MayorCommandCenter() {
@@ -96,13 +102,18 @@ export default function MayorCommandCenter() {
   const [kebeles, setKebeles] = useState<KebeleItem[]>([])
   const [currentTime, setCurrentTime] = useState<string>('')
 
+  // Citizen Appeals Oversight
+  const [appealsSummary, setAppealsSummary] = useState<{ total: number; pending: number; upheld: number; dismissed: number } | null>(null)
+  const [recentAppeals, setRecentAppeals] = useState<any[]>([])
+  const [selectedAppeal, setSelectedAppeal] = useState<any | null>(null)
+
   // Sector filtering
   const [sectorSearch, setSectorSearch] = useState('')
   const [sectorFilter, setSectorFilter] = useState<'ALL' | 'CRITICAL' | 'EXCELLENT'>('ALL')
   const [selectedSector, setSelectedSector] = useState<SectorData | null>(null)
 
   // Activity Intelligence Hub state
-  const [activityTab, setActivityTab] = useState<'ACTIONS' | 'REPORTS'>('ACTIONS')
+  const [activityTab, setActivityTab] = useState<'ACTIONS' | 'REPORTS' | 'APPEALS'>('ACTIONS')
   const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null)
   const [selectedExecReport, setSelectedExecReport] = useState<ExecutiveReportItem | null>(null)
 
@@ -152,6 +163,8 @@ export default function MayorCommandCenter() {
         setExecReports(data.executive_reports || [])
         setDirectives(data.directives || [])
         setKebeles(data.kebele_summary || [])
+        setAppealsSummary(data.appeals_summary || null)
+        setRecentAppeals(data.recent_appeals || [])
       }
     } catch (err) {
       console.error('Error fetching mayor overview', err)
@@ -647,6 +660,13 @@ export default function MayorCommandCenter() {
                         }}>
                           {s.resolution_rate}% Solved
                         </span>
+                        <span style={{
+                          fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6,
+                          background: 'rgba(245,158,11,0.15)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.3)',
+                          display: 'flex', alignItems: 'center', gap: 3
+                        }} title={`Citizen satisfaction: ${s.citizen_satisfaction ?? 4.0}/5 (${s.feedback_count || 0} reviews)`}>
+                          ⭐ {s.citizen_satisfaction ?? 4.0} ({s.feedback_count || 0})
+                        </span>
                         {s.critical_active > 0 && (
                           <span style={{
                             fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6,
@@ -732,32 +752,45 @@ export default function MayorCommandCenter() {
             </div>
 
             {/* Toggle Tabs */}
-            <div style={{ display: 'flex', gap: 8, background: 'rgba(10,11,15,0.7)', padding: 4, borderRadius: 10, border: '1px solid rgba(245,158,11,0.15)' }}>
+            <div style={{ display: 'flex', gap: 6, background: 'rgba(10,11,15,0.7)', padding: 4, borderRadius: 10, border: '1px solid rgba(245,158,11,0.15)' }}>
               <button
                 onClick={() => setActivityTab('ACTIONS')}
                 style={{
-                  flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                  flex: 1, padding: '8px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
                   background: activityTab === 'ACTIONS' ? 'linear-gradient(135deg, rgba(245,158,11,0.25), rgba(180,83,9,0.25))' : 'transparent',
                   color: activityTab === 'ACTIONS' ? '#fbbf24' : '#94a3b8',
                   border: activityTab === 'ACTIONS' ? '1px solid rgba(245,158,11,0.4)' : '1px solid transparent',
                   cursor: 'pointer', transition: 'all 0.2s',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                 }}
               >
-                <Flame size={14} /> Live City Actions ({activity.length})
+                <Flame size={13} /> Live Actions ({activity.length})
               </button>
               <button
                 onClick={() => setActivityTab('REPORTS')}
                 style={{
-                  flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                  flex: 1, padding: '8px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
                   background: activityTab === 'REPORTS' ? 'linear-gradient(135deg, rgba(245,158,11,0.25), rgba(180,83,9,0.25))' : 'transparent',
                   color: activityTab === 'REPORTS' ? '#fbbf24' : '#94a3b8',
                   border: activityTab === 'REPORTS' ? '1px solid rgba(245,158,11,0.4)' : '1px solid transparent',
                   cursor: 'pointer', transition: 'all 0.2s',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                 }}
               >
-                <ScrollText size={14} /> Sector Briefings ({execReports.length})
+                <ScrollText size={13} /> Sector Briefings ({execReports.length})
+              </button>
+              <button
+                onClick={() => setActivityTab('APPEALS')}
+                style={{
+                  flex: 1, padding: '8px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                  background: activityTab === 'APPEALS' ? 'linear-gradient(135deg, rgba(245,158,11,0.25), rgba(180,83,9,0.25))' : 'transparent',
+                  color: activityTab === 'APPEALS' ? '#fbbf24' : '#94a3b8',
+                  border: activityTab === 'APPEALS' ? '1px solid rgba(245,158,11,0.4)' : '1px solid transparent',
+                  cursor: 'pointer', transition: 'all 0.2s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                }}
+              >
+                <Scale size={13} /> Citizen Appeals ({appealsSummary?.total ?? recentAppeals.length})
               </button>
             </div>
           </div>
@@ -836,7 +869,7 @@ export default function MayorCommandCenter() {
                   </div>
                 ))
               )
-            ) : (
+            ) : activityTab === 'REPORTS' ? (
               execReports.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>
                   No official sector reports submitted to the Mayor yet.
@@ -889,6 +922,61 @@ export default function MayorCommandCenter() {
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>
                         {rep.executive_summary}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )
+            ) : (
+              recentAppeals.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>
+                  No citizen administrative appeals filed at this time.
+                </div>
+              ) : (
+                recentAppeals.map(app => (
+                  <div
+                    key={app.id}
+                    onClick={() => setSelectedAppeal(app)}
+                    style={{
+                      background: 'rgba(28,24,20,0.6)',
+                      border: app.status === 'UPHELD' ? '1px solid rgba(16,185,129,0.3)' : app.status === 'SUBMITTED' ? '1px solid rgba(234,179,8,0.3)' : '1px solid rgba(245,158,11,0.15)',
+                      borderRadius: 12, padding: '12px 14px',
+                      display: 'flex', flexDirection: 'column', gap: 6,
+                      cursor: 'pointer', transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = 'rgba(245,158,11,0.45)'
+                      e.currentTarget.style.background = 'rgba(38,30,22,0.7)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = app.status === 'UPHELD' ? 'rgba(16,185,129,0.3)' : app.status === 'SUBMITTED' ? 'rgba(234,179,8,0.3)' : 'rgba(245,158,11,0.15)'
+                      e.currentTarget.style.background = 'rgba(28,24,20,0.6)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: '#fbbf24', fontSize: 11, fontWeight: 700, fontFamily: 'monospace' }}>
+                        {app.appeal_number} &bull; Case #{app.case_number}
+                      </span>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                        background: app.status === 'UPHELD' ? 'rgba(16,185,129,0.2)' : app.status === 'DISMISSED' ? 'rgba(239,68,68,0.2)' : 'rgba(234,179,8,0.2)',
+                        color: app.status === 'UPHELD' ? '#34d399' : app.status === 'DISMISSED' ? '#f87171' : '#facc15',
+                      }}>
+                        {app.status}
+                      </span>
+                    </div>
+
+                    <div style={{ color: '#ffffff', fontSize: 13, fontWeight: 700 }}>
+                      Sector: {app.department_name}
+                    </div>
+
+                    <div style={{ fontSize: 11, color: '#cbd5e1', lineHeight: 1.4, fontStyle: 'italic' }}>
+                      "{app.reason}"
+                    </div>
+
+                    {app.reviewer_decision && (
+                      <div style={{ fontSize: 11, color: '#94a3b8', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 4 }}>
+                        Ruling: <strong style={{ color: '#e2e8f0' }}>{app.reviewer_decision}</strong>
                       </div>
                     )}
                   </div>
@@ -1362,6 +1450,111 @@ export default function MayorCommandCenter() {
                 }}
               >
                 <Send size={15} /> Issue Directive in Response
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Citizen Appeal Mayoral Oversight ──────────────────────────── */}
+      {selectedAppeal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 110,
+          background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #181922 0%, #0d0e14 100%)',
+            border: '1px solid rgba(245,158,11,0.4)', borderRadius: 20,
+            padding: 32, width: '100%', maxWidth: 640,
+            boxShadow: '0 25px 60px rgba(0,0,0,0.8), 0 0 30px rgba(245,158,11,0.2)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+              <div>
+                <span style={{
+                  fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
+                  background: selectedAppeal.status === 'UPHELD' ? 'rgba(16,185,129,0.2)' : 'rgba(234,179,8,0.2)',
+                  color: selectedAppeal.status === 'UPHELD' ? '#34d399' : '#facc15',
+                  border: `1px solid ${selectedAppeal.status === 'UPHELD' ? 'rgba(16,185,129,0.4)' : 'rgba(234,179,8,0.4)'}`,
+                }}>
+                  CITIZEN ADMINISTRATIVE APPEAL &bull; {selectedAppeal.status}
+                </span>
+                <h3 style={{ margin: '8px 0 2px', color: '#ffffff', fontSize: 20, fontWeight: 800 }}>
+                  Appeal {selectedAppeal.appeal_number}
+                </h3>
+                <p style={{ margin: 0, color: '#94a3b8', fontSize: 12 }}>
+                  Case #{selectedAppeal.case_number} &bull; Sector: <strong>{selectedAppeal.department_name}</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedAppeal(null)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 4 }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 24 }}>
+              <div style={{ background: 'rgba(28,24,20,0.6)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 12, padding: '16px 18px' }}>
+                <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, marginBottom: 6, letterSpacing: 0.5 }}>
+                  CITIZEN'S GROUNDS FOR GRIEVANCE:
+                </div>
+                <div style={{ color: '#e2e8f0', fontSize: 13, lineHeight: 1.7, fontStyle: 'italic' }}>
+                  "{selectedAppeal.reason}"
+                </div>
+              </div>
+
+              {selectedAppeal.desired_outcome && (
+                <div style={{ background: 'rgba(28,24,20,0.6)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 10, padding: '12px 16px' }}>
+                  <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>DESIRED CITIZEN REMEDY</div>
+                  <div style={{ color: '#cbd5e1', fontSize: 13, marginTop: 4 }}>{selectedAppeal.desired_outcome}</div>
+                </div>
+              )}
+
+              {selectedAppeal.reviewer_decision && (
+                <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '12px 16px' }}>
+                  <div style={{ fontSize: 10, color: '#34d399', fontWeight: 700 }}>
+                    ADMINISTRATIVE ADJUDICATION ({selectedAppeal.reviewer_name || 'Reviewer'})
+                  </div>
+                  <div style={{ color: '#ffffff', fontSize: 13, marginTop: 4 }}>{selectedAppeal.reviewer_decision}</div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setSelectedAppeal(null)}
+                style={{
+                  padding: '10px 18px', borderRadius: 10, border: '1px solid rgba(148,163,184,0.2)',
+                  background: 'transparent', color: '#94a3b8', cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const targetDept = sectors.find(s => s.name === selectedAppeal.department_name)
+                  setDirectiveForm({
+                    title: `Mayoral Directive: Remedy Citizen Grievance (Appeal ${selectedAppeal.appeal_number})`,
+                    target_department_id: targetDept ? String(targetDept.id) : '',
+                    priority: 'CRITICAL',
+                    instructions: `Executive Mayoral Intervention for Appeal ${selectedAppeal.appeal_number} (Case #${selectedAppeal.case_number}). Citizen claims: "${selectedAppeal.reason}". Department ${selectedAppeal.department_name} is instructed to urgently review the matter and take corrective measures immediately.`,
+                    deadline: '',
+                  })
+                  setSelectedAppeal(null)
+                  setShowDirectiveModal(true)
+                }}
+                style={{
+                  padding: '10px 20px', borderRadius: 10, border: 'none',
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                  color: '#000000', fontWeight: 800, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  boxShadow: '0 4px 15px rgba(245,158,11,0.3)',
+                }}
+              >
+                <Send size={15} /> Issue Directive for this Appeal
               </button>
             </div>
           </div>

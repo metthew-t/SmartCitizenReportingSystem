@@ -1,6 +1,6 @@
 import React from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, Clock, User, FileText, Building2, Tag, AlertTriangle, ExternalLink, CheckCircle, XCircle, Navigation, Calendar, Phone, MapPinned, Home } from 'lucide-react'
+import { ArrowLeft, MapPin, Clock, User, FileText, Building2, Tag, AlertTriangle, ExternalLink, CheckCircle, XCircle, Navigation, Calendar, Phone, MapPinned, Home, Star, Scale, ShieldAlert, Check, X } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -40,6 +40,13 @@ export default function ReportDetails() {
   const [statusHistory, setStatusHistory] = React.useState<any[]>([])
   const [officerNote, setOfficerNote] = React.useState('')
   const [officerSelectedStatus, setOfficerSelectedStatus] = React.useState('')
+
+  // Citizen Appeals Adjudication state
+  const [appealModal, setAppealModal] = React.useState<{ show: boolean; appeal: any | null }>({ show: false, appeal: null })
+  const [appealStatus, setAppealStatus] = React.useState<'UPHELD' | 'DISMISSED' | 'UNDER_REVIEW'>('UPHELD')
+  const [appealDecision, setAppealDecision] = React.useState('')
+  const [adjudicating, setAdjudicating] = React.useState(false)
+  const [appealMsg, setAppealMsg] = React.useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   // Mark this report as viewed in localStorage and notify top bar
   React.useEffect(() => {
@@ -209,6 +216,53 @@ export default function ReportDetails() {
     } finally {
       setStatusUpdating(false)
       setTimeout(() => setStatusMsg(null), 5000)
+    }
+  }
+
+  const handleAdjudicateAppeal = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!appealModal.appeal) return
+    if (!appealDecision.trim()) {
+      setAppealMsg({ type: 'error', text: 'Administrative decision remarks are mandatory.' })
+      return
+    }
+
+    setAdjudicating(true)
+    setAppealMsg(null)
+    try {
+      const token = useAuthStore.getState().token
+      const res = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/appeals/${appealModal.appeal.id}/review/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          status: appealStatus,
+          reviewer_decision: appealDecision.trim()
+        })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setAppealModal({ show: false, appeal: null })
+        setAppealDecision('')
+        setStatusMsg({ type: 'success', text: `Official Appeal decision recorded: ${appealStatus}` })
+        // Refresh report
+        const repRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (repRes.ok) setReport(await repRes.json())
+        const histRes = await fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/reports/${id}/status_history/`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (histRes.ok) setStatusHistory(await histRes.json())
+      } else {
+        setAppealMsg({ type: 'error', text: data.error || 'Failed to adjudicate appeal.' })
+      }
+    } catch {
+      setAppealMsg({ type: 'error', text: 'Network error submitting appeal review.' })
+    } finally {
+      setAdjudicating(false)
     }
   }
 
@@ -1045,6 +1099,214 @@ export default function ReportDetails() {
         </div>
       </div>
 
+      {/* Citizen Feedback & Satisfaction Card */}
+      {report.feedback ? (
+        <div style={{
+          marginTop: 20,
+          background: 'linear-gradient(135deg, rgba(30,41,59,0.85), rgba(245,158,11,0.06))',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(245,158,11,0.25)', borderRadius: 16,
+          padding: 24,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+            <h3 style={{ color: '#fbbf24', fontSize: 16, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              ⭐ Citizen Service Feedback
+            </h3>
+            <span style={{ fontSize: 12, color: '#94a3b8' }}>
+              Submitted on {new Date(report.feedback.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 16 }}>
+            <div style={{ background: 'rgba(15,23,42,0.6)', padding: '12px 16px', borderRadius: 12, border: '1px solid rgba(148,163,184,0.1)' }}>
+              <div style={{ fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Overall Rating</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                <span style={{ fontSize: 20, fontWeight: 800, color: '#fbbf24' }}>{report.feedback.rating} / 5</span>
+                <div style={{ display: 'flex', gap: 2 }}>
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star key={s} size={14} fill={s <= report.feedback.rating ? '#fbbf24' : 'transparent'} color={s <= report.feedback.rating ? '#fbbf24' : '#64748b'} />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {report.feedback.timeliness_rating && (
+              <div style={{ background: 'rgba(15,23,42,0.6)', padding: '12px 16px', borderRadius: 12, border: '1px solid rgba(148,163,184,0.1)' }}>
+                <div style={{ fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Response Timeliness</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: '#38bdf8' }}>{report.feedback.timeliness_rating} / 5</span>
+                  <div style={{ display: 'flex', gap: 2 }}>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} size={12} fill={s <= report.feedback.timeliness_rating ? '#38bdf8' : 'transparent'} color={s <= report.feedback.timeliness_rating ? '#38bdf8' : '#64748b'} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {report.feedback.quality_rating && (
+              <div style={{ background: 'rgba(15,23,42,0.6)', padding: '12px 16px', borderRadius: 12, border: '1px solid rgba(148,163,184,0.1)' }}>
+                <div style={{ fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Resolution Quality</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: '#34d399' }}>{report.feedback.quality_rating} / 5</span>
+                  <div style={{ display: 'flex', gap: 2 }}>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} size={12} fill={s <= report.feedback.quality_rating ? '#34d399' : 'transparent'} color={s <= report.feedback.quality_rating ? '#34d399' : '#64748b'} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {report.feedback.comment && (
+            <div style={{ background: 'rgba(15,23,42,0.5)', padding: 14, borderRadius: 12, border: '1px solid rgba(148,163,184,0.15)' }}>
+              <div style={{ fontSize: 12, color: '#cbd5e1', fontStyle: 'italic', lineHeight: 1.6 }}>
+                "{report.feedback.comment}"
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (report.status === 'RESOLVED' || report.status === 'CLOSED') ? (
+        <div style={{
+          marginTop: 20, padding: 18, borderRadius: 16,
+          background: 'rgba(30,41,59,0.4)', border: '1px dashed rgba(148,163,184,0.15)',
+          display: 'flex', alignItems: 'center', gap: 10, color: '#94a3b8', fontSize: 13,
+        }}>
+          <Star size={18} color="#f59e0b" />
+          <span>Case is resolved. Waiting for citizen feedback rating.</span>
+        </div>
+      ) : null}
+
+      {/* Citizen Administrative Appeals Section */}
+      <div style={{
+        marginTop: 20,
+        background: 'linear-gradient(135deg, rgba(30,41,59,0.85), rgba(99,102,241,0.06))',
+        backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16,
+        padding: 24,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+          <h3 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Scale size={20} color="#a5b4fc" /> Citizen Administrative Appeals
+            {report.appeals && report.appeals.length > 0 && (
+              <span style={{
+                background: 'rgba(99,102,241,0.25)', color: '#c7d2fe', padding: '2px 8px',
+                borderRadius: 12, fontSize: 12, fontWeight: 700, border: '1px solid rgba(99,102,241,0.4)'
+              }}>
+                {report.appeals.length}
+              </span>
+            )}
+          </h3>
+        </div>
+
+        {(!report.appeals || report.appeals.length === 0) ? (
+          <div style={{ color: '#64748b', fontSize: 13, padding: '12px 0' }}>
+            No administrative appeals lodged for this case. Citizens have the legal right to lodge an appeal if they believe their case was improperly rejected or resolved.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {report.appeals.map((appeal: any) => {
+              const statusBg: Record<string, string> = {
+                SUBMITTED: 'rgba(234, 179, 8, 0.15)',
+                UNDER_REVIEW: 'rgba(59, 130, 246, 0.15)',
+                UPHELD: 'rgba(16, 185, 129, 0.15)',
+                DISMISSED: 'rgba(239, 68, 68, 0.15)',
+              }
+              const statusCol: Record<string, string> = {
+                SUBMITTED: '#eab308',
+                UNDER_REVIEW: '#60a5fa',
+                UPHELD: '#34d399',
+                DISMISSED: '#f87171',
+              }
+              const canAdjudicate = ['super_admin', 'city_admin', 'department_manager'].includes(useAuthStore.getState().role || '')
+
+              return (
+                <div key={appeal.id} style={{
+                  background: 'rgba(15,23,42,0.65)', border: '1px solid rgba(148,163,184,0.15)',
+                  borderRadius: 14, padding: 18,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                    <div>
+                      <div style={{ color: '#a5b4fc', fontWeight: 800, fontSize: 14 }}>
+                        {appeal.appeal_number}
+                      </div>
+                      <div style={{ color: '#64748b', fontSize: 11, marginTop: 2 }}>
+                        Lodged on {new Date(appeal.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{
+                        padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                        background: statusBg[appeal.status] || 'rgba(148,163,184,0.15)',
+                        color: statusCol[appeal.status] || '#94a3b8',
+                        border: `1px solid ${statusCol[appeal.status] || '#94a3b8'}40`,
+                      }}>
+                        {appeal.status}
+                      </span>
+                      {canAdjudicate && (
+                        <button
+                          onClick={() => {
+                            setAppealModal({ show: true, appeal })
+                            setAppealStatus(appeal.status === 'SUBMITTED' ? 'UPHELD' : appeal.status)
+                            setAppealDecision(appeal.reviewer_decision || '')
+                          }}
+                          style={{
+                            padding: '6px 12px', borderRadius: 8, border: 'none',
+                            background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                            color: 'white', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                          }}
+                        >
+                          Adjudicate
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>
+                      Grounds for Appeal / Sababa Iyyannoo
+                    </div>
+                    <div style={{ color: '#e2e8f0', fontSize: 13, lineHeight: 1.6, background: 'rgba(0,0,0,0.2)', padding: '10px 12px', borderRadius: 8 }}>
+                      {appeal.reason}
+                    </div>
+                  </div>
+
+                  {appeal.desired_outcome && (
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>
+                        Desired Citizen Outcome
+                      </div>
+                      <div style={{ color: '#cbd5e1', fontSize: 12 }}>
+                        {appeal.desired_outcome}
+                      </div>
+                    </div>
+                  )}
+
+                  {appeal.reviewer_decision && (
+                    <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: appeal.status === 'UPHELD' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${appeal.status === 'UPHELD' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: appeal.status === 'UPHELD' ? '#34d399' : '#f87171', textTransform: 'uppercase' }}>
+                          ⚖️ Official Determination by {appeal.reviewer_name || 'Administrative Reviewer'}
+                        </span>
+                        {appeal.reviewed_at && (
+                          <span style={{ fontSize: 10, color: '#94a3b8' }}>
+                            {new Date(appeal.reviewed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.5 }}>
+                        {appeal.reviewer_decision}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Resolution Modal */}
       {showResolveModal && (
         <div style={{
@@ -1202,6 +1464,115 @@ export default function ReportDetails() {
                 {statusUpdating ? 'Rejecting...' : 'Confirm Rejection'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Appeal Adjudication Modal */}
+      {appealModal.show && appealModal.appeal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16
+        }}>
+          <div style={{
+            background: '#0f172a', border: '1px solid rgba(99,102,241,0.3)',
+            borderRadius: 16, width: '100%', maxWidth: 520, padding: 24,
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.7)'
+          }}>
+            <h3 style={{ color: '#a5b4fc', margin: '0 0 8px', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Scale size={20} color="#818cf8" /> Adjudicate Administrative Appeal
+            </h3>
+            <p style={{ color: '#94a3b8', fontSize: 12, marginBottom: 16, lineHeight: 1.5 }}>
+              Review the citizen's grievance for case #{report.caseNumber} ({appealModal.appeal.appeal_number}). Upholding an appeal will immediately return the case to <strong style={{ color: '#f87171' }}>REOPENED</strong> status for mandatory department corrective action.
+            </p>
+
+            <div style={{ background: 'rgba(15,23,42,0.8)', padding: 12, borderRadius: 10, marginBottom: 16, border: '1px solid rgba(148,163,184,0.1)' }}>
+              <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>CITIZEN'S GROUNDS:</div>
+              <div style={{ color: '#e2e8f0', fontSize: 13, marginTop: 4, fontStyle: 'italic' }}>
+                "{appealModal.appeal.reason}"
+              </div>
+            </div>
+
+            {appealMsg && (
+              <div style={{
+                padding: '10px 12px', borderRadius: 8, marginBottom: 14,
+                background: appealMsg.type === 'success' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                border: `1px solid ${appealMsg.type === 'success' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                color: appealMsg.type === 'success' ? '#10b981' : '#ef4444',
+                fontSize: 12, fontWeight: 600
+              }}>
+                {appealMsg.text}
+              </div>
+            )}
+
+            <form onSubmit={handleAdjudicateAppeal}>
+              <label style={{ color: '#cbd5e1', fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                Administrative Determination *
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
+                {[
+                  { value: 'UPHELD', label: 'Upheld (Reopen Case)', col: '#10b981' },
+                  { value: 'DISMISSED', label: 'Dismissed (Reject)', col: '#ef4444' },
+                  { value: 'UNDER_REVIEW', label: 'Under Review', col: '#3b82f6' }
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setAppealStatus(opt.value as any)}
+                    style={{
+                      padding: '10px 8px', borderRadius: 8, cursor: 'pointer',
+                      background: appealStatus === opt.value ? `${opt.col}25` : 'rgba(15,23,42,0.5)',
+                      color: appealStatus === opt.value ? opt.col : '#94a3b8',
+                      border: `1px solid ${appealStatus === opt.value ? opt.col : 'rgba(148,163,184,0.2)'}`,
+                      fontWeight: 700, fontSize: 11, textAlign: 'center'
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              <label style={{ color: '#cbd5e1', fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                Written Official Determination / Justification *
+              </label>
+              <textarea
+                value={appealDecision}
+                onChange={e => setAppealDecision(e.target.value)}
+                placeholder="State the formal basis of this ruling and directives for the department..."
+                rows={4}
+                style={{
+                  width: '100%', padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
+                  background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(148,163,184,0.25)',
+                  color: '#e2e8f0', fontSize: 13, outline: 'none', resize: 'vertical', marginBottom: 20
+                }}
+              />
+
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => { setAppealModal({ show: false, appeal: null }); setAppealMsg(null); }}
+                  style={{
+                    flex: 1, padding: 12, borderRadius: 8, border: '1px solid rgba(148,163,184,0.2)',
+                    background: 'transparent', color: '#94a3b8', fontWeight: 600, cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={adjudicating}
+                  style={{
+                    flex: 1, padding: 12, borderRadius: 8, border: 'none',
+                    background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                    color: 'white', fontWeight: 700, cursor: adjudicating ? 'not-allowed' : 'pointer',
+                    opacity: adjudicating ? 0.6 : 1, boxShadow: '0 4px 14px rgba(99,102,241,0.35)'
+                  }}
+                >
+                  {adjudicating ? 'Recording Ruling...' : 'Submit Ruling'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

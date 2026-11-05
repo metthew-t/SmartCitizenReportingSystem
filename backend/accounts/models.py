@@ -29,6 +29,7 @@ class User(AbstractUser):
     is_super_admin = models.BooleanField(default=False)
     is_mayor = models.BooleanField(default=False)
     profile_photo = models.ImageField(upload_to='profiles/', null=True, blank=True)
+    must_change_password = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'phone_number'
     REQUIRED_FIELDS = []

@@ -500,37 +500,28 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                       ),
                     ),
 
-                  // Category
-                  _SectionHeader(title: 'Category', icon: Icons.category),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8, runSpacing: 8,
-                    children: _categories.map((cat) {
-                      final isSelected = _selectedCategory == cat['en'];
-                      return ChoiceChip(
-                        label: Text(cat['en']!),
-                        selected: isSelected,
-                        selectedColor: Colors.green[100],
-                        onSelected: (selected) => setState(() => _selectedCategory = cat['en']!),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Details
-                  _SectionHeader(title: 'Description', icon: Icons.edit_note),
+                  // Details (Title & Description first per government workflow standard)
+                  _SectionHeader(title: 'Case Title & Description', icon: Icons.edit_note),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _titleController,
-                    decoration: InputDecoration(labelText: 'Title', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-                    validator: (value) => value!.isEmpty ? 'Required' : null,
+                    decoration: InputDecoration(
+                      labelText: 'Case Title / Mata Duree / ርዕስ',
+                      hintText: 'e.g. Broken water pipe near Kebele 04 market',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    validator: (value) => value!.isEmpty ? 'Please enter a case title' : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _descriptionController,
-                    decoration: InputDecoration(labelText: 'Detailed Description', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                    decoration: InputDecoration(
+                      labelText: 'Detailed Description / Ibsa Bal\'aa / ዝርዝር መግለጫ',
+                      hintText: 'Describe what happened, when it started, and the impact...',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                     maxLines: 4,
-                    validator: (value) => value!.isEmpty ? 'Required' : null,
+                    validator: (value) => value!.isEmpty ? 'Please provide case description' : null,
                   ),
                   const SizedBox(height: 24),
 
@@ -617,6 +608,23 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     validator: (value) => value!.isEmpty ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Category
+                  _SectionHeader(title: 'Category / Ramaddii / ምድብ', icon: Icons.category),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8, runSpacing: 8,
+                    children: _categories.map((cat) {
+                      final isSelected = _selectedCategory == cat['en'];
+                      return ChoiceChip(
+                        label: Text(cat['en']!),
+                        selected: isSelected,
+                        selectedColor: Colors.green[100],
+                        onSelected: (selected) => setState(() => _selectedCategory = cat['en']!),
+                      );
+                    }).toList(),
                   ),
                   const SizedBox(height: 24),
 

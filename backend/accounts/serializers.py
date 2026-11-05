@@ -22,7 +22,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ('id', 'phone_number', 'email', 'full_name', 'department_name',
                   'is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin', 'is_super_admin', 'is_mayor',
-                  'is_active', 'date_joined', 'profile_photo_url')
+                  'is_active', 'must_change_password', 'date_joined', 'profile_photo_url')
         read_only_fields = ('is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin', 'is_super_admin', 'is_mayor')
 
     def to_representation(self, instance):
@@ -84,26 +84,39 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['is_city_admin'] = is_super or user.is_city_admin
         token['is_super_admin'] = is_super
         token['is_mayor'] = is_mayor
+        token['must_change_password'] = bool(getattr(user, 'must_change_password', False))
         token['role'] = 'mayor' if is_mayor else ('super_admin' if is_super else ('city_admin' if user.is_city_admin else ('department_manager' if user.is_department_manager else ('officer' if user.is_officer else 'citizen'))))
 
         return token
 
     def validate(self, attrs):
+        # Auto-heal must_change_password column if missing
+        try:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute('ALTER TABLE accounts_user ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT FALSE;')
+        except Exception:
+            pass
+
         # The default USERNAME_FIELD is phone_number, but officials log in with email.
         # Resolve the identifier to the actual phone_number so SimpleJWT can find the user.
         from django.db.models import Q
         identifier = attrs.get(User.USERNAME_FIELD, '')
+        resolved_user = None
         try:
             try:
-                user = User.objects.get(Q(phone_number=identifier) | Q(email=identifier))
+                resolved_user = User.objects.get(Q(phone_number=identifier) | Q(email=identifier))
             except Exception:
-                # email column might not exist yet during migration transition
-                user = User.objects.get(phone_number=identifier)
-            # Replace the identifier with the actual USERNAME_FIELD value
-            attrs[User.USERNAME_FIELD] = user.phone_number or user.email
+                resolved_user = User.objects.get(phone_number=identifier)
+            attrs[User.USERNAME_FIELD] = resolved_user.phone_number or resolved_user.email
         except (User.DoesNotExist, User.MultipleObjectsReturned):
             pass  # let SimpleJWT handle the error
-        return super().validate(attrs)
+
+        data = super().validate(attrs)
+        # Include must_change_password in login payload for instant client enforcement
+        if resolved_user:
+            data['must_change_password'] = bool(getattr(resolved_user, 'must_change_password', False))
+        return data
 
 class RegisterSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=20)
@@ -133,13 +146,17 @@ class RegisterSerializer(serializers.Serializer):
 class OfficerRegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
     phone_number = serializers.CharField(max_length=20, required=False, allow_blank=True, default='')
-    password = serializers.CharField(write_only=True, min_length=4)
+    password = serializers.CharField(write_only=True, min_length=12)
     full_name = serializers.CharField(max_length=255)
     department_name = serializers.CharField(max_length=255, required=False, allow_blank=True, default='')
     is_manager = serializers.BooleanField(default=False)
     is_city_admin = serializers.BooleanField(default=False)
     is_super_admin = serializers.BooleanField(default=False)
     is_mayor = serializers.BooleanField(default=False)
+
+    def validate_password(self, value):
+        from .validators import validate_strong_password
+        return validate_strong_password(value)
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
@@ -194,6 +211,7 @@ class OfficerRegisterSerializer(serializers.Serializer):
             is_mayor=is_mayor,
             is_staff=is_staff,
             is_superuser=is_superuser,
+            must_change_password=True,
         )
         OfficerProfile.objects.create(
             user=user,
@@ -201,6 +219,18 @@ class OfficerRegisterSerializer(serializers.Serializer):
             department=dept,
             is_manager=is_manager or is_city_admin,
         )
+
+        # Send immediate SMS notification to user instructing them to change their password
+        if phone:
+            try:
+                from core.sms_service import send_sms
+                send_sms(
+                    phone,
+                    f"[Adama Smart City] Your official account ({user.email}) has been provisioned. In accordance with municipal cybersecurity policy, you are REQUIRED to change your password immediately upon first login before accessing the system."
+                )
+            except Exception as se:
+                print(f"[SMS] Account creation notification error: {se}")
+
         return user
 
 class OTPVerifySerializer(serializers.Serializer):

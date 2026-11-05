@@ -130,14 +130,22 @@ class ChangePasswordView(APIView):
             )
         if not user.check_password(old_password):
             return Response({'error': 'Old password is incorrect.'}, status=status.HTTP_400_BAD_REQUEST)
-        if len(new_password) < 6:
+
+        # Enforce government 12-character strong password standard
+        from .validators import validate_strong_password
+        from django.core.exceptions import ValidationError
+        try:
+            validate_strong_password(new_password)
+        except ValidationError as ve:
             return Response(
-                {'error': 'New password must be at least 6 characters.'},
-                status=status.HTTP_400_BAD_REQUEST,
+                {'error': ve.message if hasattr(ve, 'message') else str(ve)},
+                status=status.HTTP_400_BAD_REQUEST
             )
+
         user.set_password(new_password)
+        user.must_change_password = False
         user.save()
-        return Response({'message': 'Password changed successfully.'}, status=status.HTTP_200_OK)
+        return Response({'message': 'Password changed successfully. Your account is fully secured and updated.'}, status=status.HTTP_200_OK)
 
 
 class DeleteAccountView(APIView):
@@ -297,6 +305,16 @@ class CurrentUserView(generics.RetrieveAPIView):
     serializer_class = UserSerializer
     permission_classes = (IsAuthenticated,)
 
+    def get(self, request, *args, **kwargs):
+        try:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute('ALTER TABLE accounts_user ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT FALSE;')
+                cursor.execute('ALTER TABLE accounts_user ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;')
+        except Exception:
+            pass
+        return super().get(request, *args, **kwargs)
+
     def get_object(self):
         user = self.request.user
         # Auto-heal legacy accounts where email was stored in phone_number
@@ -381,13 +399,35 @@ class AdminResetPasswordView(APIView):
         if not user_id or not new_password:
             return Response({'error': 'user_id and new_password are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if len(new_password) < 6:
-            return Response({'error': 'Password must be at least 6 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+        # Enforce government 12-character strong password standard
+        from .validators import validate_strong_password
+        from django.core.exceptions import ValidationError
+        try:
+            validate_strong_password(new_password)
+        except ValidationError as ve:
+            return Response(
+                {'error': ve.message if hasattr(ve, 'message') else str(ve)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
             target_user = User.objects.get(id=user_id)
         except User.DoesNotExist:
             return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        def _finish_reset(u):
+            u.set_password(new_password)
+            u.must_change_password = True
+            u.save()
+            if u.phone_number:
+                try:
+                    from core.sms_service import send_sms
+                    send_sms(
+                        u.phone_number,
+                        f"[Adama Smart City] Your official account password was reset by administration. You are REQUIRED to change your password immediately upon login to protect your account."
+                    )
+                except Exception as se:
+                    print(f"[SMS] Reset notification error: {se}")
 
         # City admin / superuser can reset anyone (but city admin cannot reset super admin)
         if requester.is_city_admin or requester.is_superuser or getattr(requester, 'is_super_admin', False):
@@ -397,9 +437,8 @@ class AdminResetPasswordView(APIView):
             target_is_mayor = bool(getattr(target_user, 'is_mayor', False))
             if (target_is_super or target_is_mayor) and not requester_is_super:
                 return Response({'error': 'Only Super Admin can reset Mayor or Super Admin passwords.'}, status=status.HTTP_403_FORBIDDEN)
-            target_user.set_password(new_password)
-            target_user.save()
-            return Response({'message': f'Password for {target_user.email or target_user.phone_number} has been reset.'})
+            _finish_reset(target_user)
+            return Response({'message': f'Password for {target_user.email or target_user.phone_number} has been reset. Mandatory password change SMS triggered.'})
 
         # Department manager can only reset officers in their department
         if requester.is_department_manager:
@@ -410,9 +449,8 @@ class AdminResetPasswordView(APIView):
                 return Response({'error': 'You can only reset passwords for officers in your own department.'}, status=status.HTTP_403_FORBIDDEN)
             if target_user.is_city_admin or target_user.is_department_manager:
                 return Response({'error': 'You cannot reset a manager or admin password.'}, status=status.HTTP_403_FORBIDDEN)
-            target_user.set_password(new_password)
-            target_user.save()
-            return Response({'message': f'Password for {target_user.email or target_user.phone_number} has been reset.'})
+            _finish_reset(target_user)
+            return Response({'message': f'Password for {target_user.email or target_user.phone_number} has been reset. Mandatory password change SMS triggered.'})
 
         return Response({'error': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
 

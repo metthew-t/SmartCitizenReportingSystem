@@ -59,6 +59,14 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
   bool? _isSatisfied;
   final _feedbackController = TextEditingController();
   bool _feedbackSubmitted = false;
+  bool _isSubmittingFeedback = false;
+  Map<String, dynamic>? _existingFeedback;
+
+  // Appeals state
+  List<dynamic> _appeals = [];
+  bool _isSubmittingAppeal = false;
+  final _appealReasonController = TextEditingController();
+  final _appealOutcomeController = TextEditingController();
 
   // Status history
   List<Map<String, dynamic>> _statusHistory = [];
@@ -86,6 +94,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
     _chatController.dispose();
     _deptChatController.dispose();
     _feedbackController.dispose();
+    _appealReasonController.dispose();
+    _appealOutcomeController.dispose();
     _statusNoteController.dispose();
     super.dispose();
   }
@@ -153,6 +163,15 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
             _isLoadingReport = false;
             _assignedOfficerName = data['assigned_officer_name'] ?? '';
             _isAssignedOfficer = assignedOfficer != null;
+            if (data['feedback'] != null) {
+              _existingFeedback = data['feedback'];
+              _feedbackSubmitted = true;
+              _rating = data['feedback']['rating'] ?? 5;
+              _isSatisfied = data['feedback']['is_satisfied'] ?? true;
+            }
+            if (data['appeals'] != null) {
+              _appeals = data['appeals'] as List<dynamic>;
+            }
             // shared_with comes as list of dept IDs; resolve names later
             _sharedWithNames = rawShared.map((e) => e.toString()).toList();
           });
@@ -506,16 +525,179 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
     );
   }
 
-  void _submitFeedback() {
+  Future<void> _submitFeedback() async {
     if (_rating == 0 || _isSatisfied == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a rating and satisfaction level.')),
       );
       return;
     }
-    setState(() => _feedbackSubmitted = true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Feedback submitted. Thank you!'), backgroundColor: Colors.green),
+    setState(() => _isSubmittingFeedback = true);
+    try {
+      final headers = await _authHeaders();
+      final res = await http.post(
+        Uri.parse('$_baseUrl/feedback/'),
+        headers: headers,
+        body: jsonEncode({
+          'report': int.tryParse(widget.reportId) ?? widget.reportId,
+          'rating': _rating,
+          'is_satisfied': _isSatisfied ?? true,
+          'comment': _feedbackController.text.trim(),
+          'timeliness_rating': _rating,
+          'quality_rating': _rating,
+        }),
+      );
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        setState(() {
+          _feedbackSubmitted = true;
+          _existingFeedback = {
+            'rating': _rating,
+            'is_satisfied': _isSatisfied,
+            'comment': _feedbackController.text.trim(),
+          };
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Feedback submitted successfully. Thank you!'), backgroundColor: Colors.green),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to submit feedback.'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Network error submitting feedback.'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmittingFeedback = false);
+    }
+  }
+
+  void _openAppealDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: const [
+              Icon(Icons.gavel, color: Colors.indigo),
+              SizedBox(width: 8),
+              Expanded(child: Text('Administrative Appeal', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'If you believe this case was resolved improperly, delayed, or unfairly rejected, you may submit a formal administrative appeal to City Administration and the Mayor’s Office.',
+                  style: TextStyle(fontSize: 12, color: Colors.black87),
+                ),
+                const SizedBox(height: 14),
+                const Text('Grounds for Appeal *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _appealReasonController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    hintText: 'Clearly explain why you are appealing...',
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text('Desired Remedy (Optional)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _appealOutcomeController,
+                  decoration: const InputDecoration(
+                    hintText: 'e.g. Re-investigation, Site visit, Reopening',
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: _isSubmittingAppeal ? null : () async {
+                final reason = _appealReasonController.text.trim();
+                if (reason.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please state the grounds for your appeal.')),
+                  );
+                  return;
+                }
+                setDialogState(() => _isSubmittingAppeal = true);
+                try {
+                  final headers = await _authHeaders();
+                  final res = await http.post(
+                    Uri.parse('$_baseUrl/appeals/'),
+                    headers: headers,
+                    body: jsonEncode({
+                      'report': int.tryParse(widget.reportId) ?? widget.reportId,
+                      'reason': reason,
+                      'desired_outcome': _appealOutcomeController.text.trim(),
+                    }),
+                  );
+                  if (res.statusCode == 200 || res.statusCode == 201) {
+                    final newAppeal = jsonDecode(res.body);
+                    if (mounted) {
+                      setState(() {
+                        _appeals.insert(0, newAppeal);
+                      });
+                    }
+                    _appealReasonController.clear();
+                    _appealOutcomeController.clear();
+                    if (context.mounted) {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Appeal ${newAppeal['appeal_number'] ?? ''} lodged successfully!'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } else {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Failed to lodge appeal.'), backgroundColor: Colors.red),
+                      );
+                    }
+                  }
+                } catch (_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Network error lodging appeal.'), backgroundColor: Colors.red),
+                    );
+                  }
+                } finally {
+                  setDialogState(() => _isSubmittingAppeal = false);
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo),
+              child: _isSubmittingAppeal
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Submit Appeal', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -796,11 +978,156 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                         ),
                         const SizedBox(height: 12),
                         ElevatedButton(
-                          onPressed: _submitFeedback,
+                          onPressed: _isSubmittingFeedback ? null : _submitFeedback,
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-                          child: const Text('Submit Feedback', style: TextStyle(color: Colors.white)),
+                          child: _isSubmittingFeedback
+                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Text('Submit Feedback', style: TextStyle(color: Colors.white)),
                         ),
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                if (_feedbackSubmitted && _existingFeedback != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.amber[50],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.amber[300]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: const [
+                            Icon(Icons.star, color: Colors.amber),
+                            SizedBox(width: 8),
+                            Text('Your Service Rating', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: List.generate(5, (idx) => Icon(
+                            idx < (_existingFeedback?['rating'] ?? _rating) ? Icons.star : Icons.star_border,
+                            color: Colors.amber,
+                            size: 20,
+                          )),
+                        ),
+                        if ((_existingFeedback?['comment'] ?? '').toString().isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text('"${_existingFeedback?['comment']}"', style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                // ── Citizen Administrative Appeal (rejected / closed / resolved) ──
+                if (_status == 'REJECTED' || _status == 'CLOSED' || _status == 'RESOLVED') ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.indigo[50],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.indigo[200]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.gavel, color: Colors.indigo[800], size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Citizen Administrative Appeal',
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.indigo[900]),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'If you are unsatisfied with the handling or rejection of this case, you have the right to lodge a formal administrative appeal for Mayoral and Administrative review.',
+                          style: TextStyle(fontSize: 12, color: Colors.indigo[900]),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          onPressed: _openAppealDialog,
+                          icon: const Icon(Icons.edit_document, size: 16, color: Colors.white),
+                          label: const Text('File Official Appeal (Iyyannoo)', style: TextStyle(color: Colors.white)),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo[700]),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                // ── Appeals List ──────────────────────────────────────────
+                if (_appeals.isNotEmpty) ...[
+                  _DetailSection(
+                    title: 'Administrative Appeals (${_appeals.length})',
+                    icon: Icons.balance,
+                    child: Column(
+                      children: _appeals.map<Widget>((app) {
+                        final aMap = app is Map<String, dynamic> ? app : <String, dynamic>{};
+                        final st = (aMap['status'] ?? 'SUBMITTED').toString();
+                        final isUpheld = st == 'UPHELD';
+                        final isDismissed = st == 'DISMISSED';
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    aMap['appeal_number'] ?? 'Appeal',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.indigo),
+                                  ),
+                                  Chip(
+                                    label: Text(st, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                    backgroundColor: isUpheld ? Colors.green[100] : (isDismissed ? Colors.red[100] : Colors.amber[100]),
+                                    padding: EdgeInsets.zero,
+                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Grounds: ${aMap['reason'] ?? ''}',
+                                style: const TextStyle(fontSize: 12, color: Colors.black87),
+                              ),
+                              if (aMap['reviewer_decision'] != null && (aMap['reviewer_decision'] as String).isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: isUpheld ? Colors.green[50] : Colors.red[50],
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'Determination: ${aMap['reviewer_decision']}',
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isUpheld ? Colors.green[900] : Colors.red[900]),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
                   const SizedBox(height: 24),

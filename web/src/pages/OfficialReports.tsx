@@ -17,12 +17,14 @@ interface OfficialReport {
   reference_number: string
   title: string
   report_type: string
-  level: 'OFFICER_TO_MANAGER' | 'MANAGER_TO_ADMIN'
+  level: 'OFFICER_TO_MANAGER' | 'MANAGER_TO_ADMIN' | 'INTER_DEPARTMENT'
   sender: number
   sender_name: string
   sender_role: string
   department: number
   department_name: string
+  target_department?: number | null
+  target_department_name?: string | null
   linked_citizen_report?: number | null
   linked_case_number?: string | null
   linked_report_title?: string | null
@@ -48,6 +50,7 @@ interface CitizenCaseOption {
 
 const REPORT_TYPE_LABELS: Record<string, string> = {
   FIELD_INVESTIGATION: 'Field Investigation & Case Finding',
+  INTER_DEPT_COLLABORATION: 'Inter-Department Case Collaboration',
   WEEKLY_ACTIVITY: 'Weekly Activity Report',
   MONTHLY_SUMMARY: 'Monthly Operations & Performance',
   INCIDENT_ESCALATION: 'Urgent Incident Escalation',
@@ -122,7 +125,9 @@ export default function OfficialReports() {
     title: '',
     report_type: 'FIELD_INVESTIGATION',
     priority: 'ROUTINE',
+    level: role === 'department_manager' ? 'MANAGER_TO_ADMIN' : 'OFFICER_TO_MANAGER',
     department: '',
+    target_department: '',
     linked_citizen_report: '',
     executive_summary: '',
     findings: '',
@@ -216,10 +221,21 @@ export default function OfficialReports() {
         title: createForm.title.trim(),
         report_type: createForm.report_type,
         priority: createForm.priority,
+        level: createForm.level || (role === 'department_manager' ? 'MANAGER_TO_ADMIN' : 'OFFICER_TO_MANAGER'),
         executive_summary: createForm.executive_summary.trim(),
         findings: createForm.findings.trim(),
         recommendations: createForm.recommendations.trim() || null,
         attachment_url: createForm.attachment_url.trim() || null,
+      }
+
+      if (createForm.level === 'INTER_DEPARTMENT') {
+        if (!createForm.target_department) {
+          setCreateError('Please select a target collaborating department.')
+          setSubmitting(false)
+          return
+        }
+        payload.target_department = parseInt(createForm.target_department)
+        payload.level = 'INTER_DEPARTMENT'
       }
 
       if (createForm.department) {
@@ -245,7 +261,9 @@ export default function OfficialReports() {
           title: '',
           report_type: 'FIELD_INVESTIGATION',
           priority: 'ROUTINE',
+          level: role === 'department_manager' ? 'MANAGER_TO_ADMIN' : 'OFFICER_TO_MANAGER',
           department: '',
+          target_department: '',
           linked_citizen_report: '',
           executive_summary: '',
           findings: '',
@@ -315,6 +333,9 @@ export default function OfficialReports() {
       if (activeTab === 'my_admin_reports') {
         return r.level === 'MANAGER_TO_ADMIN' && r.sender === user?.id
       }
+      if (activeTab === 'inter_department_collab') {
+        return r.level === 'INTER_DEPARTMENT'
+      }
       if (activeTab === 'manager_reports') {
         return r.level === 'MANAGER_TO_ADMIN'
       }
@@ -331,7 +352,8 @@ export default function OfficialReports() {
       r.title.toLowerCase().includes(search.toLowerCase()) ||
       r.reference_number.toLowerCase().includes(search.toLowerCase()) ||
       (r.sender_name && r.sender_name.toLowerCase().includes(search.toLowerCase())) ||
-      (r.department_name && r.department_name.toLowerCase().includes(search.toLowerCase()))
+      (r.department_name && r.department_name.toLowerCase().includes(search.toLowerCase())) ||
+      (r.target_department_name && r.target_department_name.toLowerCase().includes(search.toLowerCase()))
 
     const matchType = typeFilter === 'ALL' || r.report_type === typeFilter
     const matchStatus = statusFilter === 'ALL' || r.status === statusFilter
@@ -344,12 +366,16 @@ export default function OfficialReports() {
   const pendingCount = reports.filter(r => r.status === 'SUBMITTED' || r.status === 'UNDER_REVIEW').length
   const approvedCount = reports.filter(r => r.status === 'APPROVED').length
   const directivesCount = reports.filter(r => r.status === 'DIRECTIVE_ISSUED').length
+  const collabCount = reports.filter(r => r.level === 'INTER_DEPARTMENT').length
 
   // Check if current user can review the selected report
   const canReviewSelected = () => {
     if (!selectedReport) return false
     if (role === 'city_admin') return true
-    if (role === 'department_manager' && selectedReport.level === 'OFFICER_TO_MANAGER') return true
+    if (role === 'department_manager') {
+      if (selectedReport.level === 'OFFICER_TO_MANAGER') return true
+      if (selectedReport.level === 'INTER_DEPARTMENT') return true
+    }
     return false
   }
 
@@ -589,6 +615,28 @@ export default function OfficialReports() {
             >
               My Executive Reports to City Admin ({reports.filter(r => r.level === 'MANAGER_TO_ADMIN' && r.sender === user?.id).length})
             </button>
+
+            <button
+              onClick={() => setActiveTab('inter_department_collab')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '10px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                fontSize: 13, fontWeight: 600, transition: 'all 0.2s',
+                background: activeTab === 'inter_department_collab' ? 'rgba(99,102,241,0.2)' : 'transparent',
+                color: activeTab === 'inter_department_collab' ? '#818cf8' : '#94a3b8',
+                borderBottom: activeTab === 'inter_department_collab' ? '2px solid #6366f1' : '2px solid transparent',
+              }}
+            >
+              Inter-Department Collaboration ({reports.filter(r => r.level === 'INTER_DEPARTMENT').length})
+              {reports.filter(r => r.level === 'INTER_DEPARTMENT' && (r.status === 'SUBMITTED' || r.status === 'UNDER_REVIEW')).length > 0 && (
+                <span style={{
+                  background: '#6366f1', color: '#ffffff', fontSize: 11, fontWeight: 700,
+                  padding: '2px 7px', borderRadius: 20,
+                }}>
+                  {reports.filter(r => r.level === 'INTER_DEPARTMENT' && (r.status === 'SUBMITTED' || r.status === 'UNDER_REVIEW')).length}
+                </span>
+              )}
+            </button>
           </>
         )}
 
@@ -781,6 +829,18 @@ export default function OfficialReports() {
                       <Building2 size={13} color="#94a3b8" />
                       <span>{report.department_name}</span>
                     </div>
+
+                    {report.level === 'INTER_DEPARTMENT' && report.target_department_name && (
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        color: '#38bdf8', background: 'rgba(56, 189, 248, 0.12)',
+                        padding: '2px 8px', borderRadius: 6, border: '1px solid rgba(56, 189, 248, 0.3)',
+                        fontWeight: 600, fontSize: 11
+                      }}>
+                        <ArrowRight size={12} />
+                        <span>Collab Target: {report.target_department_name}</span>
+                      </div>
+                    )}
 
                     {report.linked_case_number && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#38bdf8' }}>
@@ -1396,6 +1456,66 @@ export default function OfficialReports() {
                   background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444'
                 }}>
                   {createError}
+                </div>
+              )}
+
+              {/* Reporting Channel & Inter-Department Selection */}
+              {(role === 'department_manager' || role === 'city_admin') && (
+                <div style={{
+                  background: 'rgba(30,41,59,0.5)', border: '1px solid rgba(99,102,241,0.2)',
+                  borderRadius: 10, padding: 14, display: 'flex', flexDirection: 'column', gap: 10
+                }}>
+                  <label style={{ fontSize: 12, color: '#818cf8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    Reporting Objective & Routing Channel
+                  </label>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#e2e8f0', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        name="reportLevel"
+                        value="MANAGER_TO_ADMIN"
+                        checked={createForm.level === 'MANAGER_TO_ADMIN'}
+                        onChange={() => setCreateForm({ ...createForm, level: 'MANAGER_TO_ADMIN', target_department: '' })}
+                      />
+                      Executive Report to City Administration
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#38bdf8', cursor: 'pointer', fontWeight: 600 }}>
+                      <input
+                        type="radio"
+                        name="reportLevel"
+                        value="INTER_DEPARTMENT"
+                        checked={createForm.level === 'INTER_DEPARTMENT'}
+                        onChange={() => setCreateForm({ ...createForm, level: 'INTER_DEPARTMENT', report_type: 'INTER_DEPT_COLLABORATION' })}
+                      />
+                      <Building2 size={14} /> Send Collaboration to Another Department
+                    </label>
+                  </div>
+
+                  {createForm.level === 'INTER_DEPARTMENT' && (
+                    <div style={{ marginTop: 6 }}>
+                      <label style={{ display: 'block', fontSize: 12, color: '#38bdf8', fontWeight: 600, marginBottom: 4 }}>
+                        Target Collaborating Department *
+                      </label>
+                      <select
+                        required
+                        value={createForm.target_department}
+                        onChange={e => setCreateForm({ ...createForm, target_department: e.target.value })}
+                        style={{
+                          width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.8)',
+                          border: '1.5px solid #38bdf8', borderRadius: 8,
+                          color: '#e2e8f0', fontSize: 13, outline: 'none',
+                        }}
+                      >
+                        <option value="">-- Select Target Department to Collaborate With --</option>
+                        {departments.filter(d => d.name !== departmentName).map(d => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                      </select>
+                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+                        The target department manager will be notified immediately to review and coordinate action on this case.
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
