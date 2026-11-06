@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../theme.dart';
 import 'home_screen.dart';
 
 const String _base = 'https://smartcitizenreportingsystem.onrender.com/api/v1';
@@ -517,7 +518,7 @@ class _LoginScreenState extends State<LoginScreen>
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: _otpResendEnabled ? Colors.green[700] : Colors.grey[400],
+                  color: _otpResendEnabled ? CivicColors.govBlue : CivicColors.textMuted,
                 ),
               ),
             ),
@@ -539,17 +540,17 @@ class _LoginScreenState extends State<LoginScreen>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.green[50],
+            color: CivicColors.statusSolvedBg,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.green[200]!),
+            border: Border.all(color: CivicColors.statusSolved.withValues(alpha: 0.4)),
           ),
           child: Row(
             children: [
-              Icon(Icons.verified, color: Colors.green[700], size: 18),
+              Icon(Icons.verified, color: CivicColors.statusSolved, size: 18),
               const SizedBox(width: 8),
               Expanded(
                 child: Text('$_otpPhone verified',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.green[800])),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: CivicColors.statusSolvedText)),
               ),
             ],
           ),
@@ -625,7 +626,7 @@ class _LoginScreenState extends State<LoginScreen>
             textAlign: TextAlign.center,
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: active ? Colors.green[700] : Colors.grey[500],
+              color: active ? CivicColors.govBlue : CivicColors.textMuted,
             ),
           ),
         ),
@@ -670,8 +671,8 @@ class _LoginScreenState extends State<LoginScreen>
             height: 4,
             decoration: BoxDecoration(
               color: active
-                  ? (isCurrent ? Colors.green[700] : Colors.green[300])
-                  : Colors.grey[200],
+                  ? (isCurrent ? CivicColors.govBlue : CivicColors.govBlue.withValues(alpha: 0.4))
+                  : CivicColors.surfaceBorderLight,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -714,24 +715,41 @@ class _LoginScreenState extends State<LoginScreen>
     required VoidCallback onPressed,
     IconData? icon,
   }) {
-    return ElevatedButton(
-      onPressed: _isLoading ? null : onPressed,
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        backgroundColor: Colors.green[700],
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 0,
+    return SizedBox(
+      height: 48,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: _isLoading ? null : const LinearGradient(
+            colors: [CivicColors.govBlue, CivicColors.navyDeep],
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+          ),
+          color: _isLoading ? CivicColors.surfaceBorderLight : null,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: _isLoading ? null : [
+            BoxShadow(color: CivicColors.govBlue.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))
+          ],
+        ),
+        child: ElevatedButton(
+          onPressed: _isLoading ? null : onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: Colors.transparent,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+          ),
+          child: _isLoading
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 8)],
+                    Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 0.1)),
+                  ],
+                ),
+        ),
       ),
-      child: _isLoading
-          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-          : Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 8)],
-                Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-              ],
-            ),
     );
   }
 }
@@ -816,7 +834,7 @@ class _OTPInputFieldState extends State<_OTPInputField> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.green[700]!, width: 2),
+                borderSide: BorderSide(color: CivicColors.govBlue, width: 2),
               ),
               contentPadding: EdgeInsets.zero,
             ),

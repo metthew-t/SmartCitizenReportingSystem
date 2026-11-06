@@ -8,6 +8,7 @@ import 'package:easy_localization/easy_localization.dart';
 import '../services/api_config.dart';
 import '../services/database_helper.dart';
 import '../services/sync_service.dart';
+import '../theme.dart';
 import 'submit_report_screen.dart';
 import 'report_details_screen.dart';
 import 'profile_screen.dart';
@@ -267,8 +268,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
-          selectedItemColor: Colors.green[700],
-          unselectedItemColor: Colors.grey[400],
+          selectedItemColor: CivicColors.govBlue,
+          unselectedItemColor: CivicColors.textMuted,
           type: BottomNavigationBarType.fixed,
           elevation: 0,
           items: [
@@ -285,7 +286,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       right: -6, top: -4,
                       child: Container(
                         padding: const EdgeInsets.all(3),
-                        decoration: const BoxDecoration(color: Colors.orange, shape: BoxShape.circle),
+                        decoration: const BoxDecoration(color: CivicColors.statusAction, shape: BoxShape.circle),
                         child: Text('$_pendingOfflineCount', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                       ),
                     ),
@@ -328,23 +329,24 @@ class DashboardContent extends StatelessWidget {
               expandedHeight: 220,
               floating: false,
               pinned: true,
-              backgroundColor: Colors.green[700],
+              backgroundColor: CivicColors.navyDeep,
               automaticallyImplyLeading: false,
               flexibleSpace: FlexibleSpaceBar(
-                title: const Text('Adama Smart Citizen', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                title: const Text('Adama Smart Citizen',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Colors.white, letterSpacing: -0.2)),
                 background: Container(
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Colors.green[900]!, Colors.green[700]!],
+                      colors: [CivicColors.navyDeep, CivicColors.govBlue],
                     ),
                   ),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
                       Opacity(
-                        opacity: 0.3,
+                        opacity: 0.2,
                         child: Image.asset(
                           'assets/images/adama_bg.jpg',
                           fit: BoxFit.cover,
@@ -356,7 +358,7 @@ class DashboardContent extends StatelessWidget {
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, Colors.green[900]!.withValues(alpha: 0.7)],
+                            colors: [Colors.transparent, CivicColors.navyDeep.withValues(alpha: 0.85)],
                           ),
                         ),
                       ),
@@ -366,7 +368,7 @@ class DashboardContent extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Welcome to Adama', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                            Text('Welcome to Adama', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
                             SizedBox(height: 4),
                             Text('Report issues and improve your city', style: TextStyle(color: Colors.white70, fontSize: 13)),
                           ],
@@ -384,75 +386,81 @@ class DashboardContent extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Main Action Button
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.add_location_alt, size: 28),
-                      label: const Text('REPORT THE ISSUES', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green[700],
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 8,
-                        shadowColor: Colors.green.withValues(alpha: 0.5),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [CivicColors.govBlue, CivicColors.navyDeep],
+                          begin: Alignment.topLeft, end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [BoxShadow(color: CivicColors.govBlue.withValues(alpha: 0.35), blurRadius: 14, offset: const Offset(0, 5))],
                       ),
-                      onPressed: () async {
-                        final result = await Navigator.push<ReportItem>(
-                          context,
-                          MaterialPageRoute(builder: (context) => const SubmitReportScreen()),
-                        );
-                        if (result != null) {
-                          onReportSubmitted(result);
-                        }
-                      },
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.add_location_alt_rounded, size: 24),
+                        label: const Text('REPORT AN ISSUE', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.8)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        onPressed: () async {
+                          final result = await Navigator.push<ReportItem>(
+                            context,
+                            MaterialPageRoute(builder: (context) => const SubmitReportScreen()),
+                          );
+                          if (result != null) onReportSubmitted(result);
+                        },
+                      ),
                     ),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 28),
 
                     // Quick Stats
-                    const Text('Your Activity', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 16),
+                    Text('Your Activity', style: CivicText.h3),
+                    const SizedBox(height: 14),
                     Row(
                       children: [
-                        Expanded(child: _StatCard(title: 'Total', count: reports.length.toString(), color: Colors.blue)),
-                        const SizedBox(width: 12),
-                        Expanded(child: _StatCard(title: 'Pending', count: pending.toString(), color: Colors.orange)),
-                        const SizedBox(width: 12),
-                        Expanded(child: _StatCard(title: 'Resolved', count: resolved.toString(), color: Colors.green)),
+                        Expanded(child: _StatCard(title: 'Total', count: reports.length.toString(), color: CivicColors.govBlue)),
+                        const SizedBox(width: 10),
+                        Expanded(child: _StatCard(title: 'Pending', count: pending.toString(), color: CivicColors.statusAction)),
+                        const SizedBox(width: 10),
+                        Expanded(child: _StatCard(title: 'Resolved', count: resolved.toString(), color: CivicColors.emeraldGreen)),
                       ],
                     ),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 28),
 
                     // Recent Reports
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Recent Reports', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                        TextButton(
-                          onPressed: () {
-                            // The parent handles tab switching, but since we don't have direct access here, 
-                            // we can't easily switch to the history tab. 
-                            // This button can just refresh for now, or we can omit it.
-                            onRefresh();
-                          },
-                          child: const Text('Refresh'),
+                        Text('Recent Reports', style: CivicText.h3),
+                        TextButton.icon(
+                          onPressed: onRefresh,
+                          icon: const Icon(Icons.refresh_rounded, size: 16),
+                          label: const Text('Refresh'),
+                          style: TextButton.styleFrom(foregroundColor: CivicColors.govBlue),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     
                     if (isLoading)
                       const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
                     else if (reports.isEmpty)
-                      Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(16)),
-                          child: const Column(
-                            children: [
-                              Icon(Icons.info_outline, size: 48, color: Colors.grey),
-                              SizedBox(height: 16),
-                              Text('No reports yet', style: TextStyle(fontSize: 16, color: Colors.black54)),
-                            ],
-                          ),
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: CivicColors.canvasLight,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: CivicColors.surfaceBorderLight),
+                        ),
+                        child: const Column(
+                          children: [
+                            Icon(Icons.inbox_rounded, size: 44, color: CivicColors.textMuted),
+                            SizedBox(height: 12),
+                            Text('No reports yet', style: TextStyle(fontSize: 15, color: CivicColors.textSecondary, fontWeight: FontWeight.w500)),
+                          ],
                         ),
                       )
                     else
@@ -477,17 +485,24 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        color: CivicColors.surfaceLight,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+        boxShadow: [BoxShadow(color: color.withValues(alpha: 0.08), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
         children: [
-          Text(count, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
-          const SizedBox(height: 4),
-          Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[700])),
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
+            child: Icon(Icons.bar_chart_rounded, size: 18, color: color),
+          ),
+          const SizedBox(height: 8),
+          Text(count, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: color, letterSpacing: -0.5)),
+          const SizedBox(height: 2),
+          Text(title, style: CivicText.micro.copyWith(color: CivicColors.textSecondary)),
         ],
       ),
     );
@@ -510,9 +525,9 @@ class HomeMapContent extends StatelessWidget {
   });
 
   Color _getMarkerColor(String priority, String status) {
-    if (status == 'RESOLVED' || status == 'CLOSED') return Colors.green;
-    if (priority == 'CRITICAL' || priority == 'HIGH') return Colors.red;
-    return Colors.amber;
+    if (status == 'RESOLVED' || status == 'CLOSED') return CivicColors.statusSolved;
+    if (priority == 'CRITICAL' || priority == 'HIGH') return CivicColors.statusRejected;
+    return CivicColors.statusAction;
   }
 
   @override
@@ -597,14 +612,14 @@ class HomeMapContent extends StatelessWidget {
                 child: SafeArea(
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.add_location_alt, size: 24),
-                    label: const Text('REPORT THE ISSUES', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                    label: const Text('REPORT AN ISSUE', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 0.6)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green[700],
+                      backgroundColor: CivicColors.govBlue,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: 10,
-                      shadowColor: Colors.green.withValues(alpha: 0.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 6,
+                      shadowColor: CivicColors.govBlue.withValues(alpha: 0.4),
                     ),
                     onPressed: () async {
                       final result = await Navigator.push<ReportItem>(
@@ -634,9 +649,9 @@ class HomeMapContent extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _LegendItem(color: Colors.red, label: 'Urgent'),
-                      _LegendItem(color: Colors.amber, label: 'In Progress'),
-                      _LegendItem(color: Colors.green, label: 'Resolved'),
+                      _LegendItem(color: CivicColors.statusRejected, label: 'Urgent'),
+                      _LegendItem(color: CivicColors.statusAction, label: 'In Progress'),
+                      _LegendItem(color: CivicColors.statusSolved, label: 'Resolved'),
                     ],
                   ),
                 ),
@@ -702,7 +717,7 @@ class _MapReportPreviewState extends State<_MapReportPreview> {
         });
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Recorded — $_count citizens affected'),
-          backgroundColor: Colors.green[700],
+          backgroundColor: CivicColors.emeraldGreen,
           duration: const Duration(seconds: 2),
         ));
       }
@@ -737,7 +752,7 @@ class _MapReportPreviewState extends State<_MapReportPreview> {
           if (!['RESOLVED', 'CLOSED', 'REJECTED'].contains(widget.report.status) && widget.report.slaHoursRemaining != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 6),
-              child: _SlaBadge(hoursRemaining: widget.report.slaHoursRemaining!, isBreached: widget.report.isSlaBreached),
+              child: CivicSlaBadge(hoursRemaining: widget.report.slaHoursRemaining!, isBreached: widget.report.isSlaBreached),
             ),
           Text(widget.report.department, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
@@ -769,7 +784,7 @@ class _MapReportPreviewState extends State<_MapReportPreview> {
                         builder: (context) => ReportDetailsScreen(reportId: widget.report.id, caseNumber: widget.report.caseNumber)));
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green[700],
+                    backgroundColor: CivicColors.govBlue,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 8),
                   ),
@@ -789,28 +804,8 @@ class _ReportCard extends StatelessWidget {
 
   const _ReportCard({required this.report});
 
-  Color _statusColor() {
-    switch (report.status) {
-      case 'SUBMITTED': return Colors.indigo;
-      case 'RECEIVED': return Colors.purple;
-      case 'ASSIGNED': return Colors.blue;
-      case 'UNDER_INVESTIGATION': return Colors.amber;
-      case 'IN_PROGRESS': return Colors.orange;
-      case 'RESOLVED': return Colors.green;
-      case 'CLOSED': return Colors.grey;
-      default: return Colors.grey;
-    }
-  }
-
-  Color _priorityColor() {
-    switch (report.priority) {
-      case 'CRITICAL': return Colors.red;
-      case 'HIGH': return Colors.orange;
-      case 'MEDIUM': return Colors.blue;
-      case 'LOW': return Colors.grey;
-      default: return Colors.grey;
-    }
-  }
+  Color _statusColor() => CivicStatus.accent(report.status);
+  Color _priorityColor() => CivicPriority.color(report.priority);
 
   @override
   Widget build(BuildContext context) {
@@ -835,22 +830,14 @@ class _ReportCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Expanded(child: Text(report.department, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14))),
+                        Expanded(child: Text(report.department, style: CivicText.h3.copyWith(fontSize: 14))),
                         // Feature 1: SLA countdown badge
                         if (!['RESOLVED', 'CLOSED', 'REJECTED'].contains(report.status) && report.slaHoursRemaining != null)
-                          _SlaBadge(hoursRemaining: report.slaHoursRemaining!, isBreached: report.isSlaBreached),
-                        if (['RESOLVED', 'CLOSED', 'REJECTED'].contains(report.status))
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(color: _priorityColor().withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                            child: Text(report.priority, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _priorityColor())),
-                          )
-                        else
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(color: _priorityColor().withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                            child: Text(report.priority, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _priorityColor())),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: CivicSlaBadge(hoursRemaining: report.slaHoursRemaining!, isBreached: report.isSlaBreached),
                           ),
+                        CivicPriorityBadge(report.priority),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -860,30 +847,19 @@ class _ReportCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(color: _statusColor().withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(width: 6, height: 6, decoration: BoxDecoration(color: _statusColor(), shape: BoxShape.circle)),
-                              const SizedBox(width: 4),
-                              Text(report.status.replaceAll('_', ' '), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _statusColor())),
-                            ],
-                          ),
-                        ),
+                        CivicStatusBadge(report.status),
                         // Feature 2: Affected count badge
                         if (report.affectedCount > 1) ...[
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                            decoration: BoxDecoration(color: Colors.indigo[50], borderRadius: BorderRadius.circular(20)),
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(color: CivicColors.infoBg, borderRadius: BorderRadius.circular(20)),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.people, size: 10, color: Colors.indigo[600]),
+                                Icon(Icons.people_rounded, size: 10, color: CivicColors.infoText),
                                 const SizedBox(width: 3),
-                                Text('${report.affectedCount}', style: TextStyle(fontSize: 10, color: Colors.indigo[700], fontWeight: FontWeight.w600)),
+                                Text('${report.affectedCount}', style: CivicText.micro.copyWith(color: CivicColors.infoText, fontSize: 10)),
                               ],
                             ),
                           ),
@@ -892,14 +868,14 @@ class _ReportCard extends StatelessWidget {
                         if (!report.isWithinGeofence) ...[
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                            decoration: BoxDecoration(color: Colors.orange[50], borderRadius: BorderRadius.circular(20)),
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(color: CivicColors.warningBg, borderRadius: BorderRadius.circular(20)),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.location_off, size: 10, color: Colors.orange[700]),
+                                Icon(Icons.location_off_rounded, size: 10, color: CivicColors.warningText),
                                 const SizedBox(width: 3),
-                                Text('Outside limits', style: TextStyle(fontSize: 9, color: Colors.orange[700])),
+                                Text('Outside limits', style: CivicText.micro.copyWith(color: CivicColors.warningText, fontSize: 9)),
                               ],
                             ),
                           ),
@@ -920,54 +896,6 @@ class _ReportCard extends StatelessWidget {
 }
 
 // ── Feature 1: SLA Countdown Badge ───────────────────────────────────────────
-class _SlaBadge extends StatelessWidget {
-  final double hoursRemaining;
-  final bool isBreached;
-
-  const _SlaBadge({required this.hoursRemaining, required this.isBreached});
-
-  @override
-  Widget build(BuildContext context) {
-    Color badgeColor;
-    String label;
-    IconData icon;
-
-    if (isBreached) {
-      badgeColor = Colors.red[700]!;
-      final overdue = hoursRemaining.abs();
-      label = overdue < 1
-          ? 'Overdue ${(overdue * 60).toInt()}m'
-          : 'Overdue ${overdue.toStringAsFixed(0)}h';
-      icon = Icons.timer_off;
-    } else if (hoursRemaining <= 4) {
-      badgeColor = Colors.orange[700]!;
-      label = '${hoursRemaining.toStringAsFixed(0)}h left';
-      icon = Icons.timer;
-    } else {
-      badgeColor = Colors.green[700]!;
-      label = '${hoursRemaining.toStringAsFixed(0)}h left';
-      icon = Icons.timer_outlined;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: badgeColor.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: badgeColor.withValues(alpha: 0.4)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 10, color: badgeColor),
-          const SizedBox(width: 3),
-          Text(label, style: TextStyle(fontSize: 9, color: badgeColor, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-}
-
 /// My Reports tab
 class MyReportsContent extends StatefulWidget {
   final List<ReportItem> reports;
