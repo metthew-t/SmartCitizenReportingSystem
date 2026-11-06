@@ -10,3 +10,5 @@ gunicorn
 whitenoise
 dj-database-url
 Pillow==10.3.0
+cloudinary==1.40.0
+django-apscheduler==0.7.0

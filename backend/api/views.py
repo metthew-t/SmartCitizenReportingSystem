@@ -736,6 +736,23 @@ class ReportViewSet(viewsets.ModelViewSet):
             report.rejection_reason = final_reason
             resolution_notes = final_reason
 
+        # ── Feature 4: Enforce Before/After Photo proof for RESOLVED ──────────
+        if new_status == 'RESOLVED':
+            has_proof = (
+                request.FILES.get('resolution_proof') or
+                request.FILES.get('after_photo') or
+                request.data.get('resolution_proof_url') or
+                report.resolution_proof_url
+            )
+            if not has_proof:
+                return Response(
+                    {
+                        'error': 'Resolution proof required. You must upload an "After" photo with verifiable GPS metadata before marking this report as RESOLVED.',
+                        'code': 'PROOF_REQUIRED'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
         report.status = new_status
         if resolution_notes and new_status != 'REJECTED':
             report.resolution_notes = resolution_notes

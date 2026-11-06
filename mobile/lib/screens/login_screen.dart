@@ -6,10 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../services/api_config.dart';
 import 'home_screen.dart';
 
-String get _base => ApiConfig.baseUrl;
+const String _base = 'https://smartcitizenreportingsystem.onrender.com/api/v1';
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -22,31 +21,20 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
   // 'login' | 'register_phone' | 'register_otp' | 'register_profile'
-  // 'forgot_phone' | 'forgot_otp' | 'forgot_newpass'
   String _mode = 'login';
 
-  // Shared controllers
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-
-  // Registration-only controllers
   final _fullNameController = TextEditingController();
   final _nationalIdController = TextEditingController();
 
-  // Forgot password controllers
-  final _newPasswordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-
-  // OTP step state
-  String _otpPhone = ''; // phone sent to (normalised)
+  String _otpPhone = '';
   bool _otpResendEnabled = false;
   int _resendCountdown = 60;
   Timer? _resendTimer;
 
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _obscureNewPassword = true;
-  bool _obscureConfirmPassword = true;
 
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
@@ -58,8 +46,7 @@ class _LoginScreenState extends State<LoginScreen>
       duration: const Duration(milliseconds: 700),
       vsync: this,
     );
-    _fadeAnim =
-        CurvedAnimation(parent: _animController, curve: Curves.easeOut);
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
     _animController.forward();
     _checkExistingToken();
   }
@@ -71,8 +58,6 @@ class _LoginScreenState extends State<LoginScreen>
     _passwordController.dispose();
     _fullNameController.dispose();
     _nationalIdController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
     _resendTimer?.cancel();
     super.dispose();
   }
@@ -95,7 +80,6 @@ class _LoginScreenState extends State<LoginScreen>
         await prefs.remove('refresh_token');
       }
     } catch (_) {
-      // Network error — allow offline home access
       if (mounted) _goHome();
     }
   }
@@ -107,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  // ── Login flow ──────────────────────────────────────────────────────────────
+  // ── Login ───────────────────────────────────────────────────────────────────
 
   Future<void> _handleLogin() async {
     if (_phoneController.text.isEmpty || _passwordController.text.isEmpty) {
@@ -123,17 +107,11 @@ class _LoginScreenState extends State<LoginScreen>
           'phone_number': _phoneController.text.trim(),
           'password': _passwordController.text,
         }),
-      ).timeout(const Duration(seconds: 30));
+      );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         await _saveTokens(data['access'], data['refresh']);
-        if (data['must_change_password'] == true) {
-          if (mounted) _showForcedPasswordChangeDialog(data['access']);
-        } else {
-          if (mounted) _goHome();
-        }
-      } else if (res.statusCode >= 500) {
-        _showError(_safeDecodeError(res));
+        if (mounted) _goHome();
       } else {
         _showError('Invalid phone number or password');
       }
@@ -144,329 +122,7 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-  void _showForcedPasswordChangeDialog(String token) {
-    final oldPwCtrl = TextEditingController(text: _passwordController.text);
-    final newPwCtrl = TextEditingController();
-    final confirmPwCtrl = TextEditingController();
-    bool isSubmitting = false;
-    String? localError;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: const [
-              Icon(Icons.security, color: Colors.amber),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Mandatory Password Change',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber[50],
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.amber[300]!),
-                  ),
-                  child: Column(
-                    children: const [
-                      Icon(Icons.shield_outlined, color: Colors.amber, size: 24),
-                      SizedBox(height: 6),
-                      Text(
-                        'Initial Login Security Policy',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Your account was provisioned by municipal administration. You are required to establish a strong 12+ character password before continuing.',
-                        style: TextStyle(fontSize: 11.5, color: Colors.black87),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-                if (localError != null) ...[
-                  Text(
-                    localError!,
-                    style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                TextField(
-                  controller: oldPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Current Temporary Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: newPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'New Password (12+ Characters)',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: confirmPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Confirm New Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: isSubmitting
-                  ? null
-                  : () async {
-                      final np = newPwCtrl.text.trim();
-                      final cp = confirmPwCtrl.text.trim();
-                      if (np.length < 12) {
-                        setDialogState(() => localError = 'Password must be at least 12 characters.');
-                        return;
-                      }
-                      if (np != cp) {
-                        setDialogState(() => localError = 'New passwords do not match.');
-                        return;
-                      }
-                      setDialogState(() {
-                        isSubmitting = true;
-                        localError = null;
-                      });
-                      try {
-                        final res = await http.post(
-                          Uri.parse('$_base/auth/change-password/'),
-                          headers: {
-                            'Authorization': 'Bearer ' + token,
-                            'Content-Type': 'application/json'
-                          },
-                          body: jsonEncode({
-                            'old_password': oldPwCtrl.text,
-                            'new_password': np,
-                          }),
-                        );
-                        if (res.statusCode == 200) {
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          if (mounted) _goHome();
-                        } else {
-                          final err = jsonDecode(res.body)['error'] ?? 'Failed to update password.';
-                          setDialogState(() {
-                            isSubmitting = false;
-                            localError = err;
-                          });
-                        }
-                      } catch (e) {
-                        setDialogState(() {
-                          isSubmitting = false;
-                          localError = 'Connection error: ' + e.toString();
-                        });
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber[700],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              ),
-              child: isSubmitting
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Update Password & Continue', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showForcedPasswordChangeDialog(String token) {
-    final oldPwCtrl = TextEditingController(text: _passwordController.text);
-    final newPwCtrl = TextEditingController();
-    final confirmPwCtrl = TextEditingController();
-    bool isSubmitting = false;
-    String? localError;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: const [
-              Icon(Icons.security, color: Colors.amber),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Mandatory Password Change',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Centered Directive Text Banner
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber[50],
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.amber[300]!),
-                  ),
-                  child: Column(
-                    children: const [
-                      Icon(Icons.shield_outlined, color: Colors.amber, size: 24),
-                      SizedBox(height: 6),
-                      Text(
-                        'Initial Login Security Standard',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Your account was provisioned with a temporary password. You are required to establish a strong 12+ character password before continuing.',
-                        style: TextStyle(fontSize: 11.5, color: Colors.black87),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                if (localError != null) ...[
-                  Text(
-                    localError!,
-                    style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-
-                TextField(
-                  controller: oldPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Current Temporary Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: newPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'New Password (12+ Characters)',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: confirmPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Confirm New Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: isSubmitting
-                  ? null
-                  : () async {
-                      final np = newPwCtrl.text.trim();
-                      final cp = confirmPwCtrl.text.trim();
-                      if (np.length < 12) {
-                        setDialogState(() => localError = 'Password must be at least 12 characters.');
-                        return;
-                      }
-                      if (np != cp) {
-                        setDialogState(() => localError = 'New passwords do not match.');
-                        return;
-                      }
-                      setDialogState(() {
-                        isSubmitting = true;
-                        localError = null;
-                      });
-
-                      try {
-                        final res = await http.post(
-                          Uri.parse('$_base/auth/change-password/'),
-                          headers: {
-                            'Authorization': 'Bearer $token',
-                            'Content-Type': 'application/json'
-                          },
-                          body: jsonEncode({
-                            'old_password': oldPwCtrl.text,
-                            'new_password': np,
-                          }),
-                        );
-                        if (res.statusCode == 200) {
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          if (mounted) _goHome();
-                        } else {
-                          final err = jsonDecode(res.body)['error'] ?? 'Failed to update password.';
-                          setDialogState(() {
-                            isSubmitting = false;
-                            localError = err;
-                          });
-                        }
-                      } catch (e) {
-                        setDialogState(() {
-                          isSubmitting = false;
-                          localError = 'Connection error: $e';
-                        });
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber[700],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              ),
-              child: isSubmitting
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Update Password & Continue', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Registration flow — Step 1: enter phone ─────────────────────────────────
+  // ── Register step 1: send OTP ───────────────────────────────────────────────
 
   Future<void> _handleSendOTP() async {
     final phone = _phoneController.text.trim();
@@ -489,8 +145,7 @@ class _LoginScreenState extends State<LoginScreen>
         _startResendTimer();
         _showSuccess('OTP sent to $phone');
       } else {
-        final body = _safeDecodeError(res);
-        _showError(body);
+        _showError(_safeDecodeError(res.body));
       }
     } catch (_) {
       _showError('Connection error. Check your internet.');
@@ -499,170 +154,7 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-  void _showForcedPasswordChangeDialog(String token) {
-    final oldPwCtrl = TextEditingController(text: _passwordController.text);
-    final newPwCtrl = TextEditingController();
-    final confirmPwCtrl = TextEditingController();
-    bool isSubmitting = false;
-    String? localError;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: const [
-              Icon(Icons.security, color: Colors.amber),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Mandatory Password Change',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Centered Directive Text Banner
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber[50],
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.amber[300]!),
-                  ),
-                  child: Column(
-                    children: const [
-                      Icon(Icons.shield_outlined, color: Colors.amber, size: 24),
-                      SizedBox(height: 6),
-                      Text(
-                        'Initial Login Security Standard',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Your account was provisioned with a temporary password. You are required to establish a strong 12+ character password before continuing.',
-                        style: TextStyle(fontSize: 11.5, color: Colors.black87),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                if (localError != null) ...[
-                  Text(
-                    localError!,
-                    style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-
-                TextField(
-                  controller: oldPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Current Temporary Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: newPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'New Password (12+ Characters)',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: confirmPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Confirm New Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: isSubmitting
-                  ? null
-                  : () async {
-                      final np = newPwCtrl.text.trim();
-                      final cp = confirmPwCtrl.text.trim();
-                      if (np.length < 12) {
-                        setDialogState(() => localError = 'Password must be at least 12 characters.');
-                        return;
-                      }
-                      if (np != cp) {
-                        setDialogState(() => localError = 'New passwords do not match.');
-                        return;
-                      }
-                      setDialogState(() {
-                        isSubmitting = true;
-                        localError = null;
-                      });
-
-                      try {
-                        final res = await http.post(
-                          Uri.parse('$_base/auth/change-password/'),
-                          headers: {
-                            'Authorization': 'Bearer $token',
-                            'Content-Type': 'application/json'
-                          },
-                          body: jsonEncode({
-                            'old_password': oldPwCtrl.text,
-                            'new_password': np,
-                          }),
-                        );
-                        if (res.statusCode == 200) {
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          if (mounted) _goHome();
-                        } else {
-                          final err = jsonDecode(res.body)['error'] ?? 'Failed to update password.';
-                          setDialogState(() {
-                            isSubmitting = false;
-                            localError = err;
-                          });
-                        }
-                      } catch (e) {
-                        setDialogState(() {
-                          isSubmitting = false;
-                          localError = 'Connection error: $e';
-                        });
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber[700],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              ),
-              child: isSubmitting
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Update Password & Continue', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Registration flow — Step 2: verify OTP ──────────────────────────────────
+  // ── Register step 2: verify OTP ────────────────────────────────────────────
 
   Future<void> _handleVerifyOTP(String otp) async {
     if (otp.length != 6) {
@@ -678,13 +170,8 @@ class _LoginScreenState extends State<LoginScreen>
       );
       if (res.statusCode == 200) {
         _resendTimer?.cancel();
-        if (_mode == 'forgot_otp') {
-          setState(() => _mode = 'forgot_newpass');
-          _showSuccess('Phone verified! Set your new password.');
-        } else {
-          setState(() => _mode = 'register_profile');
-          _showSuccess('Phone verified! Complete your profile.');
-        }
+        setState(() => _mode = 'register_profile');
+        _showSuccess('Phone verified! Complete your profile.');
       } else {
         _showError('Incorrect or expired code. Try again.');
       }
@@ -695,183 +182,11 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-  void _showForcedPasswordChangeDialog(String token) {
-    final oldPwCtrl = TextEditingController(text: _passwordController.text);
-    final newPwCtrl = TextEditingController();
-    final confirmPwCtrl = TextEditingController();
-    bool isSubmitting = false;
-    String? localError;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: const [
-              Icon(Icons.security, color: Colors.amber),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Mandatory Password Change',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Centered Directive Text Banner
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber[50],
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.amber[300]!),
-                  ),
-                  child: Column(
-                    children: const [
-                      Icon(Icons.shield_outlined, color: Colors.amber, size: 24),
-                      SizedBox(height: 6),
-                      Text(
-                        'Initial Login Security Standard',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Your account was provisioned with a temporary password. You are required to establish a strong 12+ character password before continuing.',
-                        style: TextStyle(fontSize: 11.5, color: Colors.black87),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                if (localError != null) ...[
-                  Text(
-                    localError!,
-                    style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-
-                TextField(
-                  controller: oldPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Current Temporary Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: newPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'New Password (12+ Characters)',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: confirmPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Confirm New Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: isSubmitting
-                  ? null
-                  : () async {
-                      final np = newPwCtrl.text.trim();
-                      final cp = confirmPwCtrl.text.trim();
-                      if (np.length < 12) {
-                        setDialogState(() => localError = 'Password must be at least 12 characters.');
-                        return;
-                      }
-                      if (np != cp) {
-                        setDialogState(() => localError = 'New passwords do not match.');
-                        return;
-                      }
-                      setDialogState(() {
-                        isSubmitting = true;
-                        localError = null;
-                      });
-
-                      try {
-                        final res = await http.post(
-                          Uri.parse('$_base/auth/change-password/'),
-                          headers: {
-                            'Authorization': 'Bearer $token',
-                            'Content-Type': 'application/json'
-                          },
-                          body: jsonEncode({
-                            'old_password': oldPwCtrl.text,
-                            'new_password': np,
-                          }),
-                        );
-                        if (res.statusCode == 200) {
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          if (mounted) _goHome();
-                        } else {
-                          final err = jsonDecode(res.body)['error'] ?? 'Failed to update password.';
-                          setDialogState(() {
-                            isSubmitting = false;
-                            localError = err;
-                          });
-                        }
-                      } catch (e) {
-                        setDialogState(() {
-                          isSubmitting = false;
-                          localError = 'Connection error: $e';
-                        });
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber[700],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              ),
-              child: isSubmitting
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Update Password & Continue', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Registration flow — Step 3: fill profile & register ─────────────────────
+  // ── Register step 3: create account ────────────────────────────────────────
 
   Future<void> _handleRegister() async {
     if (_fullNameController.text.trim().isEmpty) {
       _showError('Full name is required');
-      return;
-    }
-    final nationalId = _nationalIdController.text.trim();
-    if (nationalId.isEmpty) {
-      _showError('National ID (FAN) is required');
-      return;
-    }
-    if (nationalId.length != 16 || !RegExp(r'^\d{16}$').hasMatch(nationalId)) {
-      _showError('National ID (FAN) must be exactly 16 digits');
       return;
     }
     if (_passwordController.text.length < 4) {
@@ -887,7 +202,7 @@ class _LoginScreenState extends State<LoginScreen>
           'phone_number': _otpPhone,
           'password': _passwordController.text,
           'full_name': _fullNameController.text.trim(),
-          'national_id': nationalId,
+          'national_id': _nationalIdController.text.trim(),
         }),
       );
       if (res.statusCode == 201) {
@@ -898,583 +213,13 @@ class _LoginScreenState extends State<LoginScreen>
           _goHome();
         }
       } else {
-        final body = _safeDecodeError(res);
-        _showError(body);
+        _showError(_safeDecodeError(res.body));
       }
     } catch (_) {
       _showError('Connection error. Check your internet.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _showForcedPasswordChangeDialog(String token) {
-    final oldPwCtrl = TextEditingController(text: _passwordController.text);
-    final newPwCtrl = TextEditingController();
-    final confirmPwCtrl = TextEditingController();
-    bool isSubmitting = false;
-    String? localError;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: const [
-              Icon(Icons.security, color: Colors.amber),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Mandatory Password Change',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Centered Directive Text Banner
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber[50],
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.amber[300]!),
-                  ),
-                  child: Column(
-                    children: const [
-                      Icon(Icons.shield_outlined, color: Colors.amber, size: 24),
-                      SizedBox(height: 6),
-                      Text(
-                        'Initial Login Security Standard',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Your account was provisioned with a temporary password. You are required to establish a strong 12+ character password before continuing.',
-                        style: TextStyle(fontSize: 11.5, color: Colors.black87),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                if (localError != null) ...[
-                  Text(
-                    localError!,
-                    style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-
-                TextField(
-                  controller: oldPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Current Temporary Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: newPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'New Password (12+ Characters)',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: confirmPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Confirm New Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: isSubmitting
-                  ? null
-                  : () async {
-                      final np = newPwCtrl.text.trim();
-                      final cp = confirmPwCtrl.text.trim();
-                      if (np.length < 12) {
-                        setDialogState(() => localError = 'Password must be at least 12 characters.');
-                        return;
-                      }
-                      if (np != cp) {
-                        setDialogState(() => localError = 'New passwords do not match.');
-                        return;
-                      }
-                      setDialogState(() {
-                        isSubmitting = true;
-                        localError = null;
-                      });
-
-                      try {
-                        final res = await http.post(
-                          Uri.parse('$_base/auth/change-password/'),
-                          headers: {
-                            'Authorization': 'Bearer $token',
-                            'Content-Type': 'application/json'
-                          },
-                          body: jsonEncode({
-                            'old_password': oldPwCtrl.text,
-                            'new_password': np,
-                          }),
-                        );
-                        if (res.statusCode == 200) {
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          if (mounted) _goHome();
-                        } else {
-                          final err = jsonDecode(res.body)['error'] ?? 'Failed to update password.';
-                          setDialogState(() {
-                            isSubmitting = false;
-                            localError = err;
-                          });
-                        }
-                      } catch (e) {
-                        setDialogState(() {
-                          isSubmitting = false;
-                          localError = 'Connection error: $e';
-                        });
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber[700],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              ),
-              child: isSubmitting
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Update Password & Continue', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Forgot Password flow — Step 1: enter phone ─────────────────────────────
-
-  Future<void> _handleForgotSendOTP() async {
-    final phone = _phoneController.text.trim();
-    if (phone.isEmpty) {
-      _showError('Enter your phone number first');
-      return;
-    }
-    setState(() => _isLoading = true);
-    try {
-      final res = await http.post(
-        Uri.parse('$_base/auth/send-otp/'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'phone_number': phone, 'is_forgot_password': true}),
-      ).timeout(const Duration(seconds: 30));
-      if (res.statusCode == 200) {
-        setState(() {
-          _otpPhone = phone;
-          _mode = 'forgot_otp';
-        });
-        _startResendTimer();
-        _showSuccess('Reset code sent to $phone');
-      } else {
-        final body = _safeDecodeError(res);
-        _showError(body);
-      }
-    } catch (_) {
-      _showError('Connection error. Check your internet.');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _showForcedPasswordChangeDialog(String token) {
-    final oldPwCtrl = TextEditingController(text: _passwordController.text);
-    final newPwCtrl = TextEditingController();
-    final confirmPwCtrl = TextEditingController();
-    bool isSubmitting = false;
-    String? localError;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: const [
-              Icon(Icons.security, color: Colors.amber),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Mandatory Password Change',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Centered Directive Text Banner
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber[50],
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.amber[300]!),
-                  ),
-                  child: Column(
-                    children: const [
-                      Icon(Icons.shield_outlined, color: Colors.amber, size: 24),
-                      SizedBox(height: 6),
-                      Text(
-                        'Initial Login Security Standard',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Your account was provisioned with a temporary password. You are required to establish a strong 12+ character password before continuing.',
-                        style: TextStyle(fontSize: 11.5, color: Colors.black87),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                if (localError != null) ...[
-                  Text(
-                    localError!,
-                    style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-
-                TextField(
-                  controller: oldPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Current Temporary Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: newPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'New Password (12+ Characters)',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: confirmPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Confirm New Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: isSubmitting
-                  ? null
-                  : () async {
-                      final np = newPwCtrl.text.trim();
-                      final cp = confirmPwCtrl.text.trim();
-                      if (np.length < 12) {
-                        setDialogState(() => localError = 'Password must be at least 12 characters.');
-                        return;
-                      }
-                      if (np != cp) {
-                        setDialogState(() => localError = 'New passwords do not match.');
-                        return;
-                      }
-                      setDialogState(() {
-                        isSubmitting = true;
-                        localError = null;
-                      });
-
-                      try {
-                        final res = await http.post(
-                          Uri.parse('$_base/auth/change-password/'),
-                          headers: {
-                            'Authorization': 'Bearer $token',
-                            'Content-Type': 'application/json'
-                          },
-                          body: jsonEncode({
-                            'old_password': oldPwCtrl.text,
-                            'new_password': np,
-                          }),
-                        );
-                        if (res.statusCode == 200) {
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          if (mounted) _goHome();
-                        } else {
-                          final err = jsonDecode(res.body)['error'] ?? 'Failed to update password.';
-                          setDialogState(() {
-                            isSubmitting = false;
-                            localError = err;
-                          });
-                        }
-                      } catch (e) {
-                        setDialogState(() {
-                          isSubmitting = false;
-                          localError = 'Connection error: $e';
-                        });
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber[700],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              ),
-              child: isSubmitting
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Update Password & Continue', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Forgot Password flow — Step 3: set new password ─────────────────────────
-
-  Future<void> _handleResetPassword() async {
-    final newPass = _newPasswordController.text;
-    final confirmPass = _confirmPasswordController.text;
-    if (newPass.isEmpty) {
-      _showError('Enter a new password');
-      return;
-    }
-    if (newPass.length < 4) {
-      _showError('Password must be at least 4 characters');
-      return;
-    }
-    if (newPass != confirmPass) {
-      _showError('Passwords do not match');
-      return;
-    }
-    setState(() => _isLoading = true);
-    try {
-      final res = await http.post(
-        Uri.parse('$_base/auth/reset-password/'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'phone_number': _otpPhone,
-          'new_password': newPass,
-        }),
-      ).timeout(const Duration(seconds: 30));
-      if (res.statusCode == 200) {
-        _showSuccess('Password reset successfully! Please login.');
-        setState(() {
-          _mode = 'login';
-          _phoneController.text = _otpPhone;
-          _passwordController.clear();
-          _newPasswordController.clear();
-          _confirmPasswordController.clear();
-        });
-      } else {
-        final body = _safeDecodeError(res);
-        _showError(body);
-      }
-    } catch (_) {
-      _showError('Connection error. Check your internet.');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _showForcedPasswordChangeDialog(String token) {
-    final oldPwCtrl = TextEditingController(text: _passwordController.text);
-    final newPwCtrl = TextEditingController();
-    final confirmPwCtrl = TextEditingController();
-    bool isSubmitting = false;
-    String? localError;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: const [
-              Icon(Icons.security, color: Colors.amber),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Mandatory Password Change',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Centered Directive Text Banner
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber[50],
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.amber[300]!),
-                  ),
-                  child: Column(
-                    children: const [
-                      Icon(Icons.shield_outlined, color: Colors.amber, size: 24),
-                      SizedBox(height: 6),
-                      Text(
-                        'Initial Login Security Standard',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Your account was provisioned with a temporary password. You are required to establish a strong 12+ character password before continuing.',
-                        style: TextStyle(fontSize: 11.5, color: Colors.black87),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                if (localError != null) ...[
-                  Text(
-                    localError!,
-                    style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-
-                TextField(
-                  controller: oldPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Current Temporary Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: newPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'New Password (12+ Characters)',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: confirmPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Confirm New Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: isSubmitting
-                  ? null
-                  : () async {
-                      final np = newPwCtrl.text.trim();
-                      final cp = confirmPwCtrl.text.trim();
-                      if (np.length < 12) {
-                        setDialogState(() => localError = 'Password must be at least 12 characters.');
-                        return;
-                      }
-                      if (np != cp) {
-                        setDialogState(() => localError = 'New passwords do not match.');
-                        return;
-                      }
-                      setDialogState(() {
-                        isSubmitting = true;
-                        localError = null;
-                      });
-
-                      try {
-                        final res = await http.post(
-                          Uri.parse('$_base/auth/change-password/'),
-                          headers: {
-                            'Authorization': 'Bearer $token',
-                            'Content-Type': 'application/json'
-                          },
-                          body: jsonEncode({
-                            'old_password': oldPwCtrl.text,
-                            'new_password': np,
-                          }),
-                        );
-                        if (res.statusCode == 200) {
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          if (mounted) _goHome();
-                        } else {
-                          final err = jsonDecode(res.body)['error'] ?? 'Failed to update password.';
-                          setDialogState(() {
-                            isSubmitting = false;
-                            localError = err;
-                          });
-                        }
-                      } catch (e) {
-                        setDialogState(() {
-                          isSubmitting = false;
-                          localError = 'Connection error: $e';
-                        });
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber[700],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              ),
-              child: isSubmitting
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Update Password & Continue', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   // ── Resend OTP ──────────────────────────────────────────────────────────────
@@ -1485,15 +230,11 @@ class _LoginScreenState extends State<LoginScreen>
       _otpResendEnabled = false;
       _isLoading = true;
     });
-    final isForgot = _mode == 'forgot_otp';
     try {
       final res = await http.post(
         Uri.parse('$_base/auth/send-otp/'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'phone_number': _otpPhone,
-          if (isForgot) 'is_forgot_password': true,
-        }),
+        body: jsonEncode({'phone_number': _otpPhone}),
       );
       if (res.statusCode == 200) {
         _startResendTimer();
@@ -1508,169 +249,6 @@ class _LoginScreenState extends State<LoginScreen>
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _showForcedPasswordChangeDialog(String token) {
-    final oldPwCtrl = TextEditingController(text: _passwordController.text);
-    final newPwCtrl = TextEditingController();
-    final confirmPwCtrl = TextEditingController();
-    bool isSubmitting = false;
-    String? localError;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: const [
-              Icon(Icons.security, color: Colors.amber),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Mandatory Password Change',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Centered Directive Text Banner
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber[50],
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.amber[300]!),
-                  ),
-                  child: Column(
-                    children: const [
-                      Icon(Icons.shield_outlined, color: Colors.amber, size: 24),
-                      SizedBox(height: 6),
-                      Text(
-                        'Initial Login Security Standard',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Your account was provisioned with a temporary password. You are required to establish a strong 12+ character password before continuing.',
-                        style: TextStyle(fontSize: 11.5, color: Colors.black87),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                if (localError != null) ...[
-                  Text(
-                    localError!,
-                    style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-
-                TextField(
-                  controller: oldPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Current Temporary Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: newPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'New Password (12+ Characters)',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: confirmPwCtrl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Confirm New Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: isSubmitting
-                  ? null
-                  : () async {
-                      final np = newPwCtrl.text.trim();
-                      final cp = confirmPwCtrl.text.trim();
-                      if (np.length < 12) {
-                        setDialogState(() => localError = 'Password must be at least 12 characters.');
-                        return;
-                      }
-                      if (np != cp) {
-                        setDialogState(() => localError = 'New passwords do not match.');
-                        return;
-                      }
-                      setDialogState(() {
-                        isSubmitting = true;
-                        localError = null;
-                      });
-
-                      try {
-                        final res = await http.post(
-                          Uri.parse('$_base/auth/change-password/'),
-                          headers: {
-                            'Authorization': 'Bearer $token',
-                            'Content-Type': 'application/json'
-                          },
-                          body: jsonEncode({
-                            'old_password': oldPwCtrl.text,
-                            'new_password': np,
-                          }),
-                        );
-                        if (res.statusCode == 200) {
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          if (mounted) _goHome();
-                        } else {
-                          final err = jsonDecode(res.body)['error'] ?? 'Failed to update password.';
-                          setDialogState(() {
-                            isSubmitting = false;
-                            localError = err;
-                          });
-                        }
-                      } catch (e) {
-                        setDialogState(() {
-                          isSubmitting = false;
-                          localError = 'Connection error: $e';
-                        });
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber[700],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              ),
-              child: isSubmitting
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Update Password & Continue', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _startResendTimer() {
@@ -1709,42 +287,15 @@ class _LoginScreenState extends State<LoginScreen>
     } catch (_) {}
   }
 
-  String _safeDecodeError(dynamic resOrBody, [int? statusCode]) {
-    String body = '';
-    int code = statusCode ?? 0;
-    if (resOrBody is http.Response) {
-      body = resOrBody.body;
-      code = resOrBody.statusCode;
-    } else if (resOrBody is String) {
-      body = resOrBody;
-    }
-
-    // 1. Detect server suspension / availability issues
-    if (code == 503 || body.toLowerCase().contains('suspended')) {
-      if (body.toLowerCase().contains('suspended')) {
-        return 'Backend service is suspended on Render. Please resume it in the Render dashboard.';
-      }
-      return 'Service temporarily unavailable (503). Server may be offline or suspended.';
-    }
-    if (code == 502 || code == 504) {
-      return 'Server is waking up or temporarily unreachable. Please retry in 30 seconds.';
-    }
-
-    // 2. Try parsing JSON error structure
+  String _safeDecodeError(String body) {
     try {
       final decoded = jsonDecode(body);
-      if (decoded is Map && decoded.isNotEmpty) {
+      if (decoded is Map) {
         final val = decoded['error'] ?? decoded['detail'] ?? decoded.values.first;
-        if (val is List && val.isNotEmpty) return val.first.toString();
-        if (val != null) return val.toString();
+        return val is List ? val.first.toString() : val.toString();
       }
     } catch (_) {}
-
-    // 3. Fallback message with status code
-    if (code >= 500) {
-      return 'Server error ($code). Please try again later.';
-    }
-    return 'Something went wrong${code > 0 ? ' ($code)' : ''}. Please try again.';
+    return 'Something went wrong. Please try again.';
   }
 
   void _showError(String msg) {
@@ -1773,8 +324,7 @@ class _LoginScreenState extends State<LoginScreen>
           image: DecorationImage(
             image: AssetImage('assets/images/adama_bg.jpg'),
             fit: BoxFit.cover,
-            colorFilter:
-                ColorFilter.mode(Colors.black54, BlendMode.darken),
+            colorFilter: ColorFilter.mode(Colors.black54, BlendMode.darken),
           ),
         ),
         child: SafeArea(
@@ -1827,8 +377,7 @@ class _LoginScreenState extends State<LoginScreen>
                     color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Icon(Icons.location_city,
-                      size: 48, color: Colors.white),
+                  child: const Icon(Icons.location_city, size: 48, color: Colors.white),
                 ),
               ),
             ),
@@ -1838,23 +387,19 @@ class _LoginScreenState extends State<LoginScreen>
         const Text(
           'Adama Smart Citizen',
           textAlign: TextAlign.center,
-          style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         const SizedBox(height: 4),
         Text(
           'Citizen Reporting System',
           textAlign: TextAlign.center,
-          style: TextStyle(
-              fontSize: 13, color: Colors.white.withValues(alpha: 0.75)),
+          style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.75)),
         ),
       ],
     );
   }
 
-  // ── White card container ──────────────────────────────────────────────────────
+  // ── Card container ────────────────────────────────────────────────────────────
 
   Widget _buildCard() {
     return Container(
@@ -1890,18 +435,12 @@ class _LoginScreenState extends State<LoginScreen>
         return _buildOTPStep();
       case 'register_profile':
         return _buildProfileStep();
-      case 'forgot_phone':
-        return _buildForgotPhoneStep();
-      case 'forgot_otp':
-        return _buildForgotOTPStep();
-      case 'forgot_newpass':
-        return _buildForgotNewPassStep();
       default:
         return _buildLoginStep();
     }
   }
 
-  // ── Step: Login ───────────────────────────────────────────────────────────────
+  // ── Login step ────────────────────────────────────────────────────────────────
 
   Widget _buildLoginStep() {
     return Column(
@@ -1909,45 +448,18 @@ class _LoginScreenState extends State<LoginScreen>
       children: [
         _buildModeTabs(),
         const SizedBox(height: 24),
-        _buildStepHeader(
-          title: 'Welcome Back',
-          subtitle: 'Sign in to report & track incidents',
-        ),
+        _buildStepHeader(title: 'Welcome Back', subtitle: 'Sign in to report & track incidents'),
         const SizedBox(height: 20),
         _buildPhoneField(),
         const SizedBox(height: 14),
         _buildPasswordField(),
-        const SizedBox(height: 8),
-        // Forgot Password Link
-        Align(
-          alignment: Alignment.centerRight,
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                _mode = 'forgot_phone';
-                _passwordController.clear();
-              });
-            },
-            child: Text(
-              'Forgot Password?',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Colors.green[700],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 18),
-        _buildPrimaryButton(
-          label: 'Sign In',
-          onPressed: _handleLogin,
-        ),
+        const SizedBox(height: 24),
+        _buildPrimaryButton(label: 'Sign In', onPressed: _handleLogin),
       ],
     );
   }
 
-  // ── Step: Register — enter phone ──────────────────────────────────────────────
+  // ── Register step 1 ───────────────────────────────────────────────────────────
 
   Widget _buildRegisterPhoneStep() {
     return Column(
@@ -1959,8 +471,7 @@ class _LoginScreenState extends State<LoginScreen>
           title: 'Create Account',
           subtitle: 'We\'ll send a 6-digit code to verify your number',
         ),
-        const SizedBox(height: 6),
-        // Progress indicator
+        const SizedBox(height: 8),
         _buildStepProgress(current: 1, total: 3),
         const SizedBox(height: 20),
         _buildPhoneField(),
@@ -1974,71 +485,57 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  // ── Step: Register — enter OTP ────────────────────────────────────────────────
+  // ── Register step 2: OTP ──────────────────────────────────────────────────────
 
   Widget _buildOTPStep() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Back button
-        Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-              onPressed: () => setState(() {
-                _mode = 'register_phone';
-                _resendTimer?.cancel();
-              }),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-            const SizedBox(width: 4),
-            Text('Back', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-          ],
-        ),
+        _backRow(() => setState(() {
+          _mode = 'register_phone';
+          _resendTimer?.cancel();
+        })),
         const SizedBox(height: 12),
         _buildStepHeader(
           title: 'Enter Verification Code',
           subtitle: 'Sent via SMS to $_otpPhone',
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         _buildStepProgress(current: 2, total: 3),
         const SizedBox(height: 28),
-
-        // 6-box OTP input
-        _OTPInputField(
-          onCompleted: _handleVerifyOTP,
-          isLoading: _isLoading,
-        ),
+        _OTPInputField(onCompleted: _handleVerifyOTP, isLoading: _isLoading),
         const SizedBox(height: 24),
-
-        // Resend row
-        _buildResendRow(),
-        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text("Didn't receive the code? ",
+                style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+            GestureDetector(
+              onTap: _otpResendEnabled ? _handleResendOTP : null,
+              child: Text(
+                _otpResendEnabled ? 'Resend' : 'Resend in ${_resendCountdown}s',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: _otpResendEnabled ? Colors.green[700] : Colors.grey[400],
+                ),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
 
-  // ── Step: Register — complete profile ────────────────────────────────────────
+  // ── Register step 3: profile ──────────────────────────────────────────────────
 
   Widget _buildProfileStep() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-              onPressed: () => setState(() => _mode = 'register_otp'),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-            const SizedBox(width: 4),
-            Text('Back', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-          ],
-        ),
+        _backRow(() => setState(() => _mode = 'register_otp')),
         const SizedBox(height: 12),
-        // Phone verified badge
+        // Verified badge
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
@@ -2051,86 +548,39 @@ class _LoginScreenState extends State<LoginScreen>
               Icon(Icons.verified, color: Colors.green[700], size: 18),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  '$_otpPhone verified',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.green[800],
-                  ),
-                ),
+                child: Text('$_otpPhone verified',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.green[800])),
               ),
             ],
           ),
         ),
         const SizedBox(height: 16),
-        _buildStepHeader(
-          title: 'Complete Your Profile',
-          subtitle: 'Almost there — just a few more details',
-        ),
-        const SizedBox(height: 6),
+        _buildStepHeader(title: 'Complete Your Profile', subtitle: 'Almost there — just a few more details'),
+        const SizedBox(height: 8),
         _buildStepProgress(current: 3, total: 3),
         const SizedBox(height: 20),
-
-        // Full name
         TextField(
           controller: _fullNameController,
           textCapitalization: TextCapitalization.words,
           decoration: InputDecoration(
-            labelText: 'Full Name *',
+            labelText: 'Full Name',
             hintText: 'Enter your full name',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             prefixIcon: const Icon(Icons.person_outline),
           ),
         ),
         const SizedBox(height: 14),
-
-        // National ID (FAN) - REQUIRED
         TextField(
           controller: _nationalIdController,
-          keyboardType: TextInputType.number,
-          maxLength: 16,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           decoration: InputDecoration(
-            labelText: 'National ID (FAN) *',
-            hintText: 'e.g. 1234567890123456',
-            helperText: 'FAN — 16 digits required',
-            helperMaxLines: 2,
-            counterText: '',
+            labelText: 'National ID (Optional)',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             prefixIcon: const Icon(Icons.badge_outlined),
           ),
         ),
-        const SizedBox(height: 6),
-        // FAN info box
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.blue[50],
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.blue[200]!),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.info_outline, color: Colors.blue[700], size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Your FAN number is 16 digits found on your national ID card. '
-                  'Example: 1234567890123456',
-                  style: TextStyle(fontSize: 12, color: Colors.blue[800], height: 1.4),
-                ),
-              ),
-            ],
-          ),
-        ),
         const SizedBox(height: 14),
-
-        // Password
         _buildPasswordField(label: 'Create Password'),
         const SizedBox(height: 24),
-
         _buildPrimaryButton(
           label: 'Create Account',
           icon: Icons.check_circle_outline,
@@ -2140,222 +590,17 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  // ── Forgot Password — Step 1: enter phone ─────────────────────────────────
-
-  Widget _buildForgotPhoneStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-              onPressed: () => setState(() {
-                _mode = 'login';
-                _phoneController.clear();
-              }),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-            const SizedBox(width: 4),
-            Text('Back to Login', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _buildStepHeader(
-          title: 'Forgot Password',
-          subtitle: 'Enter your registered phone number to receive a reset code',
-        ),
-        const SizedBox(height: 6),
-        _buildStepProgress(current: 1, total: 3),
-        const SizedBox(height: 20),
-        _buildPhoneField(),
-        const SizedBox(height: 24),
-        _buildPrimaryButton(
-          label: 'Send Reset Code',
-          icon: Icons.sms_outlined,
-          onPressed: _handleForgotSendOTP,
-        ),
-      ],
-    );
-  }
-
-  // ── Forgot Password — Step 2: enter OTP ─────────────────────────────────────
-
-  Widget _buildForgotOTPStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-              onPressed: () => setState(() {
-                _mode = 'forgot_phone';
-                _resendTimer?.cancel();
-              }),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-            const SizedBox(width: 4),
-            Text('Back', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _buildStepHeader(
-          title: 'Enter Reset Code',
-          subtitle: 'Sent via SMS to $_otpPhone',
-        ),
-        const SizedBox(height: 6),
-        _buildStepProgress(current: 2, total: 3),
-        const SizedBox(height: 28),
-
-        _OTPInputField(
-          onCompleted: _handleVerifyOTP,
-          isLoading: _isLoading,
-        ),
-        const SizedBox(height: 24),
-
-        _buildResendRow(),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-
-  // ── Forgot Password — Step 3: set new password ──────────────────────────────
-
-  Widget _buildForgotNewPassStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 8),
-        // Phone verified badge
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.green[50],
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.green[200]!),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.verified, color: Colors.green[700], size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '$_otpPhone verified',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.green[800],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildStepHeader(
-          title: 'Set New Password',
-          subtitle: 'Choose a new password for your account',
-        ),
-        const SizedBox(height: 6),
-        _buildStepProgress(current: 3, total: 3),
-        const SizedBox(height: 20),
-
-        // New password
-        TextField(
-          controller: _newPasswordController,
-          obscureText: _obscureNewPassword,
-          decoration: InputDecoration(
-            labelText: 'New Password',
-            hintText: 'At least 6 characters',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            prefixIcon: const Icon(Icons.lock_outline),
-            suffixIcon: IconButton(
-              icon: Icon(_obscureNewPassword ? Icons.visibility_off : Icons.visibility),
-              onPressed: () => setState(() => _obscureNewPassword = !_obscureNewPassword),
-            ),
-          ),
-        ),
-        const SizedBox(height: 14),
-
-        // Confirm password
-        TextField(
-          controller: _confirmPasswordController,
-          obscureText: _obscureConfirmPassword,
-          decoration: InputDecoration(
-            labelText: 'Confirm Password',
-            hintText: 'Re-enter your new password',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            prefixIcon: const Icon(Icons.lock_outline),
-            suffixIcon: IconButton(
-              icon: Icon(_obscureConfirmPassword ? Icons.visibility_off : Icons.visibility),
-              onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-
-        _buildPrimaryButton(
-          label: 'Reset Password',
-          icon: Icons.check_circle_outline,
-          onPressed: _handleResetPassword,
-        ),
-      ],
-    );
-  }
-
-  // ── Shared UI pieces ──────────────────────────────────────────────────────────
-
-  Widget _buildResendRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          "Didn't receive the code? ",
-          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-        ),
-        GestureDetector(
-          onTap: _otpResendEnabled ? _handleResendOTP : null,
-          child: Text(
-            _otpResendEnabled
-                ? 'Resend'
-                : 'Resend in ${_resendCountdown}s',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: _otpResendEnabled
-                  ? Colors.green[700]
-                  : Colors.grey[400],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  // ── Shared UI helpers ─────────────────────────────────────────────────────────
 
   Widget _buildModeTabs() {
     final isLogin = _mode == 'login';
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-      ),
+      decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
       padding: const EdgeInsets.all(4),
       child: Row(
         children: [
-          _buildTab('Login', isLogin, () {
-            setState(() {
-              _mode = 'login';
-              _resendTimer?.cancel();
-            });
-          }),
-          _buildTab('Register', !isLogin, () {
-            setState(() {
-              _mode = 'register_phone';
-            });
-          }),
+          _buildTab('Login', isLogin, () => setState(() { _mode = 'login'; _resendTimer?.cancel(); })),
+          _buildTab('Register', !isLogin, () => setState(() => _mode = 'register_phone')),
         ],
       ),
     );
@@ -2385,6 +630,21 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _backRow(VoidCallback onBack) {
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+          onPressed: onBack,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+        ),
+        const SizedBox(width: 4),
+        Text('Back', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+      ],
     );
   }
 
@@ -2464,22 +724,12 @@ class _LoginScreenState extends State<LoginScreen>
         elevation: 0,
       ),
       child: _isLoading
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: Colors.white),
-            )
+          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
           : Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (icon != null) ...[
-                  Icon(icon, size: 18),
-                  const SizedBox(width: 8),
-                ],
-                Text(label,
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w600)),
+                if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 8)],
+                Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ],
             ),
     );
@@ -2491,7 +741,6 @@ class _LoginScreenState extends State<LoginScreen>
 class _OTPInputField extends StatefulWidget {
   final void Function(String otp) onCompleted;
   final bool isLoading;
-
   const _OTPInputField({required this.onCompleted, required this.isLoading});
 
   @override
@@ -2514,11 +763,10 @@ class _OTPInputFieldState extends State<_OTPInputField> {
 
   void _onChanged(String value, int index) {
     if (value.isEmpty) {
-      // Backspace — move back
       if (index > 0) _focusNodes[index - 1].requestFocus();
       return;
     }
-    // If user pastes all 6 digits into first box
+    // Handle paste of full 6-digit code into first box
     if (value.length == _length && index == 0) {
       for (int i = 0; i < _length; i++) {
         _controllers[i].text = value[i];
@@ -2527,7 +775,6 @@ class _OTPInputFieldState extends State<_OTPInputField> {
       _submit();
       return;
     }
-    // Normal single digit
     _controllers[index].text = value[value.length - 1];
     if (index < _length - 1) {
       _focusNodes[index + 1].requestFocus();
@@ -2539,9 +786,7 @@ class _OTPInputFieldState extends State<_OTPInputField> {
 
   void _submit() {
     final otp = _controllers.map((c) => c.text).join();
-    if (otp.length == _length) {
-      widget.onCompleted(otp);
-    }
+    if (otp.length == _length) widget.onCompleted(otp);
   }
 
   @override
@@ -2558,7 +803,7 @@ class _OTPInputFieldState extends State<_OTPInputField> {
             enabled: !widget.isLoading,
             textAlign: TextAlign.center,
             keyboardType: TextInputType.number,
-            maxLength: _length, // allows paste of full code into first box
+            maxLength: _length,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             decoration: InputDecoration(

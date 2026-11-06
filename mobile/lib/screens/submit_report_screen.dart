@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'home_screen.dart';
 import '../services/api_config.dart';
+import '../services/sync_service.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -258,6 +259,39 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
     );
   }
 
+  // ── Feature 3: Upvote an existing nearby report instead of submitting new ──
+  Future<void> _upvoteExistingReport(String reportId, String caseNumber) async {
+    try {
+      final res = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/reports/$reportId/upvote_affected/'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 8));
+      if (!mounted) return;
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final count = data['affected_count'] ?? '?';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('✅ Recorded! $count citizens now affected on case $caseNumber. Officers will be notified.'),
+          backgroundColor: Colors.green[700],
+          duration: const Duration(seconds: 4),
+        ));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not record your vote. Please try again.'),
+          backgroundColor: Colors.orange,
+        ));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Network error recording your vote.'),
+          backgroundColor: Colors.red,
+        ));
+      }
+    }
+    if (mounted) Navigator.of(context).pop();
+  }
+
   void _recommendDepartment() {
     final text = (_titleController.text + " " + _descriptionController.text).toLowerCase();
     String? recommended;
@@ -312,7 +346,142 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a responsible department.'), backgroundColor: Colors.red));
       return;
     }
-    
+
+    final lat = _currentPosition?.latitude ?? 8.5415;
+    final lng = _currentPosition?.longitude ?? 39.2689;
+
+    // ── Feature 6: Geofence pre-check ──────────────────────────────────────
+    final bool insideBounds = (lat >= 8.45 && lat <= 8.63) && (lng >= 39.17 && lng <= 39.37);
+    if (!insideBounds) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(children: [
+            Icon(Icons.location_off, color: Colors.orange[700]),
+            const SizedBox(width: 8),
+            const Expanded(child: Text('Outside Adama Limits', style: TextStyle(fontSize: 16))),
+          ]),
+          content: const Text(
+            'Your current location appears to be outside the Adama City Administration municipal boundary.\n\n'
+            'This system serves Adama city only. Issues outside these limits should be reported to the Oromia Regional Administration.\n\n'
+            'Do you still want to continue?',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[700], foregroundColor: Colors.white),
+              child: const Text('Continue Anyway'),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true) return;
+    }
+
+    // ── Feature 3: Duplicate detection pre-check ──────────────────────────
+    try {
+      final dupRes = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/reports/check_duplicates/'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'latitude': lat, 'longitude': lng, 'threshold_meters': 50}),
+      ).timeout(const Duration(seconds: 8));
+
+      if (dupRes.statusCode == 200) {
+        final dupData = jsonDecode(dupRes.body);
+        if (dupData['has_duplicates'] == true && mounted) {
+          final dups = (dupData['duplicates'] as List<dynamic>? ?? []);
+          final nearest = dups.isNotEmpty ? dups.first : null;
+          final proceed = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.orange[700], size: 26),
+                const SizedBox(width: 8),
+                const Expanded(child: Text('Similar Report Nearby', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+              ]),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (nearest != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[50],
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.orange[200]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Case: ${nearest['case_number'] ?? ''}',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          const SizedBox(height: 4),
+                          Text('"${(nearest['description'] ?? '').toString().substring(0, ((nearest['description'] ?? '').toString().length < 80) ? (nearest['description'] ?? '').toString().length : 80)}..."',
+                              style: TextStyle(fontSize: 12, color: Colors.grey[700])),
+                          const SizedBox(height: 4),
+                          Row(children: [
+                            Icon(Icons.location_on, size: 14, color: Colors.orange[700]),
+                            const SizedBox(width: 4),
+                            Text('${nearest['distance_meters']?.toStringAsFixed(0) ?? '?'} m away',
+                                style: TextStyle(fontSize: 12, color: Colors.orange[700], fontWeight: FontWeight.w600)),
+                            const SizedBox(width: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(color: Colors.green[100], borderRadius: BorderRadius.circular(8)),
+                              child: Text(nearest['status'] ?? '', style: TextStyle(fontSize: 11, color: Colors.green[800], fontWeight: FontWeight.w600)),
+                            ),
+                          ]),
+                          if ((nearest['affected_count'] ?? 1) > 1)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text('${nearest['affected_count']} citizens affected',
+                                  style: TextStyle(fontSize: 12, color: Colors.indigo[700])),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  const Text(
+                    'A report for a similar issue already exists within 50 meters. '
+                    'Submitting a duplicate clogs the officer queue.\n\n'
+                    'Would you like to tap "+1 I\'m Also Affected" on the existing report instead?',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Submit New Anyway'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700], foregroundColor: Colors.white),
+                  child: const Text("I'm Also Affected"),
+                ),
+              ],
+            ),
+          );
+          // User chose "I'm Also Affected" — upvote instead of new report
+          if (proceed != true && nearest != null) {
+            final reportId = nearest['id']?.toString();
+            if (reportId != null && mounted) {
+              await _upvoteExistingReport(reportId, nearest['case_number'] ?? '');
+            }
+            return;
+          }
+        }
+      }
+    } catch (_) {
+      // Duplicate check failure is non-fatal — proceed with submission
+    }
+
     setState(() => _isSubmitting = true);
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -321,18 +490,12 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
         if (!mounted) return;
         setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please log in first to submit a report.'),
-            backgroundColor: Colors.orange,
-          )
+          const SnackBar(content: Text('Please log in first to submit a report.'), backgroundColor: Colors.orange),
         );
         return;
       }
 
-      final headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      };
+      final headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'};
 
       final fullDescription = _titleController.text.trim().isNotEmpty
           ? '${_titleController.text.trim()}\n\n${_descriptionController.text.trim()}'
@@ -343,8 +506,8 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
         headers: headers,
         body: jsonEncode({
           'description': fullDescription,
-          'latitude': _currentPosition?.latitude ?? 8.5415,
-          'longitude': _currentPosition?.longitude ?? 39.2689,
+          'latitude': lat,
+          'longitude': lng,
           'aanaa': _selectedAanaa ?? '',
           'kuta_magaalaa': _selectedKutaMagaalaa ?? '',
           'kebele': _selectedKebele ?? '',
@@ -429,7 +592,47 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to connect to backend: $e')));
+      // ── Feature 8: Offline queue fallback ───────────────────────────────
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('HandshakeException') ||
+          e.toString().contains('TimeoutException') ||
+          e.toString().contains('Failed host lookup')) {
+        try {
+          final fullDescription = _titleController.text.trim().isNotEmpty
+              ? '${_titleController.text.trim()}\n\n${_descriptionController.text.trim()}'
+              : _descriptionController.text.trim();
+          await SyncService().queueOfflineReport({
+            'description': fullDescription,
+            'latitude': _currentPosition?.latitude ?? 8.5415,
+            'longitude': _currentPosition?.longitude ?? 39.2689,
+            'department_name': _selectedDepartment ?? '',
+            'priority': _selectedPriority,
+            'aanaa': _selectedAanaa ?? '',
+            'kuta_magaalaa': _selectedKutaMagaalaa ?? '',
+            'kebele': _selectedKebele ?? '',
+            'iddoo_addaa': _iddooAddaaController.text.trim(),
+            'image_path': _selectedImage?.path ?? '',
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(children: const [
+                  Icon(Icons.wifi_off, color: Colors.white, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('No internet. Report saved offline — will auto-sync when connected.')),
+                ]),
+                backgroundColor: Colors.orange[700],
+                duration: const Duration(seconds: 5),
+              ),
+            );
+            Navigator.of(context).pop();
+          }
+        } catch (_) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save offline: $e')));
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to connect to backend: $e')));
+      }
     }
   }
 

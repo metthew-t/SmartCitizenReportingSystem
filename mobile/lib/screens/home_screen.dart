@@ -6,6 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:easy_localization/easy_localization.dart';
 import '../services/api_config.dart';
+import '../services/database_helper.dart';
+import '../services/sync_service.dart';
 import 'submit_report_screen.dart';
 import 'report_details_screen.dart';
 import 'profile_screen.dart';
@@ -24,6 +26,16 @@ class ReportItem {
   final String citizenName;
   final LatLng location;
 
+  // SLA fields (Feature 1)
+  final double? slaHoursRemaining;
+  final bool isSlaBreached;
+
+  // Community (Feature 2)
+  final int affectedCount;
+
+  // Geofence (Feature 6)
+  final bool isWithinGeofence;
+
   const ReportItem({
     required this.id,
     required this.caseNumber,
@@ -36,6 +48,10 @@ class ReportItem {
     required this.createdAt,
     this.citizenName = 'You',
     this.location = const LatLng(8.5400, 39.2700),
+    this.slaHoursRemaining,
+    this.isSlaBreached = false,
+    this.affectedCount = 1,
+    this.isWithinGeofence = true,
   });
 }
 
@@ -50,11 +66,23 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   List<ReportItem> _reports = [];
   bool _isLoading = true;
+  int _pendingOfflineCount = 0;
 
   @override
   void initState() {
     super.initState();
     _fetchReports();
+    // Feature 8: Start offline sync service
+    SyncService().startPeriodicSync();
+    SyncService().pendingCountStream.listen((count) {
+      if (mounted) setState(() => _pendingOfflineCount = count);
+    });
+    _loadPendingCount();
+  }
+
+  Future<void> _loadPendingCount() async {
+    final count = await SyncService().getPendingCount();
+    if (mounted) setState(() => _pendingOfflineCount = count);
   }
 
   Future<void> _fetchReports() async {
@@ -86,8 +114,12 @@ class _HomeScreenState extends State<HomeScreen> {
         final decoded = jsonDecode(response.body);
         final List data = decoded is List ? decoded : (decoded['results'] as List? ?? []);
         if (mounted) {
-          setState(() {
-            _reports = data.map((item) => ReportItem(
+          // Parse full report data including SLA, affected count, geofence
+          final parsed = data.map((item) {
+            final sla = item['sla_metrics'] as Map<String, dynamic>?;
+            final slaHours = sla != null ? (sla['remaining_hours'] as num?)?.toDouble() : null;
+            final slaBreached = sla?['is_breached'] == true;
+            return ReportItem(
               id: item['id'].toString(),
               caseNumber: item['case_number'] ?? '',
               title: (item['description'] ?? '').toString().length > 40
@@ -103,9 +135,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 (item['latitude'] ?? 8.54).toDouble(),
                 (item['longitude'] ?? 39.27).toDouble(),
               ),
-            )).toList();
+              slaHoursRemaining: slaHours,
+              isSlaBreached: slaBreached,
+              affectedCount: (item['affected_count'] as int?) ?? 1,
+              isWithinGeofence: item['is_within_geofence'] != false,
+            );
+          }).toList();
+          setState(() {
+            _reports = parsed;
             _isLoading = false;
           });
+          // Feature 8: cache to SQLite for offline access
+          try {
+            await DatabaseHelper().cacheReports(List<Map<String, dynamic>>.from(data));
+          } catch (_) {}
         }
       } else if (response.statusCode == 401) {
         // Token expired — clear it and prompt re-login
@@ -135,6 +178,46 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
+        // Feature 8: Load from SQLite cache when offline
+        try {
+          final cached = await DatabaseHelper().getCachedReports();
+          if (cached.isNotEmpty && mounted) {
+            final parsed = cached.map((item) => ReportItem(
+              id: item['id'].toString(),
+              caseNumber: item['case_number'] ?? '',
+              title: (item['description'] ?? '').toString().length > 40
+                  ? '${item['description'].toString().substring(0, 40)}...'
+                  : item['description'] ?? '',
+              description: item['description'] ?? '',
+              status: item['status'] ?? 'SUBMITTED',
+              priority: item['priority'] ?? 'MEDIUM',
+              department: item['department'] ?? 'Unknown',
+              category: item['category'] ?? 'General',
+              createdAt: DateTime.tryParse(item['created_at'] ?? '') ?? DateTime.now(),
+              location: LatLng(
+                (item['latitude'] as num? ?? 8.54).toDouble(),
+                (item['longitude'] as num? ?? 39.27).toDouble(),
+              ),
+              slaHoursRemaining: item['sla_hours_remaining'] as double?,
+              isSlaBreached: (item['is_sla_breached'] as int? ?? 0) == 1,
+              affectedCount: (item['affected_count'] as int?) ?? 1,
+              isWithinGeofence: (item['is_within_geofence'] as int? ?? 1) == 1,
+            )).toList();
+            setState(() => _reports = parsed);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Row(children: [
+                  Icon(Icons.wifi_off, color: Colors.white, size: 16),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('Offline — showing cached reports. Pull to refresh when connected.')),
+                ]),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 4),
+              ),
+            );
+            return;
+          }
+        } catch (_) {}
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Network error. Check your connection and pull down to retry.'),
@@ -191,7 +274,25 @@ class _HomeScreenState extends State<HomeScreen> {
           items: [
             BottomNavigationBarItem(icon: const Icon(Icons.dashboard_rounded), label: 'tab_home'.tr()),
             BottomNavigationBarItem(icon: const Icon(Icons.map), label: 'tab_map'.tr()),
-            BottomNavigationBarItem(icon: const Icon(Icons.list_alt_rounded), label: 'tab_history'.tr()),
+            // Feature 8: show offline pending badge on history tab
+            BottomNavigationBarItem(
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.list_alt_rounded),
+                  if (_pendingOfflineCount > 0)
+                    Positioned(
+                      right: -6, top: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(color: Colors.orange, shape: BoxShape.circle),
+                        child: Text('$_pendingOfflineCount', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                ],
+              ),
+              label: 'tab_history'.tr(),
+            ),
             BottomNavigationBarItem(icon: const Icon(Icons.person_rounded), label: 'tab_profile'.tr()),
           ],
         ),
@@ -566,10 +667,49 @@ class _LegendItem extends StatelessWidget {
   }
 }
 
-class _MapReportPreview extends StatelessWidget {
+class _MapReportPreview extends StatefulWidget {
   final ReportItem report;
 
   const _MapReportPreview({required this.report});
+
+  @override
+  State<_MapReportPreview> createState() => _MapReportPreviewState();
+}
+
+class _MapReportPreviewState extends State<_MapReportPreview> {
+  bool _upvoting = false;
+  int _count = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _count = widget.report.affectedCount;
+  }
+
+  Future<void> _upvote() async {
+    if (_upvoting) return;
+    setState(() => _upvoting = true);
+    try {
+      final res = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/reports/${widget.report.id}/upvote_affected/'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200 && mounted) {
+        final data = jsonDecode(res.body);
+        setState(() {
+          _count = data['affected_count'] ?? _count + 1;
+          _upvoting = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Recorded — $_count citizens affected'),
+          backgroundColor: Colors.green[700],
+          duration: const Duration(seconds: 2),
+        ));
+      }
+    } catch (_) {
+      if (mounted) setState(() => _upvoting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -588,25 +728,56 @@ class _MapReportPreview extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(report.caseNumber, style: TextStyle(color: Colors.indigo[400], fontWeight: FontWeight.bold)),
-              Text(report.status.replaceAll('_', ' '), style: TextStyle(color: Colors.grey[600], fontSize: 12, fontWeight: FontWeight.bold)),
+              Text(widget.report.caseNumber, style: TextStyle(color: Colors.indigo[400], fontWeight: FontWeight.bold)),
+              Text(widget.report.status.replaceAll('_', ' '), style: TextStyle(color: Colors.grey[600], fontSize: 12, fontWeight: FontWeight.bold)),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(report.department, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          Text(report.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey[700])),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (context) => ReportDetailsScreen(reportId: report.id, caseNumber: report.caseNumber)));
-              },
-              child: const Text('View Full Details'),
+          const SizedBox(height: 4),
+          // Feature 1: SLA badge on map popup
+          if (!['RESOLVED', 'CLOSED', 'REJECTED'].contains(widget.report.status) && widget.report.slaHoursRemaining != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: _SlaBadge(hoursRemaining: widget.report.slaHoursRemaining!, isBreached: widget.report.isSlaBreached),
             ),
-          )
+          Text(widget.report.department, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          Text(widget.report.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              // Feature 2: Me Too upvote button on map
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: _upvoting
+                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.thumb_up_alt_outlined, size: 16),
+                  label: Text('+1 Affected ($_count)', style: const TextStyle(fontSize: 12)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.indigo[700],
+                    side: BorderSide(color: Colors.indigo[200]!),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  onPressed: _upvote,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(context, MaterialPageRoute(
+                        builder: (context) => ReportDetailsScreen(reportId: widget.report.id, caseNumber: widget.report.caseNumber)));
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[700],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  child: const Text('Details', style: TextStyle(fontSize: 12)),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -665,11 +836,21 @@ class _ReportCard extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(child: Text(report.department, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14))),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(color: _priorityColor().withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                          child: Text(report.priority, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _priorityColor())),
-                        ),
+                        // Feature 1: SLA countdown badge
+                        if (!['RESOLVED', 'CLOSED', 'REJECTED'].contains(report.status) && report.slaHoursRemaining != null)
+                          _SlaBadge(hoursRemaining: report.slaHoursRemaining!, isBreached: report.isSlaBreached),
+                        if (['RESOLVED', 'CLOSED', 'REJECTED'].contains(report.status))
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(color: _priorityColor().withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+                            child: Text(report.priority, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _priorityColor())),
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(color: _priorityColor().withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+                            child: Text(report.priority, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _priorityColor())),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -677,17 +858,53 @@ class _ReportCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(report.description, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                     const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(color: _statusColor().withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(width: 6, height: 6, decoration: BoxDecoration(color: _statusColor(), shape: BoxShape.circle)),
-                          const SizedBox(width: 4),
-                          Text(report.status.replaceAll('_', ' '), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _statusColor())),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(color: _statusColor().withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(width: 6, height: 6, decoration: BoxDecoration(color: _statusColor(), shape: BoxShape.circle)),
+                              const SizedBox(width: 4),
+                              Text(report.status.replaceAll('_', ' '), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _statusColor())),
+                            ],
+                          ),
+                        ),
+                        // Feature 2: Affected count badge
+                        if (report.affectedCount > 1) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            decoration: BoxDecoration(color: Colors.indigo[50], borderRadius: BorderRadius.circular(20)),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.people, size: 10, color: Colors.indigo[600]),
+                                const SizedBox(width: 3),
+                                Text('${report.affectedCount}', style: TextStyle(fontSize: 10, color: Colors.indigo[700], fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                          ),
                         ],
-                      ),
+                        // Feature 6: Outside geofence warning
+                        if (!report.isWithinGeofence) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            decoration: BoxDecoration(color: Colors.orange[50], borderRadius: BorderRadius.circular(20)),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.location_off, size: 10, color: Colors.orange[700]),
+                                const SizedBox(width: 3),
+                                Text('Outside limits', style: TextStyle(fontSize: 9, color: Colors.orange[700])),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -697,6 +914,55 @@ class _ReportCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Feature 1: SLA Countdown Badge ───────────────────────────────────────────
+class _SlaBadge extends StatelessWidget {
+  final double hoursRemaining;
+  final bool isBreached;
+
+  const _SlaBadge({required this.hoursRemaining, required this.isBreached});
+
+  @override
+  Widget build(BuildContext context) {
+    Color badgeColor;
+    String label;
+    IconData icon;
+
+    if (isBreached) {
+      badgeColor = Colors.red[700]!;
+      final overdue = hoursRemaining.abs();
+      label = overdue < 1
+          ? 'Overdue ${(overdue * 60).toInt()}m'
+          : 'Overdue ${overdue.toStringAsFixed(0)}h';
+      icon = Icons.timer_off;
+    } else if (hoursRemaining <= 4) {
+      badgeColor = Colors.orange[700]!;
+      label = '${hoursRemaining.toStringAsFixed(0)}h left';
+      icon = Icons.timer;
+    } else {
+      badgeColor = Colors.green[700]!;
+      label = '${hoursRemaining.toStringAsFixed(0)}h left';
+      icon = Icons.timer_outlined;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: badgeColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: badgeColor.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: badgeColor),
+          const SizedBox(width: 3),
+          Text(label, style: TextStyle(fontSize: 9, color: badgeColor, fontWeight: FontWeight.bold)),
+        ],
       ),
     );
   }
