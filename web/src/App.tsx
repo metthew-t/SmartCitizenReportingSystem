@@ -305,7 +305,7 @@ function ForcedPasswordChangeModal() {
     }}>
       <div style={{
         background: '#1e293b', border: '1px solid rgba(245, 158, 11, 0.4)',
-        borderRadius: 20, padding: 32, maxWidth: 520, width: '100%',
+        borderRadius: 20, padding: 32, maxWidth: 520, width: '100%', maxHeight: '90vh', overflowY: 'auto',
         boxShadow: '0 25px 60px rgba(0,0,0,0.5)', color: '#f8fafc'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>

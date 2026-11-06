@@ -1713,7 +1713,7 @@ export default function ReportDetails() {
         }}>
           <div style={{
             background: '#1e293b', border: '1px solid rgba(148,163,184,0.1)',
-            borderRadius: 16, width: '100%', maxWidth: 480, padding: 24,
+            borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', padding: 24,
             boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)'
           }}>
             <h3 style={{ color: '#e2e8f0', margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>
@@ -1801,7 +1801,7 @@ export default function ReportDetails() {
         }}>
           <div style={{
             background: '#0f172a', border: '1px solid rgba(239,68,68,0.3)',
-            borderRadius: 16, width: '100%', maxWidth: 480, padding: 24,
+            borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', padding: 24,
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.7)'
           }}>
             <h3 style={{ color: '#f87171', margin: '0 0 10px', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1874,7 +1874,7 @@ export default function ReportDetails() {
         }}>
           <div style={{
             background: '#0f172a', border: '1px solid rgba(99,102,241,0.3)',
-            borderRadius: 16, width: '100%', maxWidth: 520, padding: 24,
+            borderRadius: 16, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', padding: 24,
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.7)'
           }}>
             <h3 style={{ color: '#a5b4fc', margin: '0 0 8px', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>

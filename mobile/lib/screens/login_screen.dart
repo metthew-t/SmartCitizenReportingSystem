@@ -127,7 +127,11 @@ class _LoginScreenState extends State<LoginScreen>
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         await _saveTokens(data['access'], data['refresh']);
-        if (mounted) _goHome();
+        if (data['must_change_password'] == true) {
+          if (mounted) _showForcedPasswordChangeDialog(data['access']);
+        } else {
+          if (mounted) _goHome();
+        }
       } else if (res.statusCode >= 500) {
         _showError(_safeDecodeError(res));
       } else {
@@ -138,6 +142,328 @@ class _LoginScreenState extends State<LoginScreen>
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showForcedPasswordChangeDialog(String token) {
+    final oldPwCtrl = TextEditingController(text: _passwordController.text);
+    final newPwCtrl = TextEditingController();
+    final confirmPwCtrl = TextEditingController();
+    bool isSubmitting = false;
+    String? localError;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: const [
+              Icon(Icons.security, color: Colors.amber),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Mandatory Password Change',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.amber[300]!),
+                  ),
+                  child: Column(
+                    children: const [
+                      Icon(Icons.shield_outlined, color: Colors.amber, size: 24),
+                      SizedBox(height: 6),
+                      Text(
+                        'Initial Login Security Policy',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Your account was provisioned by municipal administration. You are required to establish a strong 12+ character password before continuing.',
+                        style: TextStyle(fontSize: 11.5, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                if (localError != null) ...[
+                  Text(
+                    localError!,
+                    style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                TextField(
+                  controller: oldPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Current Temporary Password',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: newPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'New Password (12+ Characters)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: confirmPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm New Password',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final np = newPwCtrl.text.trim();
+                      final cp = confirmPwCtrl.text.trim();
+                      if (np.length < 12) {
+                        setDialogState(() => localError = 'Password must be at least 12 characters.');
+                        return;
+                      }
+                      if (np != cp) {
+                        setDialogState(() => localError = 'New passwords do not match.');
+                        return;
+                      }
+                      setDialogState(() {
+                        isSubmitting = true;
+                        localError = null;
+                      });
+                      try {
+                        final res = await http.post(
+                          Uri.parse('$_base/auth/change-password/'),
+                          headers: {
+                            'Authorization': 'Bearer ' + token,
+                            'Content-Type': 'application/json'
+                          },
+                          body: jsonEncode({
+                            'old_password': oldPwCtrl.text,
+                            'new_password': np,
+                          }),
+                        );
+                        if (res.statusCode == 200) {
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (mounted) _goHome();
+                        } else {
+                          final err = jsonDecode(res.body)['error'] ?? 'Failed to update password.';
+                          setDialogState(() {
+                            isSubmitting = false;
+                            localError = err;
+                          });
+                        }
+                      } catch (e) {
+                        setDialogState(() {
+                          isSubmitting = false;
+                          localError = 'Connection error: ' + e.toString();
+                        });
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber[700],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: isSubmitting
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Update Password & Continue', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showForcedPasswordChangeDialog(String token) {
+    final oldPwCtrl = TextEditingController(text: _passwordController.text);
+    final newPwCtrl = TextEditingController();
+    final confirmPwCtrl = TextEditingController();
+    bool isSubmitting = false;
+    String? localError;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: const [
+              Icon(Icons.security, color: Colors.amber),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Mandatory Password Change',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Centered Directive Text Banner
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.amber[300]!),
+                  ),
+                  child: Column(
+                    children: const [
+                      Icon(Icons.shield_outlined, color: Colors.amber, size: 24),
+                      SizedBox(height: 6),
+                      Text(
+                        'Initial Login Security Standard',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Your account was provisioned with a temporary password. You are required to establish a strong 12+ character password before continuing.',
+                        style: TextStyle(fontSize: 11.5, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                if (localError != null) ...[
+                  Text(
+                    localError!,
+                    style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+
+                TextField(
+                  controller: oldPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Current Temporary Password',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: newPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'New Password (12+ Characters)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: confirmPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm New Password',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final np = newPwCtrl.text.trim();
+                      final cp = confirmPwCtrl.text.trim();
+                      if (np.length < 12) {
+                        setDialogState(() => localError = 'Password must be at least 12 characters.');
+                        return;
+                      }
+                      if (np != cp) {
+                        setDialogState(() => localError = 'New passwords do not match.');
+                        return;
+                      }
+                      setDialogState(() {
+                        isSubmitting = true;
+                        localError = null;
+                      });
+
+                      try {
+                        final res = await http.post(
+                          Uri.parse('$_base/auth/change-password/'),
+                          headers: {
+                            'Authorization': 'Bearer $token',
+                            'Content-Type': 'application/json'
+                          },
+                          body: jsonEncode({
+                            'old_password': oldPwCtrl.text,
+                            'new_password': np,
+                          }),
+                        );
+                        if (res.statusCode == 200) {
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (mounted) _goHome();
+                        } else {
+                          final err = jsonDecode(res.body)['error'] ?? 'Failed to update password.';
+                          setDialogState(() {
+                            isSubmitting = false;
+                            localError = err;
+                          });
+                        }
+                      } catch (e) {
+                        setDialogState(() {
+                          isSubmitting = false;
+                          localError = 'Connection error: $e';
+                        });
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber[700],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: isSubmitting
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Update Password & Continue', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Registration flow — Step 1: enter phone ─────────────────────────────────
@@ -173,6 +499,169 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
+  void _showForcedPasswordChangeDialog(String token) {
+    final oldPwCtrl = TextEditingController(text: _passwordController.text);
+    final newPwCtrl = TextEditingController();
+    final confirmPwCtrl = TextEditingController();
+    bool isSubmitting = false;
+    String? localError;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: const [
+              Icon(Icons.security, color: Colors.amber),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Mandatory Password Change',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Centered Directive Text Banner
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.amber[300]!),
+                  ),
+                  child: Column(
+                    children: const [
+                      Icon(Icons.shield_outlined, color: Colors.amber, size: 24),
+                      SizedBox(height: 6),
+                      Text(
+                        'Initial Login Security Standard',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Your account was provisioned with a temporary password. You are required to establish a strong 12+ character password before continuing.',
+                        style: TextStyle(fontSize: 11.5, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                if (localError != null) ...[
+                  Text(
+                    localError!,
+                    style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+
+                TextField(
+                  controller: oldPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Current Temporary Password',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: newPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'New Password (12+ Characters)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: confirmPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm New Password',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final np = newPwCtrl.text.trim();
+                      final cp = confirmPwCtrl.text.trim();
+                      if (np.length < 12) {
+                        setDialogState(() => localError = 'Password must be at least 12 characters.');
+                        return;
+                      }
+                      if (np != cp) {
+                        setDialogState(() => localError = 'New passwords do not match.');
+                        return;
+                      }
+                      setDialogState(() {
+                        isSubmitting = true;
+                        localError = null;
+                      });
+
+                      try {
+                        final res = await http.post(
+                          Uri.parse('$_base/auth/change-password/'),
+                          headers: {
+                            'Authorization': 'Bearer $token',
+                            'Content-Type': 'application/json'
+                          },
+                          body: jsonEncode({
+                            'old_password': oldPwCtrl.text,
+                            'new_password': np,
+                          }),
+                        );
+                        if (res.statusCode == 200) {
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (mounted) _goHome();
+                        } else {
+                          final err = jsonDecode(res.body)['error'] ?? 'Failed to update password.';
+                          setDialogState(() {
+                            isSubmitting = false;
+                            localError = err;
+                          });
+                        }
+                      } catch (e) {
+                        setDialogState(() {
+                          isSubmitting = false;
+                          localError = 'Connection error: $e';
+                        });
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber[700],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: isSubmitting
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Update Password & Continue', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Registration flow — Step 2: verify OTP ──────────────────────────────────
 
   Future<void> _handleVerifyOTP(String otp) async {
@@ -204,6 +693,169 @@ class _LoginScreenState extends State<LoginScreen>
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showForcedPasswordChangeDialog(String token) {
+    final oldPwCtrl = TextEditingController(text: _passwordController.text);
+    final newPwCtrl = TextEditingController();
+    final confirmPwCtrl = TextEditingController();
+    bool isSubmitting = false;
+    String? localError;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: const [
+              Icon(Icons.security, color: Colors.amber),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Mandatory Password Change',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Centered Directive Text Banner
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.amber[300]!),
+                  ),
+                  child: Column(
+                    children: const [
+                      Icon(Icons.shield_outlined, color: Colors.amber, size: 24),
+                      SizedBox(height: 6),
+                      Text(
+                        'Initial Login Security Standard',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Your account was provisioned with a temporary password. You are required to establish a strong 12+ character password before continuing.',
+                        style: TextStyle(fontSize: 11.5, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                if (localError != null) ...[
+                  Text(
+                    localError!,
+                    style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+
+                TextField(
+                  controller: oldPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Current Temporary Password',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: newPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'New Password (12+ Characters)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: confirmPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm New Password',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final np = newPwCtrl.text.trim();
+                      final cp = confirmPwCtrl.text.trim();
+                      if (np.length < 12) {
+                        setDialogState(() => localError = 'Password must be at least 12 characters.');
+                        return;
+                      }
+                      if (np != cp) {
+                        setDialogState(() => localError = 'New passwords do not match.');
+                        return;
+                      }
+                      setDialogState(() {
+                        isSubmitting = true;
+                        localError = null;
+                      });
+
+                      try {
+                        final res = await http.post(
+                          Uri.parse('$_base/auth/change-password/'),
+                          headers: {
+                            'Authorization': 'Bearer $token',
+                            'Content-Type': 'application/json'
+                          },
+                          body: jsonEncode({
+                            'old_password': oldPwCtrl.text,
+                            'new_password': np,
+                          }),
+                        );
+                        if (res.statusCode == 200) {
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (mounted) _goHome();
+                        } else {
+                          final err = jsonDecode(res.body)['error'] ?? 'Failed to update password.';
+                          setDialogState(() {
+                            isSubmitting = false;
+                            localError = err;
+                          });
+                        }
+                      } catch (e) {
+                        setDialogState(() {
+                          isSubmitting = false;
+                          localError = 'Connection error: $e';
+                        });
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber[700],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: isSubmitting
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Update Password & Continue', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Registration flow — Step 3: fill profile & register ─────────────────────
@@ -256,6 +908,169 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
+  void _showForcedPasswordChangeDialog(String token) {
+    final oldPwCtrl = TextEditingController(text: _passwordController.text);
+    final newPwCtrl = TextEditingController();
+    final confirmPwCtrl = TextEditingController();
+    bool isSubmitting = false;
+    String? localError;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: const [
+              Icon(Icons.security, color: Colors.amber),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Mandatory Password Change',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Centered Directive Text Banner
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.amber[300]!),
+                  ),
+                  child: Column(
+                    children: const [
+                      Icon(Icons.shield_outlined, color: Colors.amber, size: 24),
+                      SizedBox(height: 6),
+                      Text(
+                        'Initial Login Security Standard',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Your account was provisioned with a temporary password. You are required to establish a strong 12+ character password before continuing.',
+                        style: TextStyle(fontSize: 11.5, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                if (localError != null) ...[
+                  Text(
+                    localError!,
+                    style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+
+                TextField(
+                  controller: oldPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Current Temporary Password',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: newPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'New Password (12+ Characters)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: confirmPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm New Password',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final np = newPwCtrl.text.trim();
+                      final cp = confirmPwCtrl.text.trim();
+                      if (np.length < 12) {
+                        setDialogState(() => localError = 'Password must be at least 12 characters.');
+                        return;
+                      }
+                      if (np != cp) {
+                        setDialogState(() => localError = 'New passwords do not match.');
+                        return;
+                      }
+                      setDialogState(() {
+                        isSubmitting = true;
+                        localError = null;
+                      });
+
+                      try {
+                        final res = await http.post(
+                          Uri.parse('$_base/auth/change-password/'),
+                          headers: {
+                            'Authorization': 'Bearer $token',
+                            'Content-Type': 'application/json'
+                          },
+                          body: jsonEncode({
+                            'old_password': oldPwCtrl.text,
+                            'new_password': np,
+                          }),
+                        );
+                        if (res.statusCode == 200) {
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (mounted) _goHome();
+                        } else {
+                          final err = jsonDecode(res.body)['error'] ?? 'Failed to update password.';
+                          setDialogState(() {
+                            isSubmitting = false;
+                            localError = err;
+                          });
+                        }
+                      } catch (e) {
+                        setDialogState(() {
+                          isSubmitting = false;
+                          localError = 'Connection error: $e';
+                        });
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber[700],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: isSubmitting
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Update Password & Continue', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Forgot Password flow — Step 1: enter phone ─────────────────────────────
 
   Future<void> _handleForgotSendOTP() async {
@@ -287,6 +1102,169 @@ class _LoginScreenState extends State<LoginScreen>
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showForcedPasswordChangeDialog(String token) {
+    final oldPwCtrl = TextEditingController(text: _passwordController.text);
+    final newPwCtrl = TextEditingController();
+    final confirmPwCtrl = TextEditingController();
+    bool isSubmitting = false;
+    String? localError;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: const [
+              Icon(Icons.security, color: Colors.amber),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Mandatory Password Change',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Centered Directive Text Banner
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.amber[300]!),
+                  ),
+                  child: Column(
+                    children: const [
+                      Icon(Icons.shield_outlined, color: Colors.amber, size: 24),
+                      SizedBox(height: 6),
+                      Text(
+                        'Initial Login Security Standard',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Your account was provisioned with a temporary password. You are required to establish a strong 12+ character password before continuing.',
+                        style: TextStyle(fontSize: 11.5, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                if (localError != null) ...[
+                  Text(
+                    localError!,
+                    style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+
+                TextField(
+                  controller: oldPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Current Temporary Password',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: newPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'New Password (12+ Characters)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: confirmPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm New Password',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final np = newPwCtrl.text.trim();
+                      final cp = confirmPwCtrl.text.trim();
+                      if (np.length < 12) {
+                        setDialogState(() => localError = 'Password must be at least 12 characters.');
+                        return;
+                      }
+                      if (np != cp) {
+                        setDialogState(() => localError = 'New passwords do not match.');
+                        return;
+                      }
+                      setDialogState(() {
+                        isSubmitting = true;
+                        localError = null;
+                      });
+
+                      try {
+                        final res = await http.post(
+                          Uri.parse('$_base/auth/change-password/'),
+                          headers: {
+                            'Authorization': 'Bearer $token',
+                            'Content-Type': 'application/json'
+                          },
+                          body: jsonEncode({
+                            'old_password': oldPwCtrl.text,
+                            'new_password': np,
+                          }),
+                        );
+                        if (res.statusCode == 200) {
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (mounted) _goHome();
+                        } else {
+                          final err = jsonDecode(res.body)['error'] ?? 'Failed to update password.';
+                          setDialogState(() {
+                            isSubmitting = false;
+                            localError = err;
+                          });
+                        }
+                      } catch (e) {
+                        setDialogState(() {
+                          isSubmitting = false;
+                          localError = 'Connection error: $e';
+                        });
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber[700],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: isSubmitting
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Update Password & Continue', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Forgot Password flow — Step 3: set new password ─────────────────────────
@@ -336,6 +1314,169 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
+  void _showForcedPasswordChangeDialog(String token) {
+    final oldPwCtrl = TextEditingController(text: _passwordController.text);
+    final newPwCtrl = TextEditingController();
+    final confirmPwCtrl = TextEditingController();
+    bool isSubmitting = false;
+    String? localError;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: const [
+              Icon(Icons.security, color: Colors.amber),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Mandatory Password Change',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Centered Directive Text Banner
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.amber[300]!),
+                  ),
+                  child: Column(
+                    children: const [
+                      Icon(Icons.shield_outlined, color: Colors.amber, size: 24),
+                      SizedBox(height: 6),
+                      Text(
+                        'Initial Login Security Standard',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Your account was provisioned with a temporary password. You are required to establish a strong 12+ character password before continuing.',
+                        style: TextStyle(fontSize: 11.5, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                if (localError != null) ...[
+                  Text(
+                    localError!,
+                    style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+
+                TextField(
+                  controller: oldPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Current Temporary Password',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: newPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'New Password (12+ Characters)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: confirmPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm New Password',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final np = newPwCtrl.text.trim();
+                      final cp = confirmPwCtrl.text.trim();
+                      if (np.length < 12) {
+                        setDialogState(() => localError = 'Password must be at least 12 characters.');
+                        return;
+                      }
+                      if (np != cp) {
+                        setDialogState(() => localError = 'New passwords do not match.');
+                        return;
+                      }
+                      setDialogState(() {
+                        isSubmitting = true;
+                        localError = null;
+                      });
+
+                      try {
+                        final res = await http.post(
+                          Uri.parse('$_base/auth/change-password/'),
+                          headers: {
+                            'Authorization': 'Bearer $token',
+                            'Content-Type': 'application/json'
+                          },
+                          body: jsonEncode({
+                            'old_password': oldPwCtrl.text,
+                            'new_password': np,
+                          }),
+                        );
+                        if (res.statusCode == 200) {
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (mounted) _goHome();
+                        } else {
+                          final err = jsonDecode(res.body)['error'] ?? 'Failed to update password.';
+                          setDialogState(() {
+                            isSubmitting = false;
+                            localError = err;
+                          });
+                        }
+                      } catch (e) {
+                        setDialogState(() {
+                          isSubmitting = false;
+                          localError = 'Connection error: $e';
+                        });
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber[700],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: isSubmitting
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Update Password & Continue', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Resend OTP ──────────────────────────────────────────────────────────────
 
   Future<void> _handleResendOTP() async {
@@ -367,6 +1508,169 @@ class _LoginScreenState extends State<LoginScreen>
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showForcedPasswordChangeDialog(String token) {
+    final oldPwCtrl = TextEditingController(text: _passwordController.text);
+    final newPwCtrl = TextEditingController();
+    final confirmPwCtrl = TextEditingController();
+    bool isSubmitting = false;
+    String? localError;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: const [
+              Icon(Icons.security, color: Colors.amber),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Mandatory Password Change',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Centered Directive Text Banner
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.amber[300]!),
+                  ),
+                  child: Column(
+                    children: const [
+                      Icon(Icons.shield_outlined, color: Colors.amber, size: 24),
+                      SizedBox(height: 6),
+                      Text(
+                        'Initial Login Security Standard',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Your account was provisioned with a temporary password. You are required to establish a strong 12+ character password before continuing.',
+                        style: TextStyle(fontSize: 11.5, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                if (localError != null) ...[
+                  Text(
+                    localError!,
+                    style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+
+                TextField(
+                  controller: oldPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Current Temporary Password',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: newPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'New Password (12+ Characters)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: confirmPwCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm New Password',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final np = newPwCtrl.text.trim();
+                      final cp = confirmPwCtrl.text.trim();
+                      if (np.length < 12) {
+                        setDialogState(() => localError = 'Password must be at least 12 characters.');
+                        return;
+                      }
+                      if (np != cp) {
+                        setDialogState(() => localError = 'New passwords do not match.');
+                        return;
+                      }
+                      setDialogState(() {
+                        isSubmitting = true;
+                        localError = null;
+                      });
+
+                      try {
+                        final res = await http.post(
+                          Uri.parse('$_base/auth/change-password/'),
+                          headers: {
+                            'Authorization': 'Bearer $token',
+                            'Content-Type': 'application/json'
+                          },
+                          body: jsonEncode({
+                            'old_password': oldPwCtrl.text,
+                            'new_password': np,
+                          }),
+                        );
+                        if (res.statusCode == 200) {
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (mounted) _goHome();
+                        } else {
+                          final err = jsonDecode(res.body)['error'] ?? 'Failed to update password.';
+                          setDialogState(() {
+                            isSubmitting = false;
+                            localError = err;
+                          });
+                        }
+                      } catch (e) {
+                        setDialogState(() {
+                          isSubmitting = false;
+                          localError = 'Connection error: $e';
+                        });
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber[700],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: isSubmitting
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Update Password & Continue', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _startResendTimer() {

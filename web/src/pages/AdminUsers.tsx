@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
-import { Trash2, User, Building2, Shield, Search, Plus, X, KeyRound, Edit2, Phone, Mail, Crown, Sparkles, Check } from 'lucide-react'
+import { Trash2, User, Building2, Shield, Search, Plus, X, KeyRound, Edit2, Phone, Mail, Crown, Sparkles, Check, ShieldAlert } from 'lucide-react'
 import { validatePasswordRules, isStrongPassword, generateStrongPassword } from '../utils/passwordPolicy'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
@@ -503,90 +503,128 @@ export default function AdminUsers() {
       {/* Create User Modal */}
       {showModal && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+          position: 'fixed', inset: 0,
+          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+          padding: 16
         }}>
           <div style={{
-            background: '#1e293b', border: '1px solid rgba(148,163,184,0.1)',
-            borderRadius: 16, width: '100%', maxWidth: 400, padding: 24,
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)'
+            background: '#1e293b', border: '1px solid rgba(148,163,184,0.2)',
+            borderRadius: 20, width: '100%', maxWidth: 480, maxHeight: '90vh',
+            display: 'flex', flexDirection: 'column',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6)', overflow: 'hidden'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, color: '#e2e8f0', fontSize: 18 }}>
+            {/* Header */}
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '18px 24px', borderBottom: '1px solid rgba(148,163,184,0.12)',
+              background: 'rgba(30, 41, 59, 0.8)'
+            }}>
+              <h3 style={{ margin: 0, color: '#f8fafc', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Plus size={18} color="#818cf8" />
                 Add New {role === 'city_admin' || role === 'super_admin' ? 'Official' : 'Officer'}
               </h3>
-              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 4 }}>
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateUser} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Scrollable Form Body */}
+            <form id="create-user-form" onSubmit={handleCreateUser} style={{
+              display: 'flex', flexDirection: 'column', gap: 14,
+              padding: '20px 24px', overflowY: 'auto', flex: 1
+            }}>
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Full Name</label>
+                <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Full Name</label>
                 <input 
                   type="text" required
+                  placeholder="e.g. Abebe Bikila"
                   value={formData.full_name}
                   onChange={e => setFormData({...formData, full_name: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none' }}
+                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Email Address</label>
+                <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Email Address</label>
                 <input 
                   type="email" required
+                  placeholder="official@adama.gov.et"
                   value={formData.email}
                   onChange={e => setFormData({...formData, email: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none' }}
+                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Phone Number</label>
+                <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Phone Number</label>
                 <input 
                   type="text"
-                  placeholder="09xxxxxxxx (optional)"
+                  placeholder="09xxxxxxxx (receives login SMS)"
                   value={formData.phone_number}
                   onChange={e => setFormData({...formData, phone_number: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none' }}
+                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <label style={{ color: '#94a3b8', fontSize: 12 }}>Initial Password (Min 12 Characters)</label>
+                  <label style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Initial Temporary Password (Min 12 Characters)</label>
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, password: generateStrongPassword() })}
                     style={{
-                      background: 'none', border: 'none', color: '#818cf8', fontSize: 11,
+                      background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)',
+                      color: '#a5b4fc', fontSize: 11, padding: '4px 10px', borderRadius: 6,
                       cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600
                     }}
                   >
-                    <Sparkles size={12} /> Auto-Generate
+                    <Sparkles size={12} color="#818cf8" /> Auto-Generate
                   </button>
                 </div>
                 <input 
                   type="text" required minLength={12}
                   value={formData.password}
-                  placeholder="Click Auto-Generate or enter strong password"
+                  placeholder="Click Auto-Generate or enter 12+ char password"
                   onChange={e => setFormData({...formData, password: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none', fontFamily: 'monospace' }}
+                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none', fontFamily: 'monospace', boxSizing: 'border-box' }}
                 />
-                <div style={{ marginTop: 6, fontSize: 11, color: '#f59e0b', background: 'rgba(245,158,11,0.08)', padding: '6px 8px', borderRadius: 6 }}>
-                  ℹ️ User will receive SMS notification and will be <strong>mandated to change this password on first login</strong>.
+              </div>
+
+              {/* Centered Directing Text Banner - Positioned in the Middle */}
+              <div style={{
+                margin: '6px 0',
+                padding: '12px 16px',
+                borderRadius: 12,
+                background: 'rgba(245, 158, 11, 0.12)',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                color: '#fcd34d',
+                fontSize: 12,
+                lineHeight: 1.5,
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: '#fbbf24' }}>
+                  <ShieldAlert size={16} />
+                  <span>Mandatory First-Login Password Change</span>
+                </div>
+                <div style={{ color: '#e2e8f0', fontSize: 11.5 }}>
+                  The user will receive an SMS notification and will be <strong>directed to change their temporary password</strong> immediately upon first logging into the system.
                 </div>
               </div>
 
               {(role === 'city_admin' || role === 'super_admin') && (
                 <>
                   <div>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Department</label>
+                    <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Department</label>
                     <select 
                       value={formData.department_name}
                       onChange={e => setFormData({...formData, department_name: e.target.value})}
-                      style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none' }}
+                      style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none', boxSizing: 'border-box' }}
                     >
                       <option value="">None (City Admin / Super Admin)</option>
                       {departments.map(d => (
@@ -595,8 +633,8 @@ export default function AdminUsers() {
                     </select>
                   </div>
 
-                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e2e8f0', fontSize: 14 }}>
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', padding: '10px 12px', background: 'rgba(15,23,42,0.4)', borderRadius: 8, border: '1px solid rgba(148,163,184,0.1)' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e2e8f0', fontSize: 13, cursor: 'pointer' }}>
                       <input 
                         type="checkbox" 
                         checked={formData.is_manager}
@@ -606,7 +644,7 @@ export default function AdminUsers() {
                     </label>
                     {role === 'super_admin' && (
                       <>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e2e8f0', fontSize: 14 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e2e8f0', fontSize: 13, cursor: 'pointer' }}>
                           <input 
                             type="checkbox" 
                             checked={formData.is_city_admin && !formData.is_super_admin && !formData.is_mayor}
@@ -619,7 +657,7 @@ export default function AdminUsers() {
                           />
                           Is City Admin
                         </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#818cf8', fontSize: 14, fontWeight: 600 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#818cf8', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                           <input 
                             type="checkbox" 
                             checked={formData.is_super_admin}
@@ -632,7 +670,7 @@ export default function AdminUsers() {
                           />
                           Is Super Admin
                         </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#eab308', fontSize: 14, fontWeight: 700 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#eab308', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                           <input 
                             type="checkbox" 
                             checked={formData.is_mayor}
@@ -645,24 +683,46 @@ export default function AdminUsers() {
                               department_name: e.target.checked ? 'Waajjira Kantiibaa' : formData.department_name
                             })}
                           />
-                          <Crown size={14} style={{ display: 'inline' }} /> Is Mayor (Office of the Mayor)
+                          <Crown size={14} style={{ display: 'inline' }} /> Is Mayor
                         </label>
                       </>
                     )}
                   </div>
                 </>
               )}
+            </form>
 
+            {/* Footer - ALL BUTTONS ALWAYS VISIBLE */}
+            <div style={{
+              display: 'flex', justifyContent: 'flex-end', gap: 12,
+              padding: '16px 24px', borderTop: '1px solid rgba(148,163,184,0.12)',
+              background: 'rgba(15, 23, 42, 0.6)'
+            }}>
               <button 
-                type="submit" disabled={creating}
+                type="button" 
+                onClick={() => setShowModal(false)}
                 style={{
-                  marginTop: 8, padding: 12, background: '#6366f1', color: 'white',
-                  border: 'none', borderRadius: 8, fontWeight: 600, cursor: creating ? 'not-allowed' : 'pointer'
+                  padding: '10px 18px', background: 'rgba(148,163,184,0.1)',
+                  border: '1px solid rgba(148,163,184,0.2)', color: '#cbd5e1',
+                  borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer'
                 }}
               >
-                {creating ? 'Creating...' : 'Create Account'}
+                Cancel
               </button>
-            </form>
+              <button 
+                type="submit" 
+                form="create-user-form"
+                disabled={creating}
+                style={{
+                  padding: '10px 22px', background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                  border: 'none', color: '#ffffff', borderRadius: 8, fontWeight: 700, fontSize: 13,
+                  cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.7 : 1,
+                  boxShadow: '0 4px 14px rgba(99,102,241,0.35)'
+                }}
+              >
+                {creating ? 'Creating Account...' : 'Create Account'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -670,77 +730,136 @@ export default function AdminUsers() {
       {/* Reset Password Modal */}
       {resetModal.show && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+          position: 'fixed', inset: 0,
+          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+          padding: 16
         }}>
           <div style={{
-            background: '#1e293b', border: '1px solid rgba(148,163,184,0.1)',
-            borderRadius: 16, width: '100%', maxWidth: 380, padding: 24,
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)'
+            background: '#1e293b', border: '1px solid rgba(148,163,184,0.2)',
+            borderRadius: 20, width: '100%', maxWidth: 440, maxHeight: '90vh',
+            display: 'flex', flexDirection: 'column',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6)', overflow: 'hidden'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ color: '#e2e8f0', margin: 0, fontSize: 16, fontWeight: 700 }}>
-                <KeyRound size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
-                Reset Password
+            {/* Header */}
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '18px 24px', borderBottom: '1px solid rgba(148,163,184,0.12)',
+              background: 'rgba(30, 41, 59, 0.8)'
+            }}>
+              <h3 style={{ color: '#f8fafc', margin: 0, fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <KeyRound size={18} color="#f59e0b" />
+                Reset Password for {resetModal.userName}
               </h3>
-              <button onClick={() => { setResetModal({show: false, userId: null, userName: ''}); setResetPassword(''); }} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><X size={20} /></button>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <p style={{ color: '#94a3b8', fontSize: 13, margin: 0 }}>
-                Set new password for <strong style={{ color: '#e2e8f0' }}>{resetModal.userName}</strong>
-              </p>
-              <button
-                type="button"
-                onClick={() => setResetPassword(generateStrongPassword())}
-                style={{
-                  background: 'none', border: 'none', color: '#818cf8', fontSize: 11,
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600
-                }}
-              >
-                <Sparkles size={12} /> Auto-Generate
+              <button onClick={() => { setResetModal({show: false, userId: null, userName: ''}); setResetPassword(''); }} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 4 }}>
+                <X size={20} />
               </button>
             </div>
-            <input
-              type="text"
-              placeholder="12+ character strong password"
-              value={resetPassword}
-              onChange={e => setResetPassword(e.target.value)}
-              style={{
-                width: '100%', padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
-                background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)',
-                color: '#e2e8f0', fontSize: 13, outline: 'none', marginBottom: 10, fontFamily: 'monospace'
-              }}
-            />
-            {resetPassword && (
-              <div style={{
-                background: 'rgba(15, 23, 42, 0.4)', border: '1px solid rgba(148, 163, 184, 0.1)',
-                borderRadius: 8, padding: '8px 10px', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 4
-              }}>
-                {validatePasswordRules(resetPassword).map(r => (
-                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: r.valid ? '#4ade80' : '#94a3b8' }}>
-                    <Check size={12} color={r.valid ? '#4ade80' : '#64748b'} />
-                    <span>{r.label}</span>
-                  </div>
-                ))}
+
+            {/* Scrollable Body */}
+            <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <label style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>New 12+ Character Password</label>
+                <button
+                  type="button"
+                  onClick={() => setResetPassword(generateStrongPassword())}
+                  style={{
+                    background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)',
+                    color: '#fbbf24', fontSize: 11, padding: '4px 10px', borderRadius: 6,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600
+                  }}
+                >
+                  <Sparkles size={12} color="#f59e0b" /> Auto-Generate
+                </button>
               </div>
-            )}
-            <div style={{ fontSize: 11, color: '#f59e0b', background: 'rgba(245,158,11,0.08)', padding: '6px 8px', borderRadius: 6, marginBottom: 16 }}>
-              ℹ️ User will be notified by SMS and will be forced to change password upon next login.
+
+              <input
+                type="text"
+                placeholder="Enter or auto-generate strong password"
+                value={resetPassword}
+                onChange={e => setResetPassword(e.target.value)}
+                style={{
+                  width: '100%', padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
+                  background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)',
+                  color: '#e2e8f0', fontSize: 13, outline: 'none', marginBottom: 12, fontFamily: 'monospace'
+                }}
+              />
+
+              {resetPassword && (
+                <div style={{
+                  background: 'rgba(15, 23, 42, 0.4)', border: '1px solid rgba(148, 163, 184, 0.1)',
+                  borderRadius: 8, padding: '10px 12px', marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 6
+                }}>
+                  {validatePasswordRules(resetPassword).map(r => (
+                    <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: r.valid ? '#4ade80' : '#94a3b8' }}>
+                      <Check size={12} color={r.valid ? '#4ade80' : '#64748b'} />
+                      <span>{r.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Centered Directing Text Banner - Positioned in the Middle */}
+              <div style={{
+                margin: '10px 0',
+                padding: '12px 16px',
+                borderRadius: 12,
+                background: 'rgba(245, 158, 11, 0.12)',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                color: '#fcd34d',
+                fontSize: 12,
+                lineHeight: 1.5,
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: '#fbbf24' }}>
+                  <ShieldAlert size={16} />
+                  <span>Password Reset Directive</span>
+                </div>
+                <div style={{ color: '#e2e8f0', fontSize: 11.5 }}>
+                  User will receive an SMS notification and will be <strong>forced to establish a new password upon next login</strong>.
+                </div>
+              </div>
             </div>
-            <button
-              onClick={handleResetPassword}
-              disabled={resetting || !isStrongPassword(resetPassword)}
-              style={{
-                width: '100%', padding: 12, background: isStrongPassword(resetPassword) ? '#f59e0b' : '#334155',
-                color: isStrongPassword(resetPassword) ? '#1e293b' : '#94a3b8',
-                border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 14,
-                cursor: resetting || !isStrongPassword(resetPassword) ? 'not-allowed' : 'pointer',
-                opacity: resetting ? 0.6 : 1,
-              }}
-            >
-              {resetting ? 'Resetting...' : 'Reset & Require Change'}
-            </button>
+
+            {/* Footer - ALL BUTTONS ALWAYS VISIBLE */}
+            <div style={{
+              display: 'flex', justifyContent: 'flex-end', gap: 12,
+              padding: '16px 24px', borderTop: '1px solid rgba(148,163,184,0.12)',
+              background: 'rgba(15, 23, 42, 0.6)'
+            }}>
+              <button
+                type="button"
+                onClick={() => { setResetModal({show: false, userId: null, userName: ''}); setResetPassword(''); }}
+                style={{
+                  padding: '10px 18px', background: 'rgba(148,163,184,0.1)',
+                  border: '1px solid rgba(148,163,184,0.2)', color: '#cbd5e1',
+                  borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleResetPassword}
+                disabled={resetting || !isStrongPassword(resetPassword)}
+                style={{
+                  padding: '10px 22px',
+                  background: isStrongPassword(resetPassword) ? 'linear-gradient(135deg, #f59e0b, #d97706)' : '#334155',
+                  color: isStrongPassword(resetPassword) ? '#0f172a' : '#94a3b8',
+                  border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13,
+                  cursor: resetting || !isStrongPassword(resetPassword) ? 'not-allowed' : 'pointer',
+                  opacity: resetting ? 0.6 : 1,
+                  boxShadow: isStrongPassword(resetPassword) ? '0 4px 14px rgba(245,158,11,0.35)' : 'none'
+                }}
+              >
+                {resetting ? 'Resetting...' : 'Reset & Require Change'}
+              </button>
+            </div>
           </div>
         </div>
       )}
