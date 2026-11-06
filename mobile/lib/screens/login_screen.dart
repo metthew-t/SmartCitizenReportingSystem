@@ -1276,8 +1276,8 @@ class _LoginScreenState extends State<LoginScreen>
       _showError('Enter a new password');
       return;
     }
-    if (newPass.length < 6) {
-      _showError('Password must be at least 6 characters');
+    if (newPass.length < 4) {
+      _showError('Password must be at least 4 characters');
       return;
     }
     if (newPass != confirmPass) {

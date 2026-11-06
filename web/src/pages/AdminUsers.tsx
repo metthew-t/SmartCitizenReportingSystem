@@ -268,7 +268,7 @@ export default function AdminUsers() {
     }
   }
 
-  if (role !== 'super_admin' && role !== 'city_admin' && role !== 'department_manager') {
+  if (role !== 'super_admin' && role !== 'city_admin' && role !== 'department_manager' && role !== 'mayor') {
     return <div style={{ color: 'red' }}>Access Denied. You must be an Admin or Department Manager to view this page.</div>
   }
 
@@ -296,22 +296,24 @@ export default function AdminUsers() {
         <div>
           <h2 style={{ color: '#e2e8f0', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>User Management</h2>
           <p style={{ color: '#64748b', fontSize: 13, margin: 0 }}>
-            {role === 'super_admin' ? 'Full system user management. Create and manage all users including City Admins.' : role === 'city_admin' ? 'View and manage all system users.' : 'Manage officers in your department.'}
+            {role === 'super_admin' ? 'Full system user management. Create and manage all users including City Admins.' : role === 'city_admin' ? 'View and manage all system users.' : role === 'mayor' ? 'Read-only view of all system users. No administrative actions available.' : 'Manage officers in your department.'}
           </p>
         </div>
-        <button 
-          onClick={() => setShowModal(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            background: '#6366f1', color: 'white', border: 'none',
-            padding: '10px 16px', borderRadius: 8, fontSize: 14, fontWeight: 600,
-            cursor: 'pointer', boxShadow: '0 2px 8px rgba(99,102,241,0.4)',
-            transition: 'background 0.2s'
-          }}
-        >
-          <Plus size={18} />
-          Add {role === 'city_admin' || role === 'super_admin' ? 'Official' : 'Officer'}
-        </button>
+        {role !== 'mayor' && (
+          <button 
+            onClick={() => setShowModal(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: '#6366f1', color: 'white', border: 'none',
+              padding: '10px 16px', borderRadius: 8, fontSize: 14, fontWeight: 600,
+              cursor: 'pointer', boxShadow: '0 2px 8px rgba(99,102,241,0.4)',
+              transition: 'background 0.2s'
+            }}
+          >
+            <Plus size={18} />
+            Add {role === 'city_admin' || role === 'super_admin' ? 'Official' : 'Officer'}
+          </button>
+        )}
       </div>
 
       {error && <div style={{ color: 'red', marginBottom: 16 }}>{error}</div>}
@@ -435,8 +437,8 @@ export default function AdminUsers() {
                       {new Date(user.date_joined).toLocaleDateString()}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                      {/* Only super_admin can manage admin/super_admin/mayor accounts */}
-                      {(role === 'super_admin' || (!user.is_super_admin && !user.is_city_admin && !user.is_mayor)) && (
+                      {/* Mayor is read-only — no actions. Only super_admin can manage admin/super_admin/mayor accounts */}
+                      {role !== 'mayor' && (role === 'super_admin' || (!user.is_super_admin && !user.is_city_admin && !user.is_mayor)) && (
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
                         <button
                           onClick={() => handleToggleActive(user)}
