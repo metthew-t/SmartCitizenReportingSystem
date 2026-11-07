@@ -175,9 +175,9 @@ export default function SessionTimeoutManager() {
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '12px 16px', borderRadius: 10,
-              background: 'linear-gradient(135deg, #6366f1, #4f46e5)', border: 'none',
+              background: 'linear-gradient(135deg, #1D70B8, #0F2942)', border: 'none',
               color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)', transition: 'all 0.2s',
+              boxShadow: '0 4px 14px rgba(29, 112, 184, 0.4)', transition: 'all 0.2s',
             }}
           >
             <CheckCircle2 size={16} /> Stay Logged In

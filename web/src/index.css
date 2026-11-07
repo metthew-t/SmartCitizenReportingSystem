@@ -224,12 +224,11 @@
     transform: translateY(-1px);
   }
 
-  /* ── Dark card (Command Center / Admin) ── */
+  /* ── Dark card (Admin dashboard — navy themed) ── */
   .dark-card {
-    background: rgba(30,41,59,0.7);
-    border: 1px solid rgba(148,163,184,0.1);
+    background: #111F35;
+    border: 1px solid rgba(29,112,184,0.18);
     border-radius: 14px;
-    backdrop-filter: blur(12px);
   }
 
   /* ── Buttons ── */

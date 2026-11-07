@@ -181,7 +181,7 @@ export default function Dashboard() {
               width: 40, height: 40, borderRadius: 10, background: `${Colors.govBlue}20`,
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
-              <ScrollText size={20} color="#a5b4fc" />
+              <ScrollText size={20} color="#93c5fd" />
             </div>
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#f8fafc' }}>

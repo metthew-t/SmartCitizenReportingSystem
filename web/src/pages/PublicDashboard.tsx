@@ -32,10 +32,10 @@ interface PublicStats {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  SUBMITTED: '#6366F1', RECEIVED: '#8B5CF6', ASSIGNED: '#3B82F6',
-  UNDER_INVESTIGATION: '#F59E0B', IN_PROGRESS: '#F97316',
-  RESOLVED: '#10B981', CLOSED: '#6B7280', REOPENED: '#EF4444', REJECTED: '#DC2626',
-};
+  SUBMITTED: '#3B82F6', RECEIVED: '#3B82F6', ASSIGNED: '#F59E0B',
+  UNDER_INVESTIGATION: '#F59E0B', IN_PROGRESS: '#8B5CF6',
+  RESOLVED: '#10B981', CLOSED: '#6B7280', REOPENED: '#EC4899', REJECTED: '#DC2626',
+}
 
 const STATUS_LABELS: Record<string, string> = {
   SUBMITTED: 'Submitted', RECEIVED: 'Received', ASSIGNED: 'Assigned',
@@ -196,7 +196,7 @@ export default function PublicDashboard() {
             fontWeight: 800,
             lineHeight: 1.15,
             marginBottom: 16,
-            background: 'linear-gradient(135deg, #ffffff 0%, #38bdf8 50%, #818cf8 100%)',
+            background: 'linear-gradient(135deg, #ffffff 0%, #93c5fd 50%, #1D70B8 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}>
@@ -212,7 +212,7 @@ export default function PublicDashboard() {
           {[
             { label: 'Total Incidents Logged', value: stats?.total_reports ?? (reports.length || 142), icon: Activity, color: Colors.govBlue },
             { label: 'Cases Resolved', value: stats?.resolved_reports ?? 118, icon: CheckCircle2, color: Colors.emeraldLight },
-            { label: 'Resolution Rate', value: `${stats?.resolution_rate ?? 83}%`, icon: Target, color: '#818cf8' },
+            { label: 'Resolution Rate', value: `${stats?.resolution_rate ?? 83}%`, icon: Target, color: Colors.teal },
             { label: 'Reports Today', value: stats?.today_reports ?? 14, icon: Clock, color: Colors.statusAction },
           ].map(stat => (
             <div key={stat.label} style={{
@@ -284,7 +284,7 @@ export default function PublicDashboard() {
                   padding: '8px 14px', color: '#c7d2fe', fontSize: 13, fontWeight: 700, cursor: 'pointer'
                 }}
               >
-                <Sparkles size={14} color="#818cf8" />
+                <Sparkles size={14} color={Colors.govBlue} />
                 <span>AI Duplicate Scanner</span>
               </button>
             </div>
@@ -296,7 +296,7 @@ export default function PublicDashboard() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: '#e0e7ff', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Search size={16} color="#818cf8" />
+                    <Search size={16} color={Colors.govBlue} />
                     Spatial Duplicate Detection Tool (150m Haversine Radius)
                   </div>
                   <span style={{ fontSize: 11, color: '#94a3b8' }}>Check if your issue is already registered</span>
@@ -321,7 +321,7 @@ export default function PublicDashboard() {
                     disabled={searchingDuplicates}
                     style={{
                       padding: '8px 16px', borderRadius: 8, border: 'none',
-                      background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: '#fff',
+                      background: 'linear-gradient(135deg, #1D70B8, #0D5C99)', color: '#fff',
                       fontSize: 12, fontWeight: 700, cursor: 'pointer'
                     }}
                   >
@@ -340,7 +340,7 @@ export default function PublicDashboard() {
                       }}>
                         <span style={{ color: '#38bdf8', fontWeight: 700 }}>{dup.case_number} ({dup.distance_meters}m away)</span>
                         <span style={{ color: '#cbd5e1' }}>{dup.description}</span>
-                        <span style={{ color: '#a5b4fc', fontWeight: 600 }}>{dup.status}</span>
+                        <span style={{ color: Colors.govBlue, fontWeight: 600 }}>{dup.status}</span>
                       </div>
                     ))}
                   </div>
