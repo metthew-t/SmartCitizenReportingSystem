@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { Activity, CheckCircle, AlertTriangle, Clock, TrendingUp, BarChart3, ScrollText, ArrowRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { Colors, darkCard, darkCardElevated, statusBadgeStyle, priorityBadgeStyle, getStatusColors, getPriorityColor, Styles, statusLabel } from '../theme'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
+// Use theme tokens — matches mobile exactly
 const STATUS_COLORS: Record<string, string> = {
-  SUBMITTED: '#6366F1', RECEIVED: '#8B5CF6', ASSIGNED: '#3B82F6',
-  UNDER_INVESTIGATION: '#F59E0B', IN_PROGRESS: '#F97316',
-  RESOLVED: '#10B981', CLOSED: '#6B7280', REOPENED: '#EF4444', REJECTED: '#DC2626',
+  SUBMITTED: '#3B82F6', RECEIVED: '#3B82F6', ASSIGNED: '#F59E0B',
+  UNDER_INVESTIGATION: '#F59E0B', IN_PROGRESS: '#8B5CF6',
+  RESOLVED: '#10B981', CLOSED: '#64748B', REOPENED: '#EC4899', REJECTED: '#EF4444',
 }
 const STATUS_LABELS: Record<string, string> = {
   SUBMITTED: 'Submitted', RECEIVED: 'Received', ASSIGNED: 'Assigned',
@@ -16,7 +18,7 @@ const STATUS_LABELS: Record<string, string> = {
   RESOLVED: 'Resolved', CLOSED: 'Closed', REOPENED: 'Reopened', REJECTED: 'Rejected',
 }
 const PRIORITY_COLORS: Record<string, string> = {
-  LOW: '#6B7280', MEDIUM: '#3B82F6', HIGH: '#F59E0B', CRITICAL: '#EF4444',
+  LOW: '#94A3B8', MEDIUM: '#3B82F6', HIGH: '#F59E0B', CRITICAL: '#DC2626',
 }
 
 interface Stats {
@@ -38,9 +40,9 @@ function MiniBarChart({ data, color }: { data: { label: string; value: number }[
             width: '100%', maxWidth: 28,
             height: Math.max(4, (d.value / max) * 50),
             background: color, borderRadius: '4px 4px 0 0',
-            opacity: 0.7 + (d.value / max) * 0.3, transition: 'height 0.5s ease',
+            opacity: 0.6 + (d.value / max) * 0.4, transition: 'height 0.5s ease',
           }} />
-          <span style={{ fontSize: 9, color: '#64748b', marginTop: 4 }}>{d.label}</span>
+          <span style={{ fontSize: 9, color: Colors.textDark3, marginTop: 4 }}>{d.label}</span>
         </div>
       ))}
     </div>
@@ -52,10 +54,10 @@ function ProgressBar({ label, value, total, color }: { label: string; value: num
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: 12, color: '#94a3b8' }}>{label}</span>
-        <span style={{ fontSize: 12, color: '#e2e8f0', fontWeight: 600 }}>{value}</span>
+        <span style={{ fontSize: 12, color: Colors.textDark2 }}>{label}</span>
+        <span style={{ fontSize: 12, color: Colors.textDark1, fontWeight: 600 }}>{value}</span>
       </div>
-      <div style={{ height: 6, background: 'rgba(148,163,184,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+      <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 3, transition: 'width 0.8s ease' }} />
       </div>
     </div>
@@ -67,20 +69,21 @@ function StatCard({ title, value, icon: Icon, color }: {
 }) {
   return (
     <div style={{
-      background: `linear-gradient(135deg, rgba(30,41,59,0.9) 0%, ${color}10 100%)`,
-      backdropFilter: 'blur(12px)', border: `1px solid ${color}30`,
-      boxShadow: `0 4px 20px ${color}15`, borderRadius: 16, padding: 20,
-      display: 'flex', alignItems: 'center', gap: 16, transition: 'all 0.3s',
+      ...darkCard,
+      borderLeft: `3px solid ${color}`,
+      padding: 20,
+      display: 'flex', alignItems: 'center', gap: 16, transition: 'all 0.2s',
     }}>
       <div style={{
-        width: 48, height: 48, borderRadius: 14, background: `${color}15`,
+        width: 48, height: 48, borderRadius: 12, background: `${color}15`,
+        border: `1px solid ${color}25`,
         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
       }}>
         <Icon size={22} color={color} />
       </div>
       <div>
-        <p style={{ color: '#94a3b8', fontSize: 12, margin: '0 0 4px', fontWeight: 500 }}>{title}</p>
-        <p style={{ color: '#e2e8f0', fontSize: 24, fontWeight: 700, margin: 0 }}>{value}</p>
+        <p style={{ color: Colors.textDark2, fontSize: 12, margin: '0 0 4px', fontWeight: 500 }}>{title}</p>
+        <p style={{ color: Colors.textDark1, fontSize: 26, fontWeight: 800, margin: 0, letterSpacing: -0.5 }}>{value}</p>
       </div>
     </div>
   )
@@ -140,8 +143,11 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#64748b' }}>
-        Loading dashboard...
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: Colors.textDark2 }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 40, height: 40, border: `3px solid ${Colors.govBlue}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+          <span style={{ fontSize: 14, fontWeight: 500 }}>Loading dashboard...</span>
+        </div>
       </div>
     )
   }
@@ -152,12 +158,12 @@ export default function Dashboard() {
   const critical = stats?.critical || 0
 
   return (
-    <div style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ fontFamily: "'Inter', sans-serif", color: Colors.textDark1 }}>
       <div style={{ marginBottom: 24 }}>
-        <h2 style={{ color: '#e2e8f0', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>
+        <h2 style={{ color: Colors.textDark1, fontSize: 22, fontWeight: 800, margin: '0 0 4px', letterSpacing: -0.3 }}>
           {departmentName ? `${departmentName} Dashboard` : 'Dashboard'}
         </h2>
-        <p style={{ color: '#64748b', fontSize: 13, margin: 0 }}>
+        <p style={{ color: Colors.textDark2, fontSize: 13, margin: 0 }}>
           Real-time overview of citizen reports
         </p>
       </div>
@@ -166,14 +172,13 @@ export default function Dashboard() {
       {pendingOfficialCount > 0 && (
         <div style={{
           marginBottom: 20, padding: '14px 18px', borderRadius: 12,
-          background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.15) 100%)',
-          border: '1px solid rgba(99,102,241,0.35)',
+          background: `linear-gradient(135deg, ${Colors.govBlue}18 0%, ${Colors.navy}30 100%)`,
+          border: `1px solid ${Colors.govBlue}40`,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
-          boxShadow: '0 4px 15px rgba(99,102,241,0.15)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{
-              width: 40, height: 40, borderRadius: 10, background: 'rgba(99,102,241,0.2)',
+              width: 40, height: 40, borderRadius: 10, background: `${Colors.govBlue}20`,
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
               <ScrollText size={20} color="#a5b4fc" />
@@ -194,12 +199,7 @@ export default function Dashboard() {
 
           <button
             onClick={() => navigate('/official-reports')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              background: '#6366f1', color: 'white', border: 'none',
-              padding: '9px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-              cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(99,102,241,0.3)'
-            }}
+            style={{ ...Styles.btnPrimary, height: 38, padding: '0 16px', fontSize: 13 }}
           >
             Review in Official Reports <ArrowRight size={14} />
           </button>
@@ -208,38 +208,32 @@ export default function Dashboard() {
 
       {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
-        <StatCard title="Total Reports" value={total} icon={Activity} color="#6366f1" />
-        <StatCard title="Resolved" value={resolved} icon={CheckCircle} color="#10b981" />
-        <StatCard title="Pending" value={pending} icon={Clock} color="#f59e0b" />
-        <StatCard title="Critical" value={critical} icon={AlertTriangle} color="#ef4444" />
+        <StatCard title="Total Reports" value={total} icon={Activity} color={Colors.govBlue} />
+        <StatCard title="Resolved" value={resolved} icon={CheckCircle} color={Colors.emeraldLight} />
+        <StatCard title="Pending" value={pending} icon={Clock} color="#F59E0B" />
+        <StatCard title="Critical" value={critical} icon={AlertTriangle} color="#EF4444" />
       </div>
 
       {/* Charts row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginBottom: 24 }}>
         {/* Weekly trend */}
-        <div style={{
-          background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16, padding: 20,
-        }}>
-          <h3 style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 600, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <TrendingUp size={16} color="#6366f1" /> Weekly Report Trend
+        <div style={{ ...darkCard, padding: 20 }}>
+          <h3 style={{ color: Colors.textDark1, fontSize: 14, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <TrendingUp size={16} color={Colors.govBlue} /> Weekly Report Trend
           </h3>
           <MiniBarChart
             data={(stats?.weekly_trend || []).map(w => ({ label: w.label, value: w.count }))}
-            color="#6366f1"
+            color={Colors.govBlue}
           />
         </div>
 
         {/* Status distribution */}
-        <div style={{
-          background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16, padding: 20,
-        }}>
-          <h3 style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 600, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <BarChart3 size={16} color="#8b5cf6" /> Reports by Status
+        <div style={{ ...darkCard, padding: 20 }}>
+          <h3 style={{ color: Colors.textDark1, fontSize: 14, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <BarChart3 size={16} color={Colors.teal} /> Reports by Status
           </h3>
           {stats && Object.entries(stats.status_distribution).map(([s, count]) => (
-            <ProgressBar key={s} label={STATUS_LABELS[s] || s} value={count} total={total} color={STATUS_COLORS[s] || '#6366f1'} />
+            <ProgressBar key={s} label={STATUS_LABELS[s] || s} value={count} total={total} color={STATUS_COLORS[s] || Colors.govBlue} />
           ))}
         </div>
       </div>
@@ -247,59 +241,53 @@ export default function Dashboard() {
       {/* Bottom row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
         {/* Priority */}
-        <div style={{
-          background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16, padding: 20,
-        }}>
-          <h3 style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 600, margin: '0 0 16px' }}>Priority Breakdown</h3>
+        <div style={{ ...darkCard, padding: 20 }}>
+          <h3 style={{ color: Colors.textDark1, fontSize: 14, fontWeight: 700, margin: '0 0 16px' }}>Priority Breakdown</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {stats && Object.entries(stats.priority_distribution).map(([p, count]) => (
               <div key={p} style={{
                 padding: 14, borderRadius: 12,
-                background: `${PRIORITY_COLORS[p]}10`, border: `1px solid ${PRIORITY_COLORS[p]}20`,
+                background: `${PRIORITY_COLORS[p]}12`, border: `1px solid ${PRIORITY_COLORS[p]}25`,
                 textAlign: 'center',
               }}>
-                <div style={{ color: PRIORITY_COLORS[p], fontSize: 22, fontWeight: 700 }}>{count}</div>
-                <div style={{ color: '#94a3b8', fontSize: 11, textTransform: 'capitalize', marginTop: 2 }}>{p.toLowerCase()}</div>
+                <div style={{ color: PRIORITY_COLORS[p], fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>{count}</div>
+                <div style={{ color: Colors.textDark2, fontSize: 11, textTransform: 'capitalize', marginTop: 3, fontWeight: 600 }}>{p.toLowerCase()}</div>
               </div>
             ))}
           </div>
         </div>
 
         {/* Recent reports */}
-        <div style={{
-          background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16, padding: 20,
-        }}>
+        <div style={{ ...darkCard, padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 600, margin: 0 }}>Recent Reports</h3>
-            <button onClick={() => navigate('/reports')} style={{
-              background: 'none', border: 'none', color: '#818cf8', fontSize: 12, cursor: 'pointer', fontWeight: 500,
-            }}>View all →</button>
+            <h3 style={{ color: Colors.textDark1, fontSize: 14, fontWeight: 700, margin: 0 }}>Recent Reports</h3>
+            <button onClick={() => navigate('/reports')} style={{ background: 'none', border: 'none', color: Colors.govBlue, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>View all →</button>
           </div>
           {(!stats?.recent_reports || stats.recent_reports.length === 0) ? (
-            <p style={{ color: '#64748b', fontSize: 13 }}>No reports yet.</p>
+            <p style={{ color: Colors.textDark2, fontSize: 13 }}>No reports yet.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {stats.recent_reports.map(report => (
                 <div key={report.id} style={{
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '10px 12px', borderRadius: 10,
-                  background: 'rgba(15,23,42,0.4)', border: '1px solid rgba(148,163,184,0.06)',
-                }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: STATUS_COLORS[report.status] || '#6366f1', flexShrink: 0 }} />
+                  background: 'rgba(255,255,255,0.03)', border: `1px solid ${Colors.borderDark}`,
+                  cursor: 'pointer', transition: 'background 0.2s',
+                }}
+                onClick={() => navigate(`/reports/${report.id}`)}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(29,112,184,0.08)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+                >
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: STATUS_COLORS[report.status] || Colors.govBlue, flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: '#e2e8f0', fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ color: Colors.textDark1, fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {report.case_number} — {report.description}
                     </div>
-                    <div style={{ color: '#64748b', fontSize: 10, marginTop: 2 }}>
+                    <div style={{ color: Colors.textDark3, fontSize: 10, marginTop: 2 }}>
                       {report.department_name}
                     </div>
                   </div>
-                  <span style={{
-                    padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600,
-                    background: `${PRIORITY_COLORS[report.priority]}15`, color: PRIORITY_COLORS[report.priority], flexShrink: 0,
-                  }}>{report.priority}</span>
+                  <span style={{ ...priorityBadgeStyle(report.priority), flexShrink: 0 }}>{report.priority}</span>
                 </div>
               ))}
             </div>
@@ -309,20 +297,19 @@ export default function Dashboard() {
         {/* Resolution rate */}
         {stats && stats.total > 0 && (
           <div style={{
-            padding: 20, borderRadius: 16,
-            background: 'linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(99,102,241,0.15) 100%)',
-            border: '1px solid rgba(16,185,129,0.25)',
+            ...darkCardElevated,
+            padding: 20,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <div>
-              <p style={{ color: '#10b981', fontSize: 13, fontWeight: 600, margin: '0 0 4px' }}>Resolution Rate</p>
-              <p style={{ color: '#94a3b8', fontSize: 11, margin: 0 }}>
+              <p style={{ color: Colors.emeraldLight, fontSize: 13, fontWeight: 600, margin: '0 0 4px' }}>Resolution Rate</p>
+              <p style={{ color: Colors.textDark2, fontSize: 11, margin: 0 }}>
                 {resolved + (stats.closed || 0)} of {total} reports resolved or closed
               </p>
             </div>
             <div style={{
-              fontSize: 32, fontWeight: 800,
-              background: 'linear-gradient(135deg, #10b981, #6366f1)',
+              fontSize: 36, fontWeight: 800, letterSpacing: -1,
+              background: `linear-gradient(135deg, ${Colors.emeraldLight}, ${Colors.govBlue})`,
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             }}>
               {stats.resolution_rate}%

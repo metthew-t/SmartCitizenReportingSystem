@@ -121,6 +121,12 @@
     padding: 0;
   }
 
+  /* ── Dark mode canvas (used by admin/officer dashboard) ── */
+  body.dark-mode {
+    background-color: var(--color-canvas-dark);
+    color: var(--color-text-inverse);
+  }
+
   /* WCAG focus-visible ring — gov yellow */
   :focus-visible {
     outline: 3px solid var(--focus-ring);

@@ -334,7 +334,7 @@ export default function DashboardLayout() {
   return (
     <div style={{
       display: 'flex', height: '100vh',
-      background: theme.appBg,
+      background: '#091420',
       fontFamily: "'Inter', 'Segoe UI', sans-serif",
       color: '#e2e8f0',
     }}>
@@ -726,8 +726,11 @@ export default function DashboardLayout() {
           </div>
         </header>
 
-        {/* Page Content */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+        {/* Page Content — dark navy background matching mobile */}
+        <div style={{
+          flex: 1, overflowY: 'auto', padding: '24px',
+          background: `linear-gradient(160deg, #0A1628 0%, #0D1B2E 60%, #091420 100%)`,
+        }}>
           <div style={{ maxWidth: 1200, margin: '0 auto' }}>
             <Outlet />
           </div>

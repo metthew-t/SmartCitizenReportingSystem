@@ -2,11 +2,12 @@ import React from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, MapPin, Clock, User, FileText, Building2, Tag, AlertTriangle, ExternalLink, CheckCircle, XCircle, Navigation, Calendar, Phone, MapPinned, Home, Star, Scale, ShieldAlert, Check, X, Lock, ShieldCheck, Timer, Users, Camera, CheckCircle2, Hash, FileCheck2 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
+import { Colors, darkCard, darkCardElevated, statusBadgeStyle, priorityBadgeStyle, slaBadgeStyle, getSlaLabel, getSlaColor, Styles } from '../theme'
 
 const STATUS_COLORS: Record<string, string> = {
-  SUBMITTED: '#6366F1', RECEIVED: '#8B5CF6', ASSIGNED: '#3B82F6',
-  UNDER_INVESTIGATION: '#F59E0B', IN_PROGRESS: '#F97316',
-  RESOLVED: '#10B981', CLOSED: '#6B7280', REOPENED: '#EF4444', REJECTED: '#DC2626',
+  SUBMITTED: '#3B82F6', RECEIVED: '#3B82F6', ASSIGNED: '#F59E0B',
+  UNDER_INVESTIGATION: '#F59E0B', IN_PROGRESS: '#8B5CF6',
+  RESOLVED: '#10B981', CLOSED: '#64748B', REOPENED: '#EC4899', REJECTED: '#EF4444',
 }
 const STATUS_LABELS: Record<string, string> = {
   SUBMITTED: 'Submitted', RECEIVED: 'Received', ASSIGNED: 'Assigned',
@@ -14,7 +15,7 @@ const STATUS_LABELS: Record<string, string> = {
   RESOLVED: 'Resolved', CLOSED: 'Closed', REOPENED: 'Reopened', REJECTED: 'Rejected',
 }
 const PRIORITY_COLORS: Record<string, string> = {
-  LOW: '#6B7280', MEDIUM: '#3B82F6', HIGH: '#F59E0B', CRITICAL: '#EF4444',
+  LOW: '#94A3B8', MEDIUM: '#3B82F6', HIGH: '#F59E0B', CRITICAL: '#DC2626',
 }
 
 export default function ReportDetails() {

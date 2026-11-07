@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_config.dart';
+import '../theme.dart';
 
 String get _baseUrl => ApiConfig.baseUrl;
 
@@ -1051,34 +1052,69 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                       ),
                     ),
 
-                    // Community Support Upvote
-                    InkWell(
-                      onTap: _upvoteAffected,
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    // ── Me Too — Prominent Community Support Banner ──────────
+                    if (!['RESOLVED', 'CLOSED', 'REJECTED'].contains(_status))
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(top: 2),
                         decoration: BoxDecoration(
-                          color: Colors.amber[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.amber[400]!),
+                          gradient: LinearGradient(
+                            colors: [CivicColors.statusAction.withValues(alpha: 0.12), CivicColors.statusActionBg],
+                            begin: Alignment.topLeft, end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: CivicColors.statusAction.withValues(alpha: 0.4), width: 1.5),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.people_outline, size: 14, color: Colors.amber[900]),
-                            const SizedBox(width: 6),
-                            Text(
-                              '$_affectedCount Affected (+1)',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.amber[900],
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: _isUpvoting ? null : _upvoteAffected,
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 40, height: 40,
+                                    decoration: BoxDecoration(
+                                      color: CivicColors.statusAction.withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: _isUpvoting
+                                        ? const Padding(padding: EdgeInsets.all(10), child: CircularProgressIndicator(strokeWidth: 2.5))
+                                        : const Icon(Icons.people_rounded, color: CivicColors.statusAction, size: 22),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '$_affectedCount Citizen${_affectedCount == 1 ? '' : 's'} Affected',
+                                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: CivicColors.statusActionText),
+                                        ),
+                                        const Text(
+                                          'Tap to add "+1 I\'m Also Affected" — raises priority',
+                                          style: TextStyle(fontSize: 11, color: CivicColors.statusActionText),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: CivicColors.statusAction,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Text('+1', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -1356,11 +1392,51 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                           style: TextStyle(fontSize: 12, color: Colors.indigo[900]),
                         ),
                         const SizedBox(height: 12),
-                        ElevatedButton.icon(
-                          onPressed: _openAppealDialog,
-                          icon: const Icon(Icons.edit_document, size: 16, color: Colors.white),
-                          label: const Text('File Official Appeal (Iyyannoo)', style: TextStyle(color: Colors.white)),
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo[700]),
+                        // ── Prominent Appeal Banner ────────────────────────
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [CivicColors.navyDeep, CivicColors.govBlue.withValues(alpha: 0.8)],
+                              begin: Alignment.topLeft, end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [BoxShadow(color: CivicColors.navyDeep.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: _openAppealDialog,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 42, height: 42,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.15),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.gavel_rounded, color: Colors.white, size: 22),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text('File Official Appeal (Iyyannoo)', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
+                                          Text('Dispute resolution · Unfair rejection · Delayed action', style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 11)),
+                                        ],
+                                      ),
+                                    ),
+                                    Icon(Icons.arrow_forward_ios_rounded, color: Colors.white.withValues(alpha: 0.7), size: 16),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),

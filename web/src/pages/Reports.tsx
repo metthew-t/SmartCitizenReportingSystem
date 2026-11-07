@@ -2,13 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
 import { Search, Filter, ChevronDown, Eye, MapPin, Clock, ExternalLink, Navigation, Phone, User, Building2, Tag, Calendar, X, Timer, ShieldAlert, Users } from 'lucide-react'
+import { Colors, darkCard, statusBadgeStyle, priorityBadgeStyle, slaBadgeStyle, getSlaColor, getSlaLabel, getPriorityColor, getStatusColors, Styles, statusLabel } from '../theme'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
 const STATUS_COLORS: Record<string, string> = {
-  SUBMITTED: '#6366F1', RECEIVED: '#8B5CF6', ASSIGNED: '#3B82F6',
-  UNDER_INVESTIGATION: '#F59E0B', IN_PROGRESS: '#F97316',
-  RESOLVED: '#10B981', CLOSED: '#6B7280', REOPENED: '#EF4444', REJECTED: '#DC2626',
+  SUBMITTED: '#3B82F6', RECEIVED: '#3B82F6', ASSIGNED: '#F59E0B',
+  UNDER_INVESTIGATION: '#F59E0B', IN_PROGRESS: '#8B5CF6',
+  RESOLVED: '#10B981', CLOSED: '#64748B', REOPENED: '#EC4899', REJECTED: '#EF4444',
 }
 const STATUS_LABELS: Record<string, string> = {
   SUBMITTED: 'Submitted', RECEIVED: 'Received', ASSIGNED: 'Assigned',
@@ -16,7 +17,7 @@ const STATUS_LABELS: Record<string, string> = {
   RESOLVED: 'Resolved', CLOSED: 'Closed', REOPENED: 'Reopened', REJECTED: 'Rejected',
 }
 const PRIORITY_COLORS: Record<string, string> = {
-  LOW: '#6B7280', MEDIUM: '#3B82F6', HIGH: '#F59E0B', CRITICAL: '#EF4444',
+  LOW: '#94A3B8', MEDIUM: '#3B82F6', HIGH: '#F59E0B', CRITICAL: '#DC2626',
 }
 
 interface Report {
@@ -149,42 +150,38 @@ export default function Reports() {
   }, [allReports])
 
   return (
-    <div style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ fontFamily: "'Inter', sans-serif", color: Colors.textDark1 }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <h2 style={{ color: '#e2e8f0', fontSize: 24, fontWeight: 800, margin: '0 0 4px' }}>
+          <h2 style={{ color: Colors.textDark1, fontSize: 22, fontWeight: 800, margin: '0 0 4px', letterSpacing: -0.3 }}>
             {role === 'city_admin' ? '📋 All System Reports' : `📋 ${departmentName} Reports`}
           </h2>
-          <p style={{ color: '#64748b', fontSize: 13, margin: 0 }}>
-            Manage and track citizen incidents • <span style={{ color: '#10b981', fontWeight: 600 }}>{filteredReports.length} reports</span>
+          <p style={{ color: Colors.textDark2, fontSize: 13, margin: 0 }}>
+            Manage and track citizen incidents • <span style={{ color: Colors.emeraldLight, fontWeight: 600 }}>{filteredReports.length} reports</span>
           </p>
         </div>
       </div>
 
       {/* Filters */}
       <div style={{
-        background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16,
+        ...darkCard,
         padding: 16, marginBottom: 24,
         display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center',
       }}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8,
-          background: 'rgba(15,23,42,0.4)', borderRadius: 10,
-          padding: '10px 14px', border: '1px solid rgba(148,163,184,0.08)',
+          background: 'rgba(255,255,255,0.04)', borderRadius: 10,
+          padding: '10px 14px', border: `1px solid ${Colors.borderDark}`,
           flex: '1 1 250px',
         }}>
-          <Search size={16} color="#6366f1" />
+          <Search size={16} color={Colors.govBlue} />
           <input
             type="text"
             placeholder="Search cases, descriptions, locations..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            style={{
-              background: 'transparent', border: 'none', color: '#e2e8f0',
-              fontSize: 13, outline: 'none', width: '100%',
-            }}
+            style={{ background: 'transparent', border: 'none', color: Colors.textDark1, fontSize: 13, outline: 'none', width: '100%' }}
           />
         </div>
 
@@ -226,12 +223,12 @@ export default function Reports() {
       {fetchError && (
         <div style={{
           marginBottom: 16, padding: '12px 18px', borderRadius: 12,
-          background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)',
+          background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239,68,68,0.3)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#fca5a5', fontSize: 13
         }}>
           <span>⚠️ {fetchError}</span>
           <button onClick={() => fetchReports(true)} style={{
-            background: 'rgba(239, 68, 68, 0.25)', border: 'none', color: 'white',
+            background: Colors.govBlue, border: 'none', color: 'white',
             borderRadius: 8, padding: '6px 14px', fontSize: 12, cursor: 'pointer', fontWeight: 600
           }}>
             Retry
@@ -240,20 +237,16 @@ export default function Reports() {
       )}
 
       {/* Table */}
-      <div style={{
-        background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16,
-        overflow: 'hidden'
-      }}>
+      <div style={{ ...darkCard, overflow: 'hidden' }}>
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>Loading reports...</div>
+          <div style={{ padding: 40, textAlign: 'center', color: Colors.textDark2 }}>Loading reports...</div>
         ) : filteredReports.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>No reports found matching your criteria.</div>
+          <div style={{ padding: 40, textAlign: 'center', color: Colors.textDark2 }}>No reports found matching your criteria.</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid rgba(148,163,184,0.08)', background: 'rgba(15,23,42,0.3)' }}>
+                <tr>
                   <th style={thStyle}>Case</th>
                   <th style={thStyle}>Description</th>
                   <th style={thStyle}>Department</th>
@@ -270,15 +263,15 @@ export default function Reports() {
                   return (
                   <tr
                     key={report.id}
-                    style={{ borderBottom: '1px solid rgba(148,163,184,0.04)', transition: 'background 0.2s', cursor: 'pointer' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.04)'}
+                    style={{ borderBottom: `1px solid ${Colors.borderDark}`, transition: 'background 0.15s', cursor: 'pointer' }}
+                    onMouseEnter={e => e.currentTarget.style.background = `${Colors.govBlue}08`}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     onClick={() => setSelectedReport(report)}
                   >
-                    <td style={{ ...tdStyle, color: '#a5b4fc', fontWeight: 700 }}>
+                    <td style={{ ...tdStyle, color: Colors.govBlue, fontWeight: 700 }}>
                       <div>{report.case_number}</div>
                       {report.ai_confidence_score ? (
-                        <div style={{ fontSize: 10, color: '#38bdf8', fontWeight: 600, marginTop: 2 }}>
+                        <div style={{ fontSize: 10, color: Colors.teal, fontWeight: 600, marginTop: 2 }}>
                           🤖 AI {Math.round(report.ai_confidence_score * 100)}%
                         </div>
                       ) : null}
@@ -286,61 +279,36 @@ export default function Reports() {
                     <td style={{ ...tdStyle, maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {report.description}
                     </td>
-                    <td style={{ ...tdStyle, color: '#94a3b8' }}>{report.department_name}</td>
-                    <td style={{ ...tdStyle, color: '#94a3b8', fontSize: 12 }}>
+                    <td style={{ ...tdStyle, color: Colors.textDark2 }}>{report.department_name}</td>
+                    <td style={{ ...tdStyle, color: Colors.textDark2, fontSize: 12 }}>
                       {[report.kuta_magaalaa, report.kebele, report.aanaa].filter(Boolean).join(', ') || '—'}
                     </td>
                     <td style={tdStyle}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span style={{
-                          padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-                          background: `${STATUS_COLORS[report.status] || '#6366f1'}18`,
-                          color: STATUS_COLORS[report.status] || '#6366f1',
-                          border: `1px solid ${STATUS_COLORS[report.status] || '#6366f1'}25`,
-                          display: 'inline-block', textAlign: 'center'
-                        }}>
+                        <span style={statusBadgeStyle(report.status, true)}>
                           {STATUS_LABELS[report.status] || report.status.replace('_', ' ')}
                         </span>
                         {(report as any).sla_metrics && !(report.status === 'RESOLVED' || report.status === 'CLOSED') && (
-                          <span style={{
-                            fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-                            background: (report as any).sla_metrics.is_breached ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.15)',
-                            color: (report as any).sla_metrics.is_breached ? '#f87171' : '#34d399',
-                            display: 'inline-flex', alignItems: 'center', gap: 3
-                          }}>
+                          <span style={slaBadgeStyle((report as any).sla_metrics.remaining_hours, (report as any).sla_metrics.is_breached)}>
                             <Timer size={10} />
-                            {(report as any).sla_metrics.is_breached ? `Overdue ${Math.abs((report as any).sla_metrics.remaining_hours)}h` : `${(report as any).sla_metrics.remaining_hours}h SLA`}
+                            {(report as any).sla_metrics.is_breached ? `Overdue ${Math.abs((report as any).sla_metrics.remaining_hours).toFixed(0)}h` : `${(report as any).sla_metrics.remaining_hours?.toFixed(0)}h SLA`}
                           </span>
                         )}
                       </div>
                     </td>
                     <td style={tdStyle}>
-                      <span style={{
-                        padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-                        background: `${PRIORITY_COLORS[report.priority] || '#6b7280'}18`,
-                        color: PRIORITY_COLORS[report.priority] || '#6b7280',
-                        border: `1px solid ${PRIORITY_COLORS[report.priority] || '#6b7280'}25`,
-                      }}>
-                        {report.priority}
-                      </span>
+                      <span style={priorityBadgeStyle(report.priority)}>{report.priority}</span>
                     </td>
-                    <td style={{ ...tdStyle, color: '#94a3b8', fontSize: 12 }}>
+                    <td style={{ ...tdStyle, color: Colors.textDark2, fontSize: 12 }}>
                       <div>{date.toLocaleDateString()}</div>
-                      <div style={{ fontSize: 10, color: '#64748b' }}>{date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                      <div style={{ fontSize: 10, color: Colors.textDark3 }}>{date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
                     </td>
                     <td style={{ ...tdStyle, textAlign: 'right' }}>
                       <button
                         onClick={(e) => { e.stopPropagation(); navigate(`/reports/${report.id}`) }}
-                        style={{
-                        background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1))',
-                        border: '1px solid rgba(99,102,241,0.2)',
-                        color: '#a5b4fc', padding: '8px 14px', borderRadius: 8,
-                        cursor: 'pointer', fontSize: 12, fontWeight: 700,
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        transition: 'all 0.2s',
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.25)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(99,102,241,0.15)'}
+                        style={{ ...Styles.btnPrimary, height: 34, padding: '0 14px', fontSize: 12 }}
+                        onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                        onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                       >
                         <Eye size={14} /> View
                       </button>
@@ -356,120 +324,86 @@ export default function Reports() {
       {/* Detail Modal */}
       {selectedReport && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(8px)',
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 24,
         }}>
           <div style={{
-            background: 'linear-gradient(180deg, #1e293b, #0f172a)', border: '1px solid rgba(148,163,184,0.12)',
+            background: Colors.surfaceDark, border: `1px solid ${Colors.borderDark2}`,
             borderRadius: 20, width: '100%', maxWidth: 650, maxHeight: '90vh', overflowY: 'auto',
             boxShadow: '0 25px 80px rgba(0,0,0,0.6)',
           }}>
             {/* Modal Header */}
             <div style={{
-              padding: '20px 24px', borderBottom: '1px solid rgba(148,163,184,0.1)',
+              padding: '20px 24px', borderBottom: `1px solid ${Colors.borderDark}`,
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              background: 'rgba(99,102,241,0.05)',
+              background: `linear-gradient(135deg, ${Colors.navy}, ${Colors.govBlue}22)`,
+              borderRadius: '20px 20px 0 0',
             }}>
               <div>
-                <h3 style={{ color: '#a5b4fc', margin: 0, fontSize: 20, fontWeight: 800 }}>{selectedReport.case_number}</h3>
+                <h3 style={{ color: Colors.govBlue, margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: -0.3 }}>{selectedReport.case_number}</h3>
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                  <span style={{
-                    padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700,
-                    background: `${STATUS_COLORS[selectedReport.status]}20`, color: STATUS_COLORS[selectedReport.status],
-                  }}>{STATUS_LABELS[selectedReport.status] || selectedReport.status}</span>
-                  <span style={{
-                    padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700,
-                    background: `${PRIORITY_COLORS[selectedReport.priority]}20`, color: PRIORITY_COLORS[selectedReport.priority],
-                  }}>{selectedReport.priority}</span>
+                  <span style={statusBadgeStyle(selectedReport.status, true)}>{STATUS_LABELS[selectedReport.status] || selectedReport.status}</span>
+                  <span style={priorityBadgeStyle(selectedReport.priority)}>{selectedReport.priority}</span>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedReport(null)}
-                style={{
-                  background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
-                  color: '#ef4444', cursor: 'pointer', borderRadius: 8, padding: 8,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-              >
+              <button onClick={() => setSelectedReport(null)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444', cursor: 'pointer', borderRadius: 8, padding: 8, display: 'flex' }}>
                 <X size={18} />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div style={{ padding: 24, color: '#e2e8f0' }}>
+            <div style={{ padding: 24, color: Colors.textDark1 }}>
               {/* Description */}
-              <div style={{ marginBottom: 20, padding: 16, background: 'rgba(15,23,42,0.5)', borderRadius: 12 }}>
-                <div style={{ color: '#94a3b8', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', marginBottom: 6 }}>📝 Description</div>
-                <p style={{ fontSize: 14, lineHeight: 1.7, margin: 0 }}>{selectedReport.description}</p>
+              <div style={{ marginBottom: 20, padding: 16, background: 'rgba(255,255,255,0.03)', borderRadius: 12, border: `1px solid ${Colors.borderDark}` }}>
+                <div style={{ color: Colors.textDark2, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', marginBottom: 6, letterSpacing: '0.05em' }}>📝 Description</div>
+                <p style={{ fontSize: 14, lineHeight: 1.7, margin: 0, color: Colors.textDark1 }}>{selectedReport.description}</p>
               </div>
 
               {/* Info Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-                <InfoRow icon={<User size={14} color="#f59e0b" />} label="Citizen" value={selectedReport.citizen_name} />
+                <InfoRow icon={<User size={14} color={Colors.emeraldLight} />} label="Citizen" value={selectedReport.citizen_name} />
                 {selectedReport.citizen_phone && (
-                  <InfoRow icon={<Phone size={14} color="#10b981" />} label="Phone" value={selectedReport.citizen_phone} />
+                  <InfoRow icon={<Phone size={14} color={Colors.emeraldLight} />} label="Phone" value={selectedReport.citizen_phone} />
                 )}
-                <InfoRow icon={<Building2 size={14} color="#6366f1" />} label="Department" value={selectedReport.department_name} />
-                <InfoRow icon={<Tag size={14} color="#8b5cf6" />} label="Category" value={selectedReport.category_name} />
-                <InfoRow icon={<Calendar size={14} color="#3b82f6" />} label="Date" value={new Date(selectedReport.created_at).toLocaleDateString()} />
-                <InfoRow icon={<Clock size={14} color="#64748b" />} label="Time" value={new Date(selectedReport.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} />
+                <InfoRow icon={<Building2 size={14} color={Colors.govBlue} />} label="Department" value={selectedReport.department_name} />
+                <InfoRow icon={<Tag size={14} color={Colors.teal} />} label="Category" value={selectedReport.category_name} />
+                <InfoRow icon={<Calendar size={14} color={Colors.govBlue} />} label="Date" value={new Date(selectedReport.created_at).toLocaleDateString()} />
+                <InfoRow icon={<Clock size={14} color={Colors.textDark2} />} label="Time" value={new Date(selectedReport.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} />
               </div>
 
               {/* Location Details */}
-              <div style={{
-                padding: 16, borderRadius: 12,
-                background: 'linear-gradient(135deg, rgba(16,185,129,0.06), rgba(59,130,246,0.04))',
-                border: '1px solid rgba(16,185,129,0.12)', marginBottom: 20,
-              }}>
-                <div style={{ color: '#10b981', fontSize: 12, fontWeight: 700, marginBottom: 12 }}>📍 Location Details</div>
+              <div style={{ padding: 16, borderRadius: 12, background: `${Colors.emerald}08`, border: `1px solid ${Colors.emerald}20`, marginBottom: 20 }}>
+                <div style={{ color: Colors.emeraldLight, fontSize: 12, fontWeight: 700, marginBottom: 12 }}>📍 Location Details</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
                   <div>
-                    <div style={{ color: '#64748b', fontSize: 10, fontWeight: 600 }}>Aanaa</div>
-                    <div style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 600, marginTop: 2 }}>{selectedReport.aanaa || '—'}</div>
+                    <div style={{ color: Colors.textDark3, fontSize: 10, fontWeight: 600 }}>Aanaa</div>
+                    <div style={{ color: Colors.textDark1, fontSize: 13, fontWeight: 600, marginTop: 2 }}>{selectedReport.aanaa || '—'}</div>
                   </div>
                   <div>
-                    <div style={{ color: '#64748b', fontSize: 10, fontWeight: 600 }}>Kuta Magaalaa</div>
-                    <div style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 600, marginTop: 2 }}>{selectedReport.kuta_magaalaa || '—'}</div>
+                    <div style={{ color: Colors.textDark3, fontSize: 10, fontWeight: 600 }}>Kuta Magaalaa</div>
+                    <div style={{ color: Colors.textDark1, fontSize: 13, fontWeight: 600, marginTop: 2 }}>{selectedReport.kuta_magaalaa || '—'}</div>
                   </div>
                   <div>
-                    <div style={{ color: '#64748b', fontSize: 10, fontWeight: 600 }}>Kebele</div>
-                    <div style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 600, marginTop: 2 }}>{selectedReport.kebele || '—'}</div>
+                    <div style={{ color: Colors.textDark3, fontSize: 10, fontWeight: 600 }}>Kebele</div>
+                    <div style={{ color: Colors.textDark1, fontSize: 13, fontWeight: 600, marginTop: 2 }}>{selectedReport.kebele || '—'}</div>
                   </div>
                   <div>
-                    <div style={{ color: '#64748b', fontSize: 10, fontWeight: 600 }}>Iddoo Addaa</div>
-                    <div style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 600, marginTop: 2 }}>{selectedReport.iddoo_addaa || '—'}</div>
+                    <div style={{ color: Colors.textDark3, fontSize: 10, fontWeight: 600 }}>Iddoo Addaa</div>
+                    <div style={{ color: Colors.textDark1, fontSize: 13, fontWeight: 600, marginTop: 2 }}>{selectedReport.iddoo_addaa || '—'}</div>
                   </div>
                 </div>
-                <div style={{ color: '#94a3b8', fontSize: 12, marginBottom: 12 }}>
+                <div style={{ color: Colors.textDark2, fontSize: 12, marginBottom: 12 }}>
                   📌 {selectedReport.latitude?.toFixed(6)}°N, {selectedReport.longitude?.toFixed(6)}°E
                 </div>
 
-                {/* Google Maps buttons */}
+                {/* Map buttons */}
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <a
-                    href={`https://www.google.com/maps?q=${selectedReport.latitude},${selectedReport.longitude}&z=17`}
-                    target="_blank" rel="noopener noreferrer"
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 6,
-                      padding: '8px 14px', borderRadius: 8,
-                      background: 'linear-gradient(135deg, #10b981, #059669)',
-                      color: 'white', textDecoration: 'none', fontSize: 12, fontWeight: 700,
-                      transition: 'all 0.2s',
-                    }}
-                  >
+                  <a href={`https://www.google.com/maps?q=${selectedReport.latitude},${selectedReport.longitude}&z=17`} target="_blank" rel="noopener noreferrer"
+                    style={{ ...Styles.btnPrimary, height: 36, padding: '0 14px', fontSize: 12, textDecoration: 'none', background: `linear-gradient(135deg, ${Colors.emerald}, ${Colors.teal})` }}>
                     <ExternalLink size={13} /> View Map
                   </a>
-                  <a
-                    href={`https://www.google.com/maps/dir/?api=1&destination=${selectedReport.latitude},${selectedReport.longitude}&travelmode=driving`}
-                    target="_blank" rel="noopener noreferrer"
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 6,
-                      padding: '8px 14px', borderRadius: 8,
-                      background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                      color: 'white', textDecoration: 'none', fontSize: 12, fontWeight: 700,
-                      transition: 'all 0.2s',
-                    }}
-                  >
+                  <a href={`https://www.google.com/maps/dir/?api=1&destination=${selectedReport.latitude},${selectedReport.longitude}&travelmode=driving`} target="_blank" rel="noopener noreferrer"
+                    style={{ ...Styles.btnPrimary, height: 36, padding: '0 14px', fontSize: 12, textDecoration: 'none' }}>
                     <Navigation size={13} /> Directions
                   </a>
                 </div>
@@ -478,14 +412,7 @@ export default function Reports() {
               {/* View Full Details Button */}
               <button
                 onClick={() => { setSelectedReport(null); navigate(`/reports/${selectedReport.id}`) }}
-                style={{
-                  width: '100%', padding: '14px', borderRadius: 12, border: 'none',
-                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                  color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                  transition: 'all 0.3s', boxShadow: '0 4px 15px rgba(99,102,241,0.3)',
-                }}
-                onMouseEnter={e => e.currentTarget.style.boxShadow = '0 6px 25px rgba(99,102,241,0.5)'}
-                onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 15px rgba(99,102,241,0.3)'}
+                style={{ ...Styles.btnPrimary, width: '100%', height: 48, fontSize: 14 }}
               >
                 Open Full Report Details →
               </button>
@@ -497,23 +424,17 @@ export default function Reports() {
   )
 }
 
-function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function InfoRow({ icon, React_node, label, value }: any) {
   return (
-    <div style={{
-      padding: '10px 14px', borderRadius: 10,
-      background: 'rgba(15,23,42,0.4)', border: '1px solid rgba(148,163,184,0.06)',
-    }}>
+    <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: `1px solid ${Colors.borderDark}` }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
         {icon}
-        <span style={{ color: '#64748b', fontSize: 10, fontWeight: 600, textTransform: 'uppercase' }}>{label}</span>
+        <span style={{ color: Colors.textDark3, fontSize: 10, fontWeight: 600, textTransform: 'uppercase' }}>{label}</span>
       </div>
-      <div style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 600 }}>{value}</div>
+      <div style={{ color: Colors.textDark1, fontSize: 13, fontWeight: 600 }}>{value}</div>
     </div>
   )
 }
-
-const thStyle: React.CSSProperties = { padding: '14px 16px', color: '#94a3b8', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }
-const tdStyle: React.CSSProperties = { padding: '14px 16px', color: '#e2e8f0', fontSize: 13, fontWeight: 500 }
 
 function FilterSelect({ value, onChange, options }: { value: string, onChange: (v: string) => void, options: { value: string, label: string }[] }) {
   return (
@@ -523,15 +444,15 @@ function FilterSelect({ value, onChange, options }: { value: string, onChange: (
         onChange={e => onChange(e.target.value)}
         style={{
           appearance: 'none',
-          background: 'rgba(15,23,42,0.4)', borderRadius: 10,
-          border: '1px solid rgba(148,163,184,0.1)',
-          color: '#e2e8f0', fontSize: 13, fontWeight: 600,
+          background: Colors.surfaceDark, borderRadius: 10,
+          border: `1px solid ${Colors.borderDark}`,
+          color: Colors.textDark1, fontSize: 13, fontWeight: 600,
           padding: '10px 36px 10px 14px', outline: 'none', cursor: 'pointer',
         }}
       >
-        {options.map(o => <option key={o.value} value={o.value} style={{ background: '#1e293b' }}>{o.label}</option>)}
+        {options.map(o => <option key={o.value} value={o.value} style={{ background: Colors.surfaceDark }}>{o.label}</option>)}
       </select>
-      <ChevronDown size={14} color="#64748b" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+      <ChevronDown size={14} color={Colors.textDark3} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
     </div>
   )
 }

@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'home_screen.dart';
 import '../services/api_config.dart';
 import '../services/sync_service.dart';
+import '../theme.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -272,13 +273,13 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
         final count = data['affected_count'] ?? '?';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('✅ Recorded! $count citizens now affected on case $caseNumber. Officers will be notified.'),
-          backgroundColor: Colors.green[700],
+          backgroundColor: CivicColors.emeraldGreen,
           duration: const Duration(seconds: 4),
         ));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Could not record your vote. Please try again.'),
-          backgroundColor: Colors.orange,
+          backgroundColor: CivicColors.statusAction,
         ));
       }
     } catch (_) {

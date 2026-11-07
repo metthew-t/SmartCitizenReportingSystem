@@ -12,6 +12,7 @@ import '../theme.dart';
 import 'submit_report_screen.dart';
 import 'report_details_screen.dart';
 import 'profile_screen.dart';
+import 'citizen_ai_screen.dart';
 
 /// Report data model (for both local and API reports)
 class ReportItem {
@@ -258,6 +259,7 @@ class _HomeScreenState extends State<HomeScreen> {
             isLoading: _isLoading,
             onRefresh: _fetchReports,
           ),
+          const CitizenAiScreen(),
           const ProfileScreen(embedded: true),
         ],
       ),
@@ -293,6 +295,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               label: 'tab_history'.tr(),
+            ),
+            // AI Assistant tab
+            BottomNavigationBarItem(
+              icon: Container(
+                width: 28, height: 28,
+                decoration: BoxDecoration(
+                  gradient: _currentIndex == 3
+                      ? const LinearGradient(colors: [CivicColors.govBlue, CivicColors.navyDeep])
+                      : null,
+                  color: _currentIndex == 3 ? null : Colors.transparent,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.smart_toy_rounded,
+                  size: 20,
+                  color: _currentIndex == 3 ? Colors.white : CivicColors.textMuted,
+                ),
+              ),
+              label: 'AI Help',
             ),
             BottomNavigationBarItem(icon: const Icon(Icons.person_rounded), label: 'tab_profile'.tr()),
           ],
