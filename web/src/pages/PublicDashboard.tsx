@@ -409,15 +409,9 @@ export default function PublicDashboard() {
                 ))}
               </div>
             )}
-                        </span>
-                      ) : (
-                        <span>{new Date(r.created_at).toLocaleDateString()}</span>
-                      )}
-                    </div>
+          </div>
+        </div>
 
-                    {/* Community Upvote & Resolution Proof Pill */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                      <button
         {/* Gamification Leaderboard */}
         <div>
           <div style={{ textAlign: 'center', marginBottom: 32 }}>

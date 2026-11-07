@@ -6,6 +6,14 @@ import { Colors, darkCard, statusBadgeStyle, priorityBadgeStyle, slaBadgeStyle, 
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
 
+// Table cell styles — defined before the component to avoid hoisting issues
+const thStyle: React.CSSProperties = {
+  padding: '12px 16px', color: Colors.textDark2, fontSize: 11, fontWeight: 700,
+  textTransform: 'uppercase', letterSpacing: '0.05em',
+  background: 'rgba(255,255,255,0.03)', borderBottom: `1px solid ${Colors.borderDark}`,
+}
+const tdStyle: React.CSSProperties = { padding: '14px 16px', color: Colors.textDark1, fontSize: 13, fontWeight: 500 }
+
 const STATUS_COLORS: Record<string, string> = {
   SUBMITTED: '#3B82F6', RECEIVED: '#3B82F6', ASSIGNED: '#F59E0B',
   UNDER_INVESTIGATION: '#F59E0B', IN_PROGRESS: '#8B5CF6',

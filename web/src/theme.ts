@@ -51,6 +51,13 @@ export const Colors = {
   warningText:  '#B45309',
   infoBg:       '#EFF6FF',
   infoText:     '#1D4ED8',
+
+  // Status accent shortcuts (for convenient inline use)
+  statusAction:   '#F59E0B',  // Amber — assigned/investigating
+  statusSolved:   '#10B981',  // Emerald — resolved
+  statusNew:      '#3B82F6',  // Blue — submitted
+  statusProgress: '#8B5CF6',  // Purple — in progress
+  statusDanger:   '#EF4444',  // Red — rejected/breached
 } as const
 
 // ── Status semantic colors (identical to mobile CivicStatus) ──────────────────
