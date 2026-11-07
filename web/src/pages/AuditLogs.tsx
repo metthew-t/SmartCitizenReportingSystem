@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+﻿import React, { useState, useEffect, useMemo } from 'react'
 import { useAuthStore } from '../store/authStore'
 import {
   ShieldAlert, Search, Filter, RefreshCw, Download, Eye,
@@ -27,7 +27,7 @@ export interface AuditRecord {
 const ROLE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   super_admin: { bg: 'rgba(239, 68, 68, 0.15)', text: '#f87171', border: 'rgba(239, 68, 68, 0.3)' },
   mayor: { bg: 'rgba(245, 158, 11, 0.15)', text: '#fbbf24', border: 'rgba(245, 158, 11, 0.3)' },
-  city_admin: { bg: 'rgba(99, 102, 241, 0.15)', text: '#a5b4fc', border: 'rgba(99, 102, 241, 0.3)' },
+  city_admin: { bg: 'rgba(99, 102, 241, 0.15)', text: '#93c5fd', border: 'rgba(99, 102, 241, 0.3)' },
   department_manager: { bg: 'rgba(59, 130, 246, 0.15)', text: '#60a5fa', border: 'rgba(59, 130, 246, 0.3)' },
   officer: { bg: 'rgba(16, 185, 129, 0.15)', text: '#34d399', border: 'rgba(16, 185, 129, 0.3)' },
   citizen: { bg: 'rgba(148, 163, 184, 0.12)', text: '#94a3b8', border: 'rgba(148, 163, 184, 0.2)' },
@@ -40,7 +40,7 @@ const ACTION_COLORS: Record<string, { bg: string; text: string }> = {
   USER_DELETED: { bg: 'rgba(239, 68, 68, 0.15)', text: '#f87171' },
   PASSWORD_RESET: { bg: 'rgba(245, 158, 11, 0.15)', text: '#fbbf24' },
   MAYOR_DIRECTIVE_PROMULGATED: { bg: 'rgba(245, 158, 11, 0.2)', text: '#f59e0b' },
-  OFFICIAL_REPORT_SUBMITTED: { bg: 'rgba(99, 102, 241, 0.15)', text: '#818cf8' },
+  OFFICIAL_REPORT_SUBMITTED: { bg: 'rgba(99, 102, 241, 0.15)', text: '#93c5fd' },
   OFFICIAL_REPORT_APPROVED: { bg: 'rgba(16, 185, 129, 0.2)', text: '#10b981' },
   OFFICIAL_REPORT_REJECTED: { bg: 'rgba(239, 68, 68, 0.2)', text: '#ef4444' },
   REPORT_STATUS_RESOLVED: { bg: 'rgba(16, 185, 129, 0.15)', text: '#10b981' },
@@ -166,7 +166,7 @@ export default function AuditLogs() {
       <div style={{ textAlign: 'center', padding: 80, color: '#ef4444' }}>
         <ShieldAlert size={48} style={{ marginBottom: 16 }} />
         <h2>Access Restricted</h2>
-        <p style={{ color: '#94a3b8' }}>
+        <p style={{ color: '#94A3B8' }}>
           System Audit Vault access is reserved exclusively for Super Administrators and City Administration.
         </p>
       </div>
@@ -191,10 +191,10 @@ export default function AuditLogs() {
               <ShieldAlert size={20} color="white" />
             </div>
             <div>
-              <h2 style={{ color: '#f8fafc', fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: -0.3 }}>
+              <h2 style={{ color: '#F1F5F9', fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: -0.3 }}>
                 System Audit Vault & Traceability
               </h2>
-              <p style={{ color: '#94a3b8', fontSize: 13, margin: '2px 0 0' }}>
+              <p style={{ color: '#94A3B8', fontSize: 13, margin: '2px 0 0' }}>
                 Immutable historical telemetry of all operations across all rules and actors
               </p>
             </div>
@@ -207,8 +207,8 @@ export default function AuditLogs() {
             disabled={refreshing}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              background: 'rgba(30,41,59,0.7)', border: '1px solid rgba(148,163,184,0.15)',
-              color: '#cbd5e1', padding: '8px 14px', borderRadius: 10, fontSize: 12,
+              background: '#111F35', border: '1px solid rgba(29,112,184,0.2)',
+              color: '#E2E8F0', padding: '8px 14px', borderRadius: 10, fontSize: 12,
               fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
             }}
           >
@@ -237,25 +237,25 @@ export default function AuditLogs() {
         gap: 16, marginBottom: 24
       }}>
         <div style={{
-          background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16, padding: 18,
+          background: '#111F35', backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(29,112,184,0.15)', borderRadius: 16, padding: 18,
           display: 'flex', alignItems: 'center', gap: 14
         }}>
           <div style={{
-            width: 44, height: 44, borderRadius: 12, background: 'rgba(99,102,241,0.15)',
+            width: 44, height: 44, borderRadius: 12, background: 'rgba(29,112,184,0.15)',
             display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}>
-            <Terminal size={20} color="#818cf8" />
+            <Terminal size={20} color="#93c5fd" />
           </div>
           <div>
-            <div style={{ color: '#94a3b8', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>Total Actions Logged</div>
-            <div style={{ color: '#f8fafc', fontSize: 22, fontWeight: 800 }}>{stats.total}</div>
+            <div style={{ color: '#94A3B8', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>Total Actions Logged</div>
+            <div style={{ color: '#F1F5F9', fontSize: 22, fontWeight: 800 }}>{stats.total}</div>
           </div>
         </div>
 
         <div style={{
-          background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16, padding: 18,
+          background: '#111F35', backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(29,112,184,0.15)', borderRadius: 16, padding: 18,
           display: 'flex', alignItems: 'center', gap: 14
         }}>
           <div style={{
@@ -265,14 +265,14 @@ export default function AuditLogs() {
             <AlertTriangle size={20} color="#ef4444" />
           </div>
           <div>
-            <div style={{ color: '#94a3b8', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>Security & Critical Ops</div>
+            <div style={{ color: '#94A3B8', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>Security & Critical Ops</div>
             <div style={{ color: '#ef4444', fontSize: 22, fontWeight: 800 }}>{stats.criticalOps}</div>
           </div>
         </div>
 
         <div style={{
-          background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16, padding: 18,
+          background: '#111F35', backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(29,112,184,0.15)', borderRadius: 16, padding: 18,
           display: 'flex', alignItems: 'center', gap: 14
         }}>
           <div style={{
@@ -282,14 +282,14 @@ export default function AuditLogs() {
             <User size={20} color="#60a5fa" />
           </div>
           <div>
-            <div style={{ color: '#94a3b8', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>Unique Active Actors</div>
+            <div style={{ color: '#94A3B8', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>Unique Active Actors</div>
             <div style={{ color: '#60a5fa', fontSize: 22, fontWeight: 800 }}>{stats.actors}</div>
           </div>
         </div>
 
         <div style={{
-          background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16, padding: 18,
+          background: '#111F35', backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(29,112,184,0.15)', borderRadius: 16, padding: 18,
           display: 'flex', alignItems: 'center', gap: 14
         }}>
           <div style={{
@@ -299,7 +299,7 @@ export default function AuditLogs() {
             <Clock size={20} color="#34d399" />
           </div>
           <div>
-            <div style={{ color: '#94a3b8', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>Recorded Today</div>
+            <div style={{ color: '#94A3B8', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>Recorded Today</div>
             <div style={{ color: '#34d399', fontSize: 22, fontWeight: 800 }}>{stats.todayCount}</div>
           </div>
         </div>
@@ -307,8 +307,8 @@ export default function AuditLogs() {
 
       {/* Filter and Search Bar */}
       <div style={{
-        background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16, padding: 18,
+        background: '#111F35', backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(29,112,184,0.15)', borderRadius: 16, padding: 18,
         marginBottom: 20
       }}>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -322,8 +322,8 @@ export default function AuditLogs() {
               placeholder="Search by actor, action, case #, or IP..."
               style={{
                 width: '100%', padding: '9px 12px 9px 36px', borderRadius: 10,
-                background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.15)',
-                color: '#f8fafc', fontSize: 13, outline: 'none', boxSizing: 'border-box'
+                background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.2)',
+                color: '#F1F5F9', fontSize: 13, outline: 'none', boxSizing: 'border-box'
               }}
             />
             {search && (
@@ -333,13 +333,13 @@ export default function AuditLogs() {
 
           {/* Role Filter */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Role:</span>
+            <span style={{ color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Role:</span>
             <select
               value={selectedRole}
               onChange={e => setSelectedRole(e.target.value)}
               style={{
-                padding: '8px 12px', borderRadius: 8, background: 'rgba(15,23,42,0.6)',
-                border: '1px solid rgba(148,163,184,0.15)', color: '#e2e8f0', fontSize: 12,
+                padding: '8px 12px', borderRadius: 8, background: 'rgba(10,22,40,0.9)',
+                border: '1px solid rgba(29,112,184,0.2)', color: '#F1F5F9', fontSize: 12,
                 outline: 'none', cursor: 'pointer'
               }}
             >
@@ -356,13 +356,13 @@ export default function AuditLogs() {
 
           {/* Action Category Filter */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Category:</span>
+            <span style={{ color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Category:</span>
             <select
               value={selectedActionCat}
               onChange={e => setSelectedActionCat(e.target.value)}
               style={{
-                padding: '8px 12px', borderRadius: 8, background: 'rgba(15,23,42,0.6)',
-                border: '1px solid rgba(148,163,184,0.15)', color: '#e2e8f0', fontSize: 12,
+                padding: '8px 12px', borderRadius: 8, background: 'rgba(10,22,40,0.9)',
+                border: '1px solid rgba(29,112,184,0.2)', color: '#F1F5F9', fontSize: 12,
                 outline: 'none', cursor: 'pointer'
               }}
             >
@@ -376,13 +376,13 @@ export default function AuditLogs() {
 
           {/* Entity Type Filter */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Entity:</span>
+            <span style={{ color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Entity:</span>
             <select
               value={selectedEntity}
               onChange={e => setSelectedEntity(e.target.value)}
               style={{
-                padding: '8px 12px', borderRadius: 8, background: 'rgba(15,23,42,0.6)',
-                border: '1px solid rgba(148,163,184,0.15)', color: '#e2e8f0', fontSize: 12,
+                padding: '8px 12px', borderRadius: 8, background: 'rgba(10,22,40,0.9)',
+                border: '1px solid rgba(29,112,184,0.2)', color: '#F1F5F9', fontSize: 12,
                 outline: 'none', cursor: 'pointer'
               }}
             >
@@ -399,38 +399,38 @@ export default function AuditLogs() {
 
       {/* Main Audit Records Table */}
       <div style={{
-        background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16,
+        background: '#111F35', backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(29,112,184,0.15)', borderRadius: 16,
         overflow: 'hidden'
       }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 60, color: '#94a3b8' }}>
+          <div style={{ textAlign: 'center', padding: 60, color: '#94A3B8' }}>
             <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 12px' }} />
             <div>Synchronizing system audit logs...</div>
           </div>
         ) : filteredLogs.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 60, color: '#64748b' }}>
+          <div style={{ textAlign: 'center', padding: 60, color: '#64748B' }}>
             <Lock size={36} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#94a3b8' }}>No audit records found matching your filters</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#94A3B8' }}>No audit records found matching your filters</div>
             <div style={{ fontSize: 12, marginTop: 4 }}>Try clearing search or filter terms to view more entries</div>
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
               <thead>
-                <tr style={{ background: 'rgba(15,23,42,0.7)', borderBottom: '1px solid rgba(148,163,184,0.1)' }}>
-                  <th style={{ padding: '14px 18px', color: '#94a3b8', fontWeight: 600 }}>Timestamp</th>
-                  <th style={{ padding: '14px 18px', color: '#94a3b8', fontWeight: 600 }}>Actor</th>
-                  <th style={{ padding: '14px 18px', color: '#94a3b8', fontWeight: 600 }}>Action</th>
-                  <th style={{ padding: '14px 18px', color: '#94a3b8', fontWeight: 600 }}>Target Entity</th>
-                  <th style={{ padding: '14px 18px', color: '#94a3b8', fontWeight: 600 }}>IP / Origin</th>
-                  <th style={{ padding: '14px 18px', color: '#94a3b8', fontWeight: 600, textAlign: 'right' }}>Inspection</th>
+                <tr style={{ background: 'rgba(15,23,42,0.7)', borderBottom: '1px solid rgba(29,112,184,0.2)' }}>
+                  <th style={{ padding: '14px 18px', color: '#94A3B8', fontWeight: 600 }}>Timestamp</th>
+                  <th style={{ padding: '14px 18px', color: '#94A3B8', fontWeight: 600 }}>Actor</th>
+                  <th style={{ padding: '14px 18px', color: '#94A3B8', fontWeight: 600 }}>Action</th>
+                  <th style={{ padding: '14px 18px', color: '#94A3B8', fontWeight: 600 }}>Target Entity</th>
+                  <th style={{ padding: '14px 18px', color: '#94A3B8', fontWeight: 600 }}>IP / Origin</th>
+                  <th style={{ padding: '14px 18px', color: '#94A3B8', fontWeight: 600, textAlign: 'right' }}>Inspection</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredLogs.map(log => {
                   const roleStyle = ROLE_COLORS[log.actor_role] || ROLE_COLORS.citizen
-                  const actionStyle = ACTION_COLORS[log.action] || { bg: 'rgba(99,102,241,0.12)', text: '#a5b4fc' }
+                  const actionStyle = ACTION_COLORS[log.action] || { bg: 'rgba(99,102,241,0.12)', text: '#93c5fd' }
                   const dateObj = new Date(log.timestamp)
 
                   return (
@@ -445,10 +445,10 @@ export default function AuditLogs() {
                     >
                       {/* Timestamp */}
                       <td style={{ padding: '14px 18px', whiteSpace: 'nowrap' }}>
-                        <div style={{ color: '#f8fafc', fontWeight: 600, fontSize: 12 }}>
+                        <div style={{ color: '#F1F5F9', fontWeight: 600, fontSize: 12 }}>
                           {dateObj.toLocaleDateString()} {dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </div>
-                        <div style={{ color: '#64748b', fontSize: 10, marginTop: 2 }}>
+                        <div style={{ color: '#64748B', fontSize: 10, marginTop: 2 }}>
                           {Math.floor((Date.now() - dateObj.getTime()) / 60000) < 60
                             ? `${Math.floor((Date.now() - dateObj.getTime()) / 60000)}m ago`
                             : `${Math.floor((Date.now() - dateObj.getTime()) / 3600000)}h ago`}
@@ -466,9 +466,9 @@ export default function AuditLogs() {
                             {log.actor_role.replace('_', ' ')}
                           </span>
                           <div>
-                            <div style={{ color: '#e2e8f0', fontWeight: 600 }}>{log.actor_name || log.user}</div>
+                            <div style={{ color: '#F1F5F9', fontWeight: 600 }}>{log.actor_name || log.user}</div>
                             {log.actor_email && (
-                              <div style={{ color: '#64748b', fontSize: 11 }}>{log.actor_email}</div>
+                              <div style={{ color: '#64748B', fontSize: 11 }}>{log.actor_email}</div>
                             )}
                           </div>
                         </div>
@@ -485,7 +485,7 @@ export default function AuditLogs() {
                           {log.action}
                         </span>
                         {log.changes?.note && (
-                          <div style={{ color: '#94a3b8', fontSize: 11, marginTop: 4, maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ color: '#94A3B8', fontSize: 11, marginTop: 4, maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {log.changes.note}
                           </div>
                         )}
@@ -496,11 +496,11 @@ export default function AuditLogs() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span style={{
                             fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-                            background: 'rgba(255,255,255,0.06)', color: '#94a3b8'
+                            background: 'rgba(255,255,255,0.06)', color: '#94A3B8'
                           }}>
                             {log.entity_type}
                           </span>
-                          <span style={{ color: '#f8fafc', fontWeight: 600, fontFamily: 'monospace' }}>
+                          <span style={{ color: '#F1F5F9', fontWeight: 600, fontFamily: 'monospace' }}>
                             {log.entity_id}
                           </span>
                         </div>
@@ -508,10 +508,10 @@ export default function AuditLogs() {
 
                       {/* IP / Origin */}
                       <td style={{ padding: '14px 18px' }}>
-                        <div style={{ color: '#cbd5e1', fontSize: 12, fontFamily: 'monospace' }}>
+                        <div style={{ color: '#E2E8F0', fontSize: 12, fontFamily: 'monospace' }}>
                           {log.ip_address || '127.0.0.1'}
                         </div>
-                        <div style={{ color: '#64748b', fontSize: 10 }}>Secure Gateway</div>
+                        <div style={{ color: '#64748B', fontSize: 10 }}>Secure Gateway</div>
                       </td>
 
                       {/* Inspection Button */}
@@ -520,8 +520,8 @@ export default function AuditLogs() {
                           onClick={() => setInspectRecord(log)}
                           style={{
                             padding: '6px 12px', borderRadius: 8,
-                            background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)',
-                            color: '#a5b4fc', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                            background: 'rgba(29,112,184,0.12)', border: '1px solid rgba(29,112,184,0.25)',
+                            color: '#93c5fd', fontSize: 12, fontWeight: 600, cursor: 'pointer',
                             display: 'inline-flex', alignItems: 'center', gap: 5,
                             transition: 'all 0.2s'
                           }}
@@ -549,25 +549,25 @@ export default function AuditLogs() {
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
         }}>
           <div style={{
-            width: '100%', maxWidth: 650, background: '#0f172a',
-            border: '1px solid rgba(148,163,184,0.2)', borderRadius: 20,
+            width: '100%', maxWidth: 650, background: '#0A1628',
+            border: '1px solid rgba(29,112,184,0.25)', borderRadius: 20,
             overflow: 'hidden', boxShadow: '0 25px 60px rgba(0,0,0,0.8)'
           }}>
             {/* Modal Header */}
             <div style={{
-              padding: '18px 24px', borderBottom: '1px solid rgba(148,163,184,0.1)',
+              padding: '18px 24px', borderBottom: '1px solid rgba(29,112,184,0.2)',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               background: 'rgba(30,41,59,0.4)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <ShieldCheck size={20} color="#10b981" />
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#f8fafc' }}>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#F1F5F9' }}>
                   Audit Evidence Dossier #{inspectRecord.id}
                 </h3>
               </div>
               <button
                 onClick={() => setInspectRecord(null)}
-                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer' }}
               >
                 <X size={20} />
               </button>
@@ -578,39 +578,39 @@ export default function AuditLogs() {
               <div style={{
                 display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14,
                 marginBottom: 20, background: 'rgba(30,41,59,0.3)', padding: 16, borderRadius: 12,
-                border: '1px solid rgba(148,163,184,0.08)'
+                border: '1px solid rgba(29,112,184,0.15)'
               }}>
                 <div>
-                  <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Action Executed</div>
-                  <div style={{ color: '#f8fafc', fontWeight: 700, fontSize: 13, marginTop: 2, fontFamily: 'monospace' }}>
+                  <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Action Executed</div>
+                  <div style={{ color: '#F1F5F9', fontWeight: 700, fontSize: 13, marginTop: 2, fontFamily: 'monospace' }}>
                     {inspectRecord.action}
                   </div>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Target Entity</div>
-                  <div style={{ color: '#818cf8', fontWeight: 700, fontSize: 13, marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Target Entity</div>
+                  <div style={{ color: '#93c5fd', fontWeight: 700, fontSize: 13, marginTop: 2 }}>
                     {inspectRecord.entity_type} ({inspectRecord.entity_id})
                   </div>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Actor Credentials</div>
-                  <div style={{ color: '#f8fafc', fontSize: 13, marginTop: 2, fontWeight: 600 }}>
+                  <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Actor Credentials</div>
+                  <div style={{ color: '#F1F5F9', fontSize: 13, marginTop: 2, fontWeight: 600 }}>
                     {inspectRecord.actor_name} [{inspectRecord.actor_role}]
                   </div>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Origin Network IP</div>
-                  <div style={{ color: '#38bdf8', fontSize: 13, marginTop: 2, fontFamily: 'monospace' }}>
+                  <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Origin Network IP</div>
+                  <div style={{ color: '#1D70B8', fontSize: 13, marginTop: 2, fontFamily: 'monospace' }}>
                     {inspectRecord.ip_address}
                   </div>
                 </div>
 
                 <div style={{ gridColumn: 'span 2' }}>
-                  <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Timestamp</div>
-                  <div style={{ color: '#e2e8f0', fontSize: 13, marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Timestamp</div>
+                  <div style={{ color: '#F1F5F9', fontSize: 13, marginTop: 2 }}>
                     {new Date(inspectRecord.timestamp).toLocaleString()} ({inspectRecord.timestamp})
                   </div>
                 </div>
@@ -618,13 +618,13 @@ export default function AuditLogs() {
 
               {/* Payload Changes JSON Block */}
               <div>
-                <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Terminal size={14} color="#818cf8" />
+                <div style={{ fontSize: 12, color: '#94A3B8', fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Terminal size={14} color="#93c5fd" />
                   State Changes & Telemetry Payload (JSON)
                 </div>
                 <pre style={{
                   background: 'rgba(15,23,42,0.9)', padding: 16, borderRadius: 10,
-                  border: '1px solid rgba(148,163,184,0.15)', color: '#34d399',
+                  border: '1px solid rgba(29,112,184,0.2)', color: '#34d399',
                   fontSize: 12, lineHeight: 1.6, overflowX: 'auto',
                   fontFamily: "Consolas, Monaco, 'Courier New', monospace"
                 }}>
@@ -635,7 +635,7 @@ export default function AuditLogs() {
 
             {/* Modal Footer */}
             <div style={{
-              padding: '14px 24px', borderTop: '1px solid rgba(148,163,184,0.1)',
+              padding: '14px 24px', borderTop: '1px solid rgba(29,112,184,0.2)',
               background: 'rgba(30,41,59,0.3)', display: 'flex', justifyContent: 'flex-end'
             }}>
               <button

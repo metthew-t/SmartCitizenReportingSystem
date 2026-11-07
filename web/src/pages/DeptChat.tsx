@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { MessageSquare, Send, Building2, Users, Search, Circle } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 
@@ -96,26 +96,26 @@ export default function DeptChat() {
   return (
     <div style={{
       fontFamily: "'Inter', sans-serif", height: 'calc(100vh - 80px)',
-      display: 'flex', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
-      borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(148,163,184,0.08)'
+      display: 'flex', background: 'linear-gradient(160deg, #0A1628 0%, #0D1B2E 60%, #091420 100%)',
+      borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(29,112,184,0.15)'
     }}>
       {/* Sidebar */}
       <div style={{
-        width: 280, background: 'rgba(15,23,42,0.8)', backdropFilter: 'blur(16px)',
-        borderRight: '1px solid rgba(148,163,184,0.08)', display: 'flex', flexDirection: 'column',
+        width: 280, background: '#0A1628', backdropFilter: 'blur(16px)',
+        borderRight: '1px solid rgba(29,112,184,0.15)', display: 'flex', flexDirection: 'column',
       }}>
-        <div style={{ padding: '20px 16px 12px', borderBottom: '1px solid rgba(148,163,184,0.06)' }}>
+        <div style={{ padding: '20px 16px 12px', borderBottom: '1px solid rgba(29,112,184,0.1)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
             <div style={{
               width: 36, height: 36, borderRadius: 10,
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              background: 'linear-gradient(135deg, #1D70B8, #0F2942)',
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
               <Building2 size={18} color="white" />
             </div>
             <div>
-              <div style={{ color: '#e2e8f0', fontWeight: 700, fontSize: 15 }}>Department Chat</div>
-              <div style={{ color: '#64748b', fontSize: 11 }}>Internal & Inter-department</div>
+              <div style={{ color: '#F1F5F9', fontWeight: 700, fontSize: 15 }}>Department Chat</div>
+              <div style={{ color: '#64748B', fontSize: 11 }}>Internal & Inter-department</div>
             </div>
           </div>
           {isManagerOrAdmin && (
@@ -127,8 +127,8 @@ export default function DeptChat() {
                 placeholder="Search departments..."
                 style={{
                   width: '100%', padding: '8px 8px 8px 32px', borderRadius: 8, boxSizing: 'border-box',
-                  background: 'rgba(30,41,59,0.6)', border: '1px solid rgba(148,163,184,0.1)',
-                  color: '#e2e8f0', fontSize: 13, outline: 'none',
+                  background: 'rgba(30,41,59,0.6)', border: '1px solid rgba(29,112,184,0.2)',
+                  color: '#F1F5F9', fontSize: 13, outline: 'none',
                 }}
               />
             </div>
@@ -137,20 +137,20 @@ export default function DeptChat() {
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
           {loading ? (
-            <div style={{ padding: 20, color: '#64748b', textAlign: 'center', fontSize: 13 }}>Loading...</div>
+            <div style={{ padding: 20, color: '#64748B', textAlign: 'center', fontSize: 13 }}>Loading...</div>
           ) : (
             <>
               {myDept && (
                 <div style={{ marginBottom: 16 }}>
-                  <div style={{ padding: '0 16px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 }}>
+                  <div style={{ padding: '0 16px', fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', marginBottom: 4 }}>
                     My Department
                   </div>
                   <div
                     onClick={() => setSelectedDept(myDept)}
                     style={{
                       padding: '12px 16px', cursor: 'pointer',
-                      background: selectedDept?.id === myDept.id ? 'linear-gradient(90deg, rgba(99,102,241,0.2), transparent)' : 'transparent',
-                      borderLeft: selectedDept?.id === myDept.id ? '3px solid #6366f1' : '3px solid transparent',
+                      background: selectedDept?.id === myDept.id ? 'linear-gradient(90deg, rgba(29,112,184,0.2), transparent)' : 'transparent',
+                      borderLeft: selectedDept?.id === myDept.id ? '3px solid #1D70B8' : '3px solid transparent',
                       transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 12,
                     }}
                   >
@@ -164,7 +164,7 @@ export default function DeptChat() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
-                        color: selectedDept?.id === myDept.id ? '#a5b4fc' : '#cbd5e1',
+                        color: selectedDept?.id === myDept.id ? '#93c5fd' : '#cbd5e1',
                         fontSize: 13, fontWeight: 600,
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                       }}>{myDept.name}</div>
@@ -175,7 +175,7 @@ export default function DeptChat() {
 
               {isManagerOrAdmin && otherDepts.length > 0 && (
                 <div>
-                  <div style={{ padding: '0 16px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 }}>
+                  <div style={{ padding: '0 16px', fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', marginBottom: 4 }}>
                     {myDept ? 'Other Departments' : 'All Departments'}
                   </div>
                   {otherDepts.map(dept => (
@@ -184,8 +184,8 @@ export default function DeptChat() {
                       onClick={() => setSelectedDept(dept)}
                       style={{
                         padding: '12px 16px', cursor: 'pointer',
-                        background: selectedDept?.id === dept.id ? 'linear-gradient(90deg, rgba(99,102,241,0.2), transparent)' : 'transparent',
-                        borderLeft: selectedDept?.id === dept.id ? '3px solid #6366f1' : '3px solid transparent',
+                        background: selectedDept?.id === dept.id ? 'linear-gradient(90deg, rgba(29,112,184,0.2), transparent)' : 'transparent',
+                        borderLeft: selectedDept?.id === dept.id ? '3px solid #1D70B8' : '3px solid transparent',
                         transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 12,
                       }}
                     >
@@ -199,7 +199,7 @@ export default function DeptChat() {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
-                          color: selectedDept?.id === dept.id ? '#a5b4fc' : '#cbd5e1',
+                          color: selectedDept?.id === dept.id ? '#93c5fd' : '#cbd5e1',
                           fontSize: 13, fontWeight: 600,
                           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                         }}>{dept.name}</div>
@@ -214,7 +214,7 @@ export default function DeptChat() {
         </div>
 
         <div style={{
-          padding: '12px 16px', borderTop: '1px solid rgba(148,163,184,0.06)',
+          padding: '12px 16px', borderTop: '1px solid rgba(29,112,184,0.1)',
           display: 'flex', alignItems: 'center', gap: 10
         }}>
           <div style={{
@@ -226,7 +226,7 @@ export default function DeptChat() {
             {(user?.name || 'U').charAt(0)}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ color: '#e2e8f0', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ color: '#F1F5F9', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {user?.name || 'You'}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
@@ -245,18 +245,18 @@ export default function DeptChat() {
             background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2))',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <MessageSquare size={36} color="#6366f1" />
+            <MessageSquare size={36} color="#1D70B8" />
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ color: '#e2e8f0', fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Select a Department</div>
-            <div style={{ color: '#64748b', fontSize: 14 }}>Choose a department to start inter-department communication</div>
+            <div style={{ color: '#F1F5F9', fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Select a Department</div>
+            <div style={{ color: '#64748B', fontSize: 14 }}>Choose a department to start inter-department communication</div>
           </div>
         </div>
       ) : (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           <div style={{
-            padding: '16px 24px', borderBottom: '1px solid rgba(148,163,184,0.06)',
-            background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(12px)',
+            padding: '16px 24px', borderBottom: '1px solid rgba(29,112,184,0.1)',
+            background: 'rgba(10,22,40,0.9)', backdropFilter: 'blur(12px)',
             display: 'flex', alignItems: 'center', gap: 14,
           }}>
             <div style={{
@@ -268,10 +268,10 @@ export default function DeptChat() {
               {selectedDept.name?.charAt(0)}
             </div>
             <div>
-              <div style={{ color: '#e2e8f0', fontWeight: 700, fontSize: 15 }}>{selectedDept.name}</div>
+              <div style={{ color: '#F1F5F9', fontWeight: 700, fontSize: 15 }}>{selectedDept.name}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
                 <Users size={11} color="#64748b" />
-                <span style={{ color: '#64748b', fontSize: 11 }}>Department channel — all members can see messages</span>
+                <span style={{ color: '#64748B', fontSize: 11 }}>Department channel — all members can see messages</span>
               </div>
             </div>
           </div>
@@ -290,7 +290,7 @@ export default function DeptChat() {
                 <div key={idx} style={{ display: 'flex', flexDirection: isMe ? 'row-reverse' : 'row', gap: 10, alignItems: 'flex-end' }}>
                   <div style={{
                     width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                    background: isMe ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : `hsl(${((msg.sender || 0) * 73) % 360}, 50%, 35%)`,
+                    background: isMe ? 'linear-gradient(135deg, #1D70B8, #0F2942)' : `hsl(${((msg.sender || 0) * 73) % 360}, 50%, 35%)`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 13, fontWeight: 700, color: 'white',
                   }}>
@@ -298,7 +298,7 @@ export default function DeptChat() {
                   </div>
                   <div style={{ maxWidth: '65%' }}>
                     {!isMe && (
-                      <div style={{ color: '#94a3b8', fontSize: 11, fontWeight: 600, marginBottom: 4, marginLeft: 4 }}>
+                      <div style={{ color: '#94A3B8', fontSize: 11, fontWeight: 600, marginBottom: 4, marginLeft: 4 }}>
                         {msg.sender_name || 'Department User'}
                         {msg.sender_dept_name && <span style={{ color: '#475569', marginLeft: 6 }}>· {msg.sender_dept_name}</span>}
                       </div>
@@ -306,10 +306,10 @@ export default function DeptChat() {
                     <div style={{
                       padding: '12px 16px',
                       borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                      background: isMe ? 'linear-gradient(135deg, #6366f1, #7c3aed)' : 'rgba(30,41,59,0.8)',
+                      background: isMe ? 'linear-gradient(135deg, #1D70B8, #0F2942)' : 'rgba(30,41,59,0.8)',
                       border: isMe ? 'none' : '1px solid rgba(148,163,184,0.08)',
                     }}>
-                      <div style={{ color: '#e2e8f0', fontSize: 14, lineHeight: 1.5 }}>{msg.content}</div>
+                      <div style={{ color: '#F1F5F9', fontSize: 14, lineHeight: 1.5 }}>{msg.content}</div>
                       <div style={{ fontSize: 10, marginTop: 6, textAlign: 'right', color: isMe ? 'rgba(255,255,255,0.5)' : '#475569' }}>
                         {msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                       </div>
@@ -322,8 +322,8 @@ export default function DeptChat() {
           </div>
 
           <div style={{
-            padding: '16px 24px', borderTop: '1px solid rgba(148,163,184,0.06)',
-            background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(12px)',
+            padding: '16px 24px', borderTop: '1px solid rgba(29,112,184,0.1)',
+            background: 'rgba(10,22,40,0.9)', backdropFilter: 'blur(12px)',
             display: 'flex', gap: 12, alignItems: 'flex-end'
           }}>
             <textarea
@@ -334,11 +334,11 @@ export default function DeptChat() {
               rows={1}
               style={{
                 flex: 1, padding: '12px 16px', borderRadius: 12,
-                background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(148,163,184,0.12)',
-                color: '#e2e8f0', fontSize: 14, outline: 'none', resize: 'none',
+                background: '#0D1928', border: '1px solid rgba(29,112,184,0.18)',
+                color: '#F1F5F9', fontSize: 14, outline: 'none', resize: 'none',
                 fontFamily: 'inherit', lineHeight: 1.5,
               }}
-              onFocus={e => e.currentTarget.style.borderColor = '#6366f1'}
+              onFocus={e => e.currentTarget.style.borderColor = '#1D70B8'}
               onBlur={e => e.currentTarget.style.borderColor = 'rgba(148,163,184,0.12)'}
             />
             <button
@@ -346,7 +346,7 @@ export default function DeptChat() {
               disabled={!newMsg.trim() || sending}
               style={{
                 width: 46, height: 46, borderRadius: 12, border: 'none', flexShrink: 0,
-                background: !newMsg.trim() ? 'rgba(148,163,184,0.1)' : 'linear-gradient(135deg, #6366f1, #7c3aed)',
+                background: !newMsg.trim() ? 'rgba(148,163,184,0.1)' : 'linear-gradient(135deg, #1D70B8, #0F2942)',
                 color: !newMsg.trim() ? '#475569' : 'white',
                 cursor: !newMsg.trim() ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { Trash2, User, Building2, Shield, Search, Plus, X, KeyRound, Edit2, Phone, Mail, Crown, Sparkles, Check, ShieldAlert } from 'lucide-react'
 import { validatePasswordRules, isStrongPassword, generateStrongPassword } from '../utils/passwordPolicy'
@@ -294,8 +294,8 @@ export default function AdminUsers() {
     <div style={{ fontFamily: "'Inter', sans-serif" }}>
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
-          <h2 style={{ color: '#e2e8f0', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>User Management</h2>
-          <p style={{ color: '#64748b', fontSize: 13, margin: 0 }}>
+          <h2 style={{ color: '#F1F5F9', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>User Management</h2>
+          <p style={{ color: '#64748B', fontSize: 13, margin: 0 }}>
             {role === 'super_admin' ? 'Full system user management. Create and manage all users including City Admins.' : role === 'city_admin' ? 'View and manage all system users.' : role === 'mayor' ? 'Read-only view of all system users. No administrative actions available.' : 'Manage officers in your department.'}
           </p>
         </div>
@@ -304,7 +304,7 @@ export default function AdminUsers() {
             onClick={() => setShowModal(true)}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              background: '#6366f1', color: 'white', border: 'none',
+              background: '#1D70B8', color: 'white', border: 'none',
               padding: '10px 16px', borderRadius: 8, fontSize: 14, fontWeight: 600,
               cursor: 'pointer', boxShadow: '0 2px 8px rgba(99,102,241,0.4)',
               transition: 'background 0.2s'
@@ -319,16 +319,16 @@ export default function AdminUsers() {
       {error && <div style={{ color: 'red', marginBottom: 16 }}>{error}</div>}
 
       <div style={{
-        background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16,
+        background: '#111F35', backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(29,112,184,0.15)', borderRadius: 16,
         overflow: 'hidden'
       }}>
         {/* Toolbar */}
-        <div style={{ padding: 16, borderBottom: '1px solid rgba(148,163,184,0.08)', display: 'flex', gap: 16, alignItems: 'center' }}>
+        <div style={{ padding: 16, borderBottom: '1px solid rgba(29,112,184,0.12)', display: 'flex', gap: 16, alignItems: 'center' }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
-            background: 'rgba(15,23,42,0.4)', borderRadius: 10,
-            padding: '8px 12px', border: '1px solid rgba(148,163,184,0.08)',
+            background: 'rgba(10,22,40,0.6)', borderRadius: 10,
+            padding: '8px 12px', border: '1px solid rgba(29,112,184,0.15)',
             flex: 1, maxWidth: 300,
           }}>
             <Search size={16} color="#64748b" />
@@ -338,7 +338,7 @@ export default function AdminUsers() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               style={{
-                background: 'transparent', border: 'none', color: '#e2e8f0',
+                background: 'transparent', border: 'none', color: '#F1F5F9',
                 fontSize: 13, outline: 'none', width: '100%',
               }}
             />
@@ -352,7 +352,7 @@ export default function AdminUsers() {
                 style={{
                   padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
                   background: filterRole === r ? 'rgba(99,102,241,0.15)' : 'transparent',
-                  color: filterRole === r ? '#818cf8' : '#94a3b8',
+                  color: filterRole === r ? '#93c5fd' : '#94a3b8',
                   border: filterRole === r ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent',
                   cursor: 'pointer', transition: 'all 0.2s',
                 }}
@@ -367,38 +367,38 @@ export default function AdminUsers() {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(148,163,184,0.08)' }}>
-                <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Name</th>
-                <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Contact</th>
-                <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Role</th>
-                <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Department</th>
-                <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Status</th>
-                <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Date Joined</th>
-                <th style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 12, fontWeight: 600, textAlign: 'right' }}>Actions</th>
+              <tr style={{ borderBottom: '1px solid rgba(29,112,184,0.12)' }}>
+                <th style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Name</th>
+                <th style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Contact</th>
+                <th style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Role</th>
+                <th style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Department</th>
+                <th style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Status</th>
+                <th style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Date Joined</th>
+                <th style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 12, fontWeight: 600, textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: '#64748b' }}>Loading users...</td></tr>
+                <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>Loading users...</td></tr>
               ) : filteredUsers.length === 0 ? (
-                <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: '#64748b' }}>No users found.</td></tr>
+                <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>No users found.</td></tr>
               ) : (
                 filteredUsers.map(user => (
                   <tr key={user.id} style={{ borderBottom: '1px solid rgba(148,163,184,0.04)', transition: 'background 0.2s' }}
                       onMouseEnter={e => e.currentTarget.style.background = 'rgba(15,23,42,0.4)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <td style={{ padding: '12px 16px', color: '#e2e8f0', fontSize: 13, fontWeight: 500 }}>
+                    <td style={{ padding: '12px 16px', color: '#F1F5F9', fontSize: 13, fontWeight: 500 }}>
                       {user.full_name || 'N/A'}
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 13 }}>
+                    <td style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 13 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         {user.email && (
-                          <span style={{ color: '#e2e8f0', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <Mail size={11} color="#6366f1" /> {user.email}
+                          <span style={{ color: '#F1F5F9', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Mail size={11} color="#1D70B8" /> {user.email}
                           </span>
                         )}
                         {user.phone_number && (
-                          <span style={{ color: '#94a3b8', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ color: '#94A3B8', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
                             <Phone size={10} color="#10b981" /> {user.phone_number}
                           </span>
                         )}
@@ -411,11 +411,11 @@ export default function AdminUsers() {
                         {user.is_super_admin && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', fontSize: 10, fontWeight: 600 }}><Shield size={10} style={{ display: 'inline', marginRight: 2 }} /> SUPER ADMIN</span>}
                         {user.is_city_admin && !user.is_super_admin && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(16,185,129,0.1)', color: '#10b981', fontSize: 10, fontWeight: 600 }}><Shield size={10} style={{ display: 'inline', marginRight: 2 }} /> ADMIN</span>}
                         {user.is_department_manager && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(236,72,153,0.1)', color: '#ec4899', fontSize: 10, fontWeight: 600 }}><Building2 size={10} style={{ display: 'inline', marginRight: 2 }} /> MANAGER</span>}
-                        {user.is_officer && !user.is_department_manager && !user.is_city_admin && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(99,102,241,0.1)', color: '#818cf8', fontSize: 10, fontWeight: 600 }}><Building2 size={10} style={{ display: 'inline', marginRight: 2 }} /> OFFICER</span>}
+                        {user.is_officer && !user.is_department_manager && !user.is_city_admin && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(99,102,241,0.1)', color: '#93c5fd', fontSize: 10, fontWeight: 600 }}><Building2 size={10} style={{ display: 'inline', marginRight: 2 }} /> OFFICER</span>}
                         {user.is_citizen && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', fontSize: 10, fontWeight: 600 }}><User size={10} style={{ display: 'inline', marginRight: 2 }} /> CITIZEN</span>}
                       </div>
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 13 }}>
+                    <td style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 13 }}>
                       {user.department_name || '-'}
                     </td>
                     <td style={{ padding: '12px 16px' }}>
@@ -433,7 +433,7 @@ export default function AdminUsers() {
                         {user.is_active !== false ? 'Active' : 'Deactivated'}
                       </span>
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 13 }}>
+                    <td style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 13 }}>
                       {new Date(user.date_joined).toLocaleDateString()}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
@@ -511,7 +511,7 @@ export default function AdminUsers() {
           padding: 16
         }}>
           <div style={{
-            background: '#1e293b', border: '1px solid rgba(148,163,184,0.2)',
+            background: '#111F35', border: '1px solid rgba(29,112,184,0.25)',
             borderRadius: 20, width: '100%', maxWidth: 480, maxHeight: '90vh',
             display: 'flex', flexDirection: 'column',
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6)', overflow: 'hidden'
@@ -522,11 +522,11 @@ export default function AdminUsers() {
               padding: '18px 24px', borderBottom: '1px solid rgba(148,163,184,0.12)',
               background: 'rgba(30, 41, 59, 0.8)'
             }}>
-              <h3 style={{ margin: 0, color: '#f8fafc', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Plus size={18} color="#818cf8" />
+              <h3 style={{ margin: 0, color: '#F1F5F9', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Plus size={18} color="#93c5fd" />
                 Add New {role === 'city_admin' || role === 'super_admin' ? 'Official' : 'Officer'}
               </h3>
-              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 4 }}>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: 4 }}>
                 <X size={20} />
               </button>
             </div>
@@ -537,51 +537,51 @@ export default function AdminUsers() {
               padding: '20px 24px', overflowY: 'auto', flex: 1
             }}>
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Full Name</label>
+                <label style={{ display: 'block', color: '#94A3B8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Full Name</label>
                 <input 
                   type="text" required
                   placeholder="e.g. Abebe Bikila"
                   value={formData.full_name}
                   onChange={e => setFormData({...formData, full_name: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Email Address</label>
+                <label style={{ display: 'block', color: '#94A3B8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Email Address</label>
                 <input 
                   type="email" required
                   placeholder="official@adama.gov.et"
                   value={formData.email}
                   onChange={e => setFormData({...formData, email: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Phone Number</label>
+                <label style={{ display: 'block', color: '#94A3B8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Phone Number</label>
                 <input 
                   type="text"
                   placeholder="09xxxxxxxx (receives login SMS)"
                   value={formData.phone_number}
                   onChange={e => setFormData({...formData, phone_number: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <label style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Initial Temporary Password (Min 12 Characters)</label>
+                  <label style={{ color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Initial Temporary Password (Min 12 Characters)</label>
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, password: generateStrongPassword() })}
                     style={{
-                      background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)',
-                      color: '#a5b4fc', fontSize: 11, padding: '4px 10px', borderRadius: 6,
+                      background: 'rgba(29,112,184,0.15)', border: '1px solid rgba(29,112,184,0.3)',
+                      color: '#93c5fd', fontSize: 11, padding: '4px 10px', borderRadius: 6,
                       cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600
                     }}
                   >
-                    <Sparkles size={12} color="#818cf8" /> Auto-Generate
+                    <Sparkles size={12} color="#93c5fd" /> Auto-Generate
                   </button>
                 </div>
                 <input 
@@ -589,7 +589,7 @@ export default function AdminUsers() {
                   value={formData.password}
                   placeholder="Click Auto-Generate or enter 12+ char password"
                   onChange={e => setFormData({...formData, password: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none', fontFamily: 'monospace', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none', fontFamily: 'monospace', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -614,7 +614,7 @@ export default function AdminUsers() {
                   <ShieldAlert size={16} />
                   <span>Mandatory First-Login Password Change</span>
                 </div>
-                <div style={{ color: '#e2e8f0', fontSize: 11.5 }}>
+                <div style={{ color: '#F1F5F9', fontSize: 11.5 }}>
                   The user will receive an SMS notification and will be <strong>directed to change their temporary password</strong> immediately upon first logging into the system.
                 </div>
               </div>
@@ -622,11 +622,11 @@ export default function AdminUsers() {
               {(role === 'city_admin' || role === 'super_admin') && (
                 <>
                   <div>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Department</label>
+                    <label style={{ display: 'block', color: '#94A3B8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Department</label>
                     <select 
                       value={formData.department_name}
                       onChange={e => setFormData({...formData, department_name: e.target.value})}
-                      style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none', boxSizing: 'border-box' }}
                     >
                       <option value="">None (City Admin / Super Admin)</option>
                       {departments.map(d => (
@@ -635,8 +635,8 @@ export default function AdminUsers() {
                     </select>
                   </div>
 
-                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', padding: '10px 12px', background: 'rgba(15,23,42,0.4)', borderRadius: 8, border: '1px solid rgba(148,163,184,0.1)' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e2e8f0', fontSize: 13, cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', padding: '10px 12px', background: 'rgba(10,22,40,0.6)', borderRadius: 8, border: '1px solid rgba(29,112,184,0.2)' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#F1F5F9', fontSize: 13, cursor: 'pointer' }}>
                       <input 
                         type="checkbox" 
                         checked={formData.is_manager}
@@ -646,7 +646,7 @@ export default function AdminUsers() {
                     </label>
                     {role === 'super_admin' && (
                       <>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#e2e8f0', fontSize: 13, cursor: 'pointer' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#F1F5F9', fontSize: 13, cursor: 'pointer' }}>
                           <input 
                             type="checkbox" 
                             checked={formData.is_city_admin && !formData.is_super_admin && !formData.is_mayor}
@@ -659,7 +659,7 @@ export default function AdminUsers() {
                           />
                           Is City Admin
                         </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#818cf8', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#93c5fd', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                           <input 
                             type="checkbox" 
                             checked={formData.is_super_admin}
@@ -705,7 +705,7 @@ export default function AdminUsers() {
                 onClick={() => setShowModal(false)}
                 style={{
                   padding: '10px 18px', background: 'rgba(148,163,184,0.1)',
-                  border: '1px solid rgba(148,163,184,0.2)', color: '#cbd5e1',
+                  border: '1px solid rgba(29,112,184,0.25)', color: '#E2E8F0',
                   borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer'
                 }}
               >
@@ -716,7 +716,7 @@ export default function AdminUsers() {
                 form="create-user-form"
                 disabled={creating}
                 style={{
-                  padding: '10px 22px', background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                  padding: '10px 22px', background: 'linear-gradient(135deg, #1D70B8, #0F2942)',
                   border: 'none', color: '#ffffff', borderRadius: 8, fontWeight: 700, fontSize: 13,
                   cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.7 : 1,
                   boxShadow: '0 4px 14px rgba(99,102,241,0.35)'
@@ -738,7 +738,7 @@ export default function AdminUsers() {
           padding: 16
         }}>
           <div style={{
-            background: '#1e293b', border: '1px solid rgba(148,163,184,0.2)',
+            background: '#111F35', border: '1px solid rgba(29,112,184,0.25)',
             borderRadius: 20, width: '100%', maxWidth: 440, maxHeight: '90vh',
             display: 'flex', flexDirection: 'column',
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6)', overflow: 'hidden'
@@ -749,11 +749,11 @@ export default function AdminUsers() {
               padding: '18px 24px', borderBottom: '1px solid rgba(148,163,184,0.12)',
               background: 'rgba(30, 41, 59, 0.8)'
             }}>
-              <h3 style={{ color: '#f8fafc', margin: 0, fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h3 style={{ color: '#F1F5F9', margin: 0, fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <KeyRound size={18} color="#f59e0b" />
                 Reset Password for {resetModal.userName}
               </h3>
-              <button onClick={() => { setResetModal({show: false, userId: null, userName: ''}); setResetPassword(''); }} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 4 }}>
+              <button onClick={() => { setResetModal({show: false, userId: null, userName: ''}); setResetPassword(''); }} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: 4 }}>
                 <X size={20} />
               </button>
             </div>
@@ -761,7 +761,7 @@ export default function AdminUsers() {
             {/* Scrollable Body */}
             <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <label style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>New 12+ Character Password</label>
+                <label style={{ color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>New 12+ Character Password</label>
                 <button
                   type="button"
                   onClick={() => setResetPassword(generateStrongPassword())}
@@ -782,8 +782,8 @@ export default function AdminUsers() {
                 onChange={e => setResetPassword(e.target.value)}
                 style={{
                   width: '100%', padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
-                  background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)',
-                  color: '#e2e8f0', fontSize: 13, outline: 'none', marginBottom: 12, fontFamily: 'monospace'
+                  background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)',
+                  color: '#F1F5F9', fontSize: 13, outline: 'none', marginBottom: 12, fontFamily: 'monospace'
                 }}
               />
 
@@ -822,7 +822,7 @@ export default function AdminUsers() {
                   <ShieldAlert size={16} />
                   <span>Password Reset Directive</span>
                 </div>
-                <div style={{ color: '#e2e8f0', fontSize: 11.5 }}>
+                <div style={{ color: '#F1F5F9', fontSize: 11.5 }}>
                   User will receive an SMS notification and will be <strong>forced to establish a new password upon next login</strong>.
                 </div>
               </div>
@@ -839,7 +839,7 @@ export default function AdminUsers() {
                 onClick={() => { setResetModal({show: false, userId: null, userName: ''}); setResetPassword(''); }}
                 style={{
                   padding: '10px 18px', background: 'rgba(148,163,184,0.1)',
-                  border: '1px solid rgba(148,163,184,0.2)', color: '#cbd5e1',
+                  border: '1px solid rgba(29,112,184,0.25)', color: '#E2E8F0',
                   borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer'
                 }}
               >
@@ -874,46 +874,46 @@ export default function AdminUsers() {
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
         }}>
           <div style={{
-            background: '#1e293b', border: '1px solid rgba(148,163,184,0.1)',
+            background: '#111F35', border: '1px solid rgba(29,112,184,0.2)',
             borderRadius: 16, width: '100%', maxWidth: 420, padding: 24,
             boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, color: '#e2e8f0', fontSize: 18 }}>
+              <h3 style={{ margin: 0, color: '#F1F5F9', fontSize: 18 }}>
                 Edit {editModal.user.full_name || 'User'}
               </h3>
-              <button onClick={() => setEditModal({ show: false, user: null })} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
+              <button onClick={() => setEditModal({ show: false, user: null })} style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
             </div>
 
             <form onSubmit={handleUpdateUser} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Full Name</label>
+                <label style={{ display: 'block', color: '#94A3B8', fontSize: 12, marginBottom: 4 }}>Full Name</label>
                 <input 
                   type="text" required
                   value={editFormData.full_name}
                   onChange={e => setEditFormData({...editFormData, full_name: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none' }}
+                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none' }}
                 />
               </div>
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <label style={{ color: '#94a3b8', fontSize: 12 }}>Email Address</label>
+                  <label style={{ color: '#94A3B8', fontSize: 12 }}>Email Address</label>
                   <span style={{ fontSize: 10, color: '#10b981', fontWeight: 600 }}>Editable</span>
                 </div>
                 <input 
                   type="email" required
                   value={editFormData.email}
                   onChange={e => setEditFormData({...editFormData, email: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none' }}
+                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none' }}
                 />
               </div>
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <label style={{ color: '#94a3b8', fontSize: 12 }}>Phone Number</label>
+                  <label style={{ color: '#94A3B8', fontSize: 12 }}>Phone Number</label>
                   <span style={{ fontSize: 10, color: '#10b981', fontWeight: 600 }}>Editable</span>
                 </div>
                 <input 
@@ -921,7 +921,7 @@ export default function AdminUsers() {
                   placeholder="09xxxxxxxx"
                   value={editFormData.phone_number}
                   onChange={e => setEditFormData({...editFormData, phone_number: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none' }}
+                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none' }}
                 />
               </div>
 
@@ -929,7 +929,7 @@ export default function AdminUsers() {
                 <button 
                   type="button" 
                   onClick={() => setEditModal({ show: false, user: null })}
-                  style={{ padding: '8px 16px', background: 'transparent', border: '1px solid rgba(148,163,184,0.2)', color: '#94a3b8', borderRadius: 8, cursor: 'pointer' }}
+                  style={{ padding: '8px 16px', background: 'transparent', border: '1px solid rgba(29,112,184,0.25)', color: '#94A3B8', borderRadius: 8, cursor: 'pointer' }}
                 >
                   Cancel
                 </button>

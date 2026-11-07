@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { useLanguageStore, Language } from '../store/languageStore'
 import { Settings as SettingsIcon, User, Bell, Globe, Shield, Database, Camera, Edit2, Check, X, Lock, KeyRound, ShieldCheck } from 'lucide-react'
@@ -188,17 +188,17 @@ export default function Settings() {
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", maxWidth: 720 }}>
-      <h2 style={{ color: '#e2e8f0', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>
+      <h2 style={{ color: '#F1F5F9', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>
         {t('settings_title')}
       </h2>
-      <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 24px' }}>
+      <p style={{ color: '#64748B', fontSize: 13, margin: '0 0 24px' }}>
         {t('settings_subtitle')}
       </p>
 
       {/* Profile section */}
       <SettingsCard
         title={t('profile')}
-        icon={<User size={18} color="#6366f1" />}
+        icon={<User size={18} color="#1D70B8" />}
         action={
           !isEditingProfile ? (
             <button
@@ -214,8 +214,8 @@ export default function Settings() {
               }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)',
-                color: '#a5b4fc', padding: '6px 12px', borderRadius: 8,
+                background: 'rgba(29,112,184,0.15)', border: '1px solid rgba(29,112,184,0.3)',
+                color: '#93c5fd', padding: '6px 12px', borderRadius: 8,
                 fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
               }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.25)'}
@@ -230,7 +230,7 @@ export default function Settings() {
           <div style={{ position: 'relative' }}>
             <div style={{
               width: 72, height: 72, borderRadius: '50%', overflow: 'hidden',
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              background: 'linear-gradient(135deg, #1D70B8, #0F2942)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               border: '3px solid rgba(99,102,241,0.3)',
             }}>
@@ -248,7 +248,7 @@ export default function Settings() {
               style={{
                 position: 'absolute', bottom: -2, right: -2,
                 width: 28, height: 28, borderRadius: '50%',
-                background: '#6366f1', border: '2px solid #1e293b',
+                background: '#1D70B8', border: '2px solid #1e293b',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
               }}
@@ -258,8 +258,8 @@ export default function Settings() {
             <input ref={fileRef} type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
           </div>
           <div>
-            <div style={{ color: '#e2e8f0', fontWeight: 600, fontSize: 16 }}>{user?.name || 'N/A'}</div>
-            <div style={{ color: '#94a3b8', fontSize: 12 }}>{role?.replace('_', ' ').toUpperCase() || 'OFFICER'}</div>
+            <div style={{ color: '#F1F5F9', fontWeight: 600, fontSize: 16 }}>{user?.name || 'N/A'}</div>
+            <div style={{ color: '#94A3B8', fontSize: 12 }}>{role?.replace('_', ' ').toUpperCase() || 'OFFICER'}</div>
             {uploadMsg && <div style={{ color: uploadMsg.includes('updated') ? '#10b981' : '#ef4444', fontSize: 12, marginTop: 4 }}>{uploadMsg}</div>}
           </div>
         </div>
@@ -285,18 +285,18 @@ export default function Settings() {
         ) : (
           <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>{t('full_name')}</label>
+              <label style={{ display: 'block', color: '#94A3B8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>{t('full_name')}</label>
               <input
                 type="text"
                 value={profileForm.fullName}
                 onChange={e => setProfileForm({ ...profileForm, fullName: e.target.value })}
-                style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none' }}
+                style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none' }}
               />
             </div>
 
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <label style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>{t('phone_number')}</label>
+                <label style={{ color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>{t('phone_number')}</label>
                 <span style={{ fontSize: 10, color: '#10b981', fontWeight: 600 }}>{t('editable')}</span>
               </div>
               <input
@@ -304,15 +304,15 @@ export default function Settings() {
                 placeholder="09xxxxxxxx"
                 value={profileForm.phone}
                 onChange={e => setProfileForm({ ...profileForm, phone: e.target.value })}
-                style={{ width: '100%', padding: '10px 12px', background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8, color: '#e2e8f0', outline: 'none' }}
+                style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none' }}
               />
             </div>
 
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <label style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Email Address</label>
+                <label style={{ color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Email Address</label>
                 {role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? (
-                  <span style={{ fontSize: 10, color: '#6366f1', fontWeight: 600 }}>Admin Editable</span>
+                  <span style={{ fontSize: 10, color: '#1D70B8', fontWeight: 600 }}>Admin Editable</span>
                 ) : (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#f59e0b', fontWeight: 600 }}>
                     <Lock size={10} /> Managed by Admin / Manager
@@ -327,7 +327,7 @@ export default function Settings() {
                 style={{
                   width: '100%', padding: '10px 12px',
                   background: role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? 'rgba(15,23,42,0.5)' : 'rgba(15,23,42,0.2)',
-                  border: '1px solid rgba(148,163,184,0.2)', borderRadius: 8,
+                  border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8,
                   color: role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? '#e2e8f0' : '#64748b',
                   cursor: role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? 'text' : 'not-allowed',
                   outline: 'none',
@@ -340,8 +340,8 @@ export default function Settings() {
                 type="button"
                 onClick={() => setIsEditingProfile(false)}
                 style={{
-                  padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(148,163,184,0.2)',
-                  background: 'transparent', color: '#94a3b8', fontSize: 13, cursor: 'pointer',
+                  padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(29,112,184,0.25)',
+                  background: 'transparent', color: '#94A3B8', fontSize: 13, cursor: 'pointer',
                 }}
               >
                 {t('cancel')}
@@ -407,7 +407,7 @@ export default function Settings() {
                 style={{
                   flex: '1 1 180px', padding: '14px', borderRadius: 12, cursor: 'pointer',
                   background: isSelected ? 'rgba(99,102,241,0.2)' : 'rgba(15,23,42,0.5)',
-                  border: isSelected ? '2px solid #6366f1' : '1px solid rgba(148,163,184,0.15)',
+                  border: isSelected ? '2px solid #1D70B8' : '1px solid rgba(29,112,184,0.2)',
                   color: isSelected ? '#ffffff' : '#94a3b8', textAlign: 'center',
                   transition: 'all 0.2s', position: 'relative',
                   boxShadow: isSelected ? '0 0 16px rgba(99,102,241,0.25)' : 'none',
@@ -416,7 +416,7 @@ export default function Settings() {
                 {isSelected && (
                   <span style={{
                     position: 'absolute', top: 8, right: 8,
-                    background: '#6366f1', color: 'white', borderRadius: '50%',
+                    background: '#1D70B8', color: 'white', borderRadius: '50%',
                     width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     <Check size={11} strokeWidth={3} />
@@ -426,7 +426,7 @@ export default function Settings() {
                 <div style={{ fontSize: 13, fontWeight: 700, marginTop: 6, color: isSelected ? '#ffffff' : '#e2e8f0' }}>
                   {lang.name}
                 </div>
-                <div style={{ fontSize: 11, color: isSelected ? '#a5b4fc' : '#64748b', marginTop: 2 }}>
+                <div style={{ fontSize: 11, color: isSelected ? '#93c5fd' : '#64748b', marginTop: 2 }}>
                   {lang.localName}
                 </div>
               </button>
@@ -452,7 +452,7 @@ export default function Settings() {
 
         <form onSubmit={handlePasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+            <label style={{ display: 'block', color: '#94A3B8', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
               Current Password
             </label>
             <input
@@ -463,14 +463,14 @@ export default function Settings() {
               required
               style={{
                 width: '100%', maxWidth: 420, padding: '10px 14px', borderRadius: 8,
-                background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)',
-                color: '#e2e8f0', fontSize: 14, outline: 'none', boxSizing: 'border-box'
+                background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)',
+                color: '#F1F5F9', fontSize: 14, outline: 'none', boxSizing: 'border-box'
               }}
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+            <label style={{ display: 'block', color: '#94A3B8', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
               New Password (12+ Characters Government Standard)
             </label>
             <input
@@ -481,8 +481,8 @@ export default function Settings() {
               required
               style={{
                 width: '100%', maxWidth: 420, padding: '10px 14px', borderRadius: 8,
-                background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)',
-                color: '#e2e8f0', fontSize: 14, outline: 'none', boxSizing: 'border-box'
+                background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)',
+                color: '#F1F5F9', fontSize: 14, outline: 'none', boxSizing: 'border-box'
               }}
             />
           </div>
@@ -502,7 +502,7 @@ export default function Settings() {
           )}
 
           <div>
-            <label style={{ display: 'block', color: '#94a3b8', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+            <label style={{ display: 'block', color: '#94A3B8', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
               Confirm New Password
             </label>
             <input
@@ -513,8 +513,8 @@ export default function Settings() {
               required
               style={{
                 width: '100%', maxWidth: 420, padding: '10px 14px', borderRadius: 8,
-                background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(148,163,184,0.2)',
-                color: '#e2e8f0', fontSize: 14, outline: 'none', boxSizing: 'border-box'
+                background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)',
+                color: '#F1F5F9', fontSize: 14, outline: 'none', boxSizing: 'border-box'
               }}
             />
           </div>
@@ -550,17 +550,17 @@ export default function Settings() {
 function SettingsCard({ title, icon, action, children }: { title: string, icon: any, action?: React.ReactNode, children: React.ReactNode }) {
   return (
     <div style={{
-      background: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(12px)',
-      border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16,
+      background: '#111F35', backdropFilter: 'blur(12px)',
+      border: '1px solid rgba(29,112,184,0.15)', borderRadius: 16,
       marginBottom: 16, overflow: 'hidden'
     }}>
       <div style={{
-        padding: '16px 20px', borderBottom: '1px solid rgba(148,163,184,0.08)',
+        padding: '16px 20px', borderBottom: '1px solid rgba(29,112,184,0.12)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {icon}
-          <h3 style={{ color: '#e2e8f0', fontSize: 15, fontWeight: 600, margin: 0 }}>{title}</h3>
+          <h3 style={{ color: '#F1F5F9', fontSize: 15, fontWeight: 600, margin: 0 }}>{title}</h3>
         </div>
         {action}
       </div>
@@ -574,8 +574,8 @@ function SettingsCard({ title, icon, action, children }: { title: string, icon: 
 function SettingsRow({ label, value }: { label: string, value: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid rgba(148,163,184,0.04)' }}>
-      <span style={{ color: '#94a3b8', fontSize: 13 }}>{label}</span>
-      <span style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 500 }}>{value}</span>
+      <span style={{ color: '#94A3B8', fontSize: 13 }}>{label}</span>
+      <span style={{ color: '#F1F5F9', fontSize: 13, fontWeight: 500 }}>{value}</span>
     </div>
   )
 }
@@ -584,7 +584,7 @@ function SettingsToggle({ label, defaultValue }: { label: string, defaultValue: 
   const [isOn, setIsOn] = React.useState(defaultValue)
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid rgba(148,163,184,0.04)' }}>
-      <span style={{ color: '#e2e8f0', fontSize: 13 }}>{label}</span>
+      <span style={{ color: '#F1F5F9', fontSize: 13 }}>{label}</span>
       <button
         onClick={() => setIsOn(!isOn)}
         style={{
