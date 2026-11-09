@@ -341,9 +341,9 @@ export default function DashboardLayout() {
   return (
     <div style={{
       display: 'flex', height: '100vh',
-      background: '#091420',
+      background: 'linear-gradient(160deg, #0A1628 0%, #0D1B2E 60%, #091420 100%)',
       fontFamily: "'Inter', 'Segoe UI', sans-serif",
-      color: '#e2e8f0',
+      color: '#F1F5F9',
     }}>
       <SessionTimeoutManager />
       {/* Sidebar */}

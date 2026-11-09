@@ -10,6 +10,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Global navy background — OUTSIDE @layer so it wins over Tailwind preflight ── */
+html {
+  background: linear-gradient(160deg, #0A1628 0%, #0D1B2E 60%, #091420 100%) !important;
+  background-attachment: fixed !important;
+  min-height: 100%;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif !important;
+  background: transparent !important;
+  color: #F1F5F9 !important;
+  margin: 0;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  background: transparent;
+}
+
 /* ── CSS Custom Properties (Design Tokens) ─────────────────────────────────── */
 :root {
   /* Brand */
@@ -26,10 +46,10 @@
   --color-border:       #E2E8F0;
   --color-muted:        #F1F5F9;
 
-  /* Canvas — Dark (Command / Admin) */
-  --color-canvas-dark:  #0F172A;
-  --color-surface-dark: #1E293B;
-  --color-border-dark:  #334155;
+  /* Canvas — Dark (matches mobile CivicColors exactly) */
+  --color-canvas-dark:  #0A1628;
+  --color-surface-dark: #111F35;
+  --color-border-dark:  rgba(29,112,184,0.18);
 
   /* Text */
   --color-text-primary:   #0F172A;
@@ -104,30 +124,7 @@
   --shadow-btn:   0 4px 14px rgba(29,112,184,0.3);
 }
 
-/* ── Base reset ───────────────────────────────────────────────────────────── */
-@layer base {
-  *, *::before, *::after { box-sizing: border-box; }
-
-  html {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
-  body {
-    font-family: var(--font-family);
-    color: var(--color-text-primary);
-    background-color: var(--color-canvas);
-    margin: 0;
-    padding: 0;
-  }
-
-  /* ── Dark mode canvas (used by admin/officer dashboard) ── */
-  body.dark-mode {
-    background-color: var(--color-canvas-dark);
-    color: var(--color-text-inverse);
-  }
-
-  /* WCAG focus-visible ring — gov yellow */
+/* ── CSS Custom Properties (Design Tokens) ─────────────────────────────────── */
   :focus-visible {
     outline: 3px solid var(--focus-ring);
     outline-offset: 2px;
@@ -142,7 +139,6 @@
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
-}
 
 /* ── Utility components ───────────────────────────────────────────────────── */
 @layer components {
@@ -224,11 +220,12 @@
     transform: translateY(-1px);
   }
 
-  /* ── Dark card (Admin dashboard — navy themed) ── */
+  /* ── Dark card (navy surface matching mobile CivicColors.surfaceDark) ── */
   .dark-card {
     background: #111F35;
     border: 1px solid rgba(29,112,184,0.18);
     border-radius: 14px;
+    color: #F1F5F9;
   }
 
   /* ── Buttons ── */
