@@ -188,7 +188,7 @@ export default function Settings() {
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", maxWidth: 720 }}>
-      <h2 style={{ color: '#F1F5F9', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>
+      <h2 style={{ color: '#0F172A', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>
         {t('settings_title')}
       </h2>
       <p style={{ color: '#64748B', fontSize: 13, margin: '0 0 24px' }}>
@@ -258,7 +258,7 @@ export default function Settings() {
             <input ref={fileRef} type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
           </div>
           <div>
-            <div style={{ color: '#F1F5F9', fontWeight: 600, fontSize: 16 }}>{user?.name || 'N/A'}</div>
+            <div style={{ color: '#0F172A', fontWeight: 600, fontSize: 16 }}>{user?.name || 'N/A'}</div>
             <div style={{ color: '#94A3B8', fontSize: 12 }}>{role?.replace('_', ' ').toUpperCase() || 'OFFICER'}</div>
             {uploadMsg && <div style={{ color: uploadMsg.includes('updated') ? '#10b981' : '#ef4444', fontSize: 12, marginTop: 4 }}>{uploadMsg}</div>}
           </div>
@@ -290,7 +290,7 @@ export default function Settings() {
                 type="text"
                 value={profileForm.fullName}
                 onChange={e => setProfileForm({ ...profileForm, fullName: e.target.value })}
-                style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none' }}
+                style={{ width: '100%', padding: '10px 12px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: 8, color: '#0F172A', outline: 'none' }}
               />
             </div>
 
@@ -304,7 +304,7 @@ export default function Settings() {
                 placeholder="09xxxxxxxx"
                 value={profileForm.phone}
                 onChange={e => setProfileForm({ ...profileForm, phone: e.target.value })}
-                style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none' }}
+                style={{ width: '100%', padding: '10px 12px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: 8, color: '#0F172A', outline: 'none' }}
               />
             </div>
 
@@ -463,8 +463,7 @@ export default function Settings() {
               required
               style={{
                 width: '100%', maxWidth: 420, padding: '10px 14px', borderRadius: 8,
-                background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)',
-                color: '#F1F5F9', fontSize: 14, outline: 'none', boxSizing: 'border-box'
+                background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#0F172A', fontSize: 14, outline: 'none', boxSizing: 'border-box'
               }}
             />
           </div>
@@ -481,8 +480,7 @@ export default function Settings() {
               required
               style={{
                 width: '100%', maxWidth: 420, padding: '10px 14px', borderRadius: 8,
-                background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)',
-                color: '#F1F5F9', fontSize: 14, outline: 'none', boxSizing: 'border-box'
+                background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#0F172A', fontSize: 14, outline: 'none', boxSizing: 'border-box'
               }}
             />
           </div>
@@ -513,8 +511,7 @@ export default function Settings() {
               required
               style={{
                 width: '100%', maxWidth: 420, padding: '10px 14px', borderRadius: 8,
-                background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)',
-                color: '#F1F5F9', fontSize: 14, outline: 'none', boxSizing: 'border-box'
+                background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#0F172A', fontSize: 14, outline: 'none', boxSizing: 'border-box'
               }}
             />
           </div>
@@ -550,17 +547,17 @@ export default function Settings() {
 function SettingsCard({ title, icon, action, children }: { title: string, icon: any, action?: React.ReactNode, children: React.ReactNode }) {
   return (
     <div style={{
-      background: '#111F35', backdropFilter: 'blur(12px)',
-      border: '1px solid rgba(29,112,184,0.15)', borderRadius: 16,
-      marginBottom: 16, overflow: 'hidden'
+      background: '#FFFFFF',
+      border: '1px solid #E2E8F0', borderRadius: 16,
+      marginBottom: 16, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
     }}>
       <div style={{
-        padding: '16px 20px', borderBottom: '1px solid rgba(29,112,184,0.12)',
+        padding: '16px 20px', borderBottom: '1px solid #E2E8F0',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {icon}
-          <h3 style={{ color: '#F1F5F9', fontSize: 15, fontWeight: 600, margin: 0 }}>{title}</h3>
+          <h3 style={{ color: '#0F172A', fontSize: 15, fontWeight: 600, margin: 0 }}>{title}</h3>
         </div>
         {action}
       </div>
@@ -573,9 +570,9 @@ function SettingsCard({ title, icon, action, children }: { title: string, icon: 
 
 function SettingsRow({ label, value }: { label: string, value: string }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid rgba(148,163,184,0.04)' }}>
-      <span style={{ color: '#94A3B8', fontSize: 13 }}>{label}</span>
-      <span style={{ color: '#F1F5F9', fontSize: 13, fontWeight: 500 }}>{value}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F1F5F9' }}>
+      <span style={{ color: '#64748B', fontSize: 13 }}>{label}</span>
+      <span style={{ color: '#0F172A', fontSize: 13, fontWeight: 500 }}>{value}</span>
     </div>
   )
 }
@@ -583,8 +580,8 @@ function SettingsRow({ label, value }: { label: string, value: string }) {
 function SettingsToggle({ label, defaultValue }: { label: string, defaultValue: boolean }) {
   const [isOn, setIsOn] = React.useState(defaultValue)
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid rgba(148,163,184,0.04)' }}>
-      <span style={{ color: '#F1F5F9', fontSize: 13 }}>{label}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #F1F5F9' }}>
+      <span style={{ color: '#0F172A', fontSize: 13 }}>{label}</span>
       <button
         onClick={() => setIsOn(!isOn)}
         style={{

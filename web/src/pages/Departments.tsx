@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { Building2, Search } from 'lucide-react'
 
@@ -88,7 +88,7 @@ export default function Departments() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h2 style={{ color: '#F1F5F9', fontSize: 22, fontWeight: 700, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h2 style={{ color: '#0F172A', fontSize: 22, fontWeight: 700, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
             <Building2 size={22} color="#1D70B8" /> All Departments
           </h2>
           <p style={{ color: '#64748B', fontSize: 13, margin: 0 }}>
@@ -107,9 +107,9 @@ export default function Departments() {
           onChange={e => setSearchQuery(e.target.value)}
           style={{
             width: '100%', padding: '10px 14px 10px 40px', borderRadius: 12,
-            border: '1px solid rgba(29,112,184,0.18)', background: 'rgba(30,41,59,0.6)',
-            backdropFilter: 'blur(12px)', color: 'white', fontSize: 13, outline: 'none',
-            boxSizing: 'border-box',
+            border: '1px solid #CBD5E1', background: '#FFFFFF',
+            color: '#0F172A', fontSize: 13, outline: 'none',
+            boxSizing: 'border-box', boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
           }}
         />
       </div>
@@ -129,23 +129,24 @@ export default function Departments() {
             <div
               key={dept.name}
               style={{
-                background: '#111F35', backdropFilter: 'blur(12px)',
-                border: '1px solid rgba(29,112,184,0.15)', borderRadius: 16,
+                background: '#FFFFFF',
+                border: '1px solid #E2E8F0', borderRadius: 16,
                 padding: 20, textAlign: 'left',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
               }}
             >
               {/* Dept header */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
                 <div style={{
                   width: 48, height: 48, borderRadius: 14,
-                  background: 'rgba(29,112,184,0.15)',
+                  background: 'rgba(29,112,184,0.1)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0,
                 }}>
-                  <Building2 size={22} color="#93c5fd" />
+                  <Building2 size={22} color="#1D70B8" />
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ color: '#F1F5F9', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ color: '#0F172A', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {dept.name}
                   </div>
                 </div>
@@ -162,10 +163,10 @@ export default function Departments() {
               {/* Resolution rate bar */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, color: '#94A3B8' }}>Resolution Rate</span>
+                  <span style={{ fontSize: 10, color: '#64748B' }}>Resolution Rate</span>
                   <span style={{ fontSize: 10, color: '#10b981', fontWeight: 700 }}>{dept.resolutionRate}%</span>
                 </div>
-                <div style={{ height: 4, background: 'rgba(148,163,184,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ height: 4, background: '#E2E8F0', borderRadius: 2, overflow: 'hidden' }}>
                   <div style={{
                     height: '100%', borderRadius: 2,
                     width: `${dept.resolutionRate}%`,
@@ -193,11 +194,12 @@ function SummaryChip({ label, value, color }: { label: string; value: string; co
   return (
     <div style={{
       padding: '10px 20px', borderRadius: 12,
-      background: `${color}08`, border: `1px solid ${color}15`,
+      background: '#FFFFFF', border: '1px solid #E2E8F0',
       display: 'flex', alignItems: 'center', gap: 10,
+      boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
     }}>
       <span style={{ color, fontSize: 20, fontWeight: 800 }}>{value}</span>
-      <span style={{ color: '#94A3B8', fontSize: 12 }}>{label}</span>
+      <span style={{ color: '#64748B', fontSize: 12 }}>{label}</span>
     </div>
   )
 }

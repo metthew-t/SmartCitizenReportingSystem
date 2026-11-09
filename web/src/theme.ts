@@ -22,12 +22,12 @@ export const Colors = {
   border:       '#E2E8F0',
   muted:        '#F1F5F9',
 
-  // Canvas — Dark (Admin / Officer dashboards)
-  canvasDark:   '#0A1628',   // Deep navy — matches mobile navyDeep
-  surfaceDark:  '#111F35',   // Slightly lighter card surface
-  surface2Dark: '#1A2E4A',   // Elevated cards
-  borderDark:   'rgba(255,255,255,0.08)',
-  borderDark2:  'rgba(29,112,184,0.2)',
+  // Canvas — Light & Standard Pages (matches mobile CivicColors exactly)
+  canvasDark:   '#F8FAFC',   // Slate 50 — matches mobile canvasLight exactly
+  surfaceDark:  '#FFFFFF',   // Card surface — matches mobile surfaceLight
+  surface2Dark: '#FFFFFF',   // Elevated cards
+  borderDark:   '#E2E8F0',   // Slate 200 border — matches mobile surfaceBorderLight
+  borderDark2:  '#CBD5E1',   // Slate 300 border
 
   // Text — Light
   textPrimary:   '#0F172A',
@@ -35,9 +35,9 @@ export const Colors = {
   textMuted:     '#94A3B8',
   textInverse:   '#F8FAFC',
 
-  // Text — Dark
-  textDark1: '#F1F5F9',
-  textDark2: '#94A3B8',
+  // Text — Primary content (matches mobile textPrimary/Secondary)
+  textDark1: '#0F172A',
+  textDark2: '#475569',
   textDark3: '#64748B',
 
   // Focus ring (WCAG gov yellow)
@@ -110,20 +110,20 @@ export function getSlaLabel(hoursRemaining: number, isBreached: boolean): string
   return hoursRemaining < 1 ? `${Math.round(hoursRemaining * 60)}m left` : `${hoursRemaining.toFixed(0)}h left`
 }
 
-// ── Dark page wrapper style (used by all authenticated pages) ─────────────────
-// This is the "mobile look" applied to web: deep navy canvas, govBlue accents
+// ── Page wrapper style (matches mobile CivicTheme.light) ───────────────────────
+// Uses mobile CivicColors palette: #F8FAFC canvas, #0F172A text, govBlue accents
 export const darkPage: React.CSSProperties = {
   minHeight: '100vh',
-  background: `linear-gradient(160deg, ${Colors.canvasDark} 0%, #0D1B2E 60%, #091420 100%)`,
+  background: '#F8FAFC',
   color: Colors.textDark1,
   fontFamily: "'Inter', 'Segoe UI', sans-serif",
 }
 
 export const darkCard: React.CSSProperties = {
-  background: Colors.surfaceDark,
+  background: '#FFFFFF',
   border: `1px solid ${Colors.borderDark}`,
   borderRadius: 14,
-  boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
 }
 
 export const darkCardHover: React.CSSProperties = {
@@ -132,10 +132,10 @@ export const darkCardHover: React.CSSProperties = {
 }
 
 export const darkCardElevated: React.CSSProperties = {
-  background: Colors.surface2Dark,
-  border: `1px solid ${Colors.borderDark2}`,
+  background: '#FFFFFF',
+  border: `1px solid ${Colors.borderDark}`,
   borderRadius: 14,
-  boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+  boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
 }
 
 // ── Inline style helpers ──────────────────────────────────────────────────────

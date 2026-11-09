@@ -78,7 +78,7 @@ export default function MapView() {
     <div style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
-        <h2 style={{ color: '#F1F5F9', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>
+        <h2 style={{ color: '#0F172A', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>
           <MapPin size={20} style={{ display: 'inline', marginRight: 8 }} />
           GIS Map — Report Locations
         </h2>
@@ -90,28 +90,28 @@ export default function MapView() {
       <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16, height: 'calc(100vh - 200px)' }}>
         {/* Left: Report list panel */}
         <div style={{
-          background: '#111F35', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(29,112,184,0.15)', borderRadius: 16,
-          overflow: 'hidden', display: 'flex', flexDirection: 'column',
+          background: '#FFFFFF',
+          border: '1px solid #E2E8F0', borderRadius: 16,
+          overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
         }}>
           <div style={{
-            padding: '16px', borderBottom: '1px solid rgba(29,112,184,0.12)',
+            padding: '16px', borderBottom: '1px solid #E2E8F0',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
-            <h3 style={{ color: '#F1F5F9', fontSize: 14, fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h3 style={{ color: '#0F172A', fontSize: 14, fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
               <Layers size={16} color="#1D70B8" /> Reports in View
             </h3>
           </div>
 
           {/* Filters */}
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(29,112,184,0.12)' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid #E2E8F0' }}>
             <label style={{ color: '#94A3B8', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Priority Filter</label>
             <select
               value={priorityFilter}
               onChange={e => setPriorityFilter(e.target.value)}
               style={{
-                width: '100%', background: 'rgba(10,22,40,0.6)', color: '#F1F5F9',
-                border: '1px solid rgba(29,112,184,0.2)', borderRadius: 8,
+                width: '100%', background: '#F8FAFC', color: '#0F172A',
+                border: '1px solid #CBD5E1', borderRadius: 8,
                 padding: '8px 12px', fontSize: 12, outline: 'none',
               }}
             >
@@ -131,16 +131,16 @@ export default function MapView() {
                 key={r.id}
                 onClick={() => setSelected(r)}
                 style={{
-                  width: '100%', padding: '12px 16px', border: 'none', borderBottom: '1px solid rgba(148,163,184,0.04)',
-                  background: selected?.id === r.id ? 'rgba(99,102,241,0.15)' : 'transparent',
+                  width: '100%', padding: '12px 16px', border: 'none', borderBottom: '1px solid #F1F5F9',
+                  background: selected?.id === r.id ? 'rgba(29,112,184,0.1)' : 'transparent',
                   textAlign: 'left', cursor: 'pointer', transition: 'background 0.2s',
                   display: 'block',
                 }}
-                onMouseEnter={e => { if (selected?.id !== r.id) e.currentTarget.style.background = 'rgba(15,23,42,0.4)' }}
+                onMouseEnter={e => { if (selected?.id !== r.id) e.currentTarget.style.background = '#F8FAFC' }}
                 onMouseLeave={e => { if (selected?.id !== r.id) e.currentTarget.style.background = 'transparent' }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ color: '#F1F5F9', fontSize: 12, fontWeight: 600 }}>{r.case_number}</span>
+                  <span style={{ color: '#0F172A', fontSize: 12, fontWeight: 600 }}>{r.case_number}</span>
                   <span style={{
                     color: PRIORITY_COLORS[r.priority] || '#6b7280', fontSize: 10, fontWeight: 700,
                     padding: '2px 6px', background: `${PRIORITY_COLORS[r.priority] || '#6b7280'}15`, borderRadius: 4,
@@ -157,16 +157,16 @@ export default function MapView() {
         {/* Right: Mock Map container */}
         <div style={{
           position: 'relative', borderRadius: 16, overflow: 'hidden',
-          border: '1px solid rgba(29,112,184,0.15)',
-          background: '#0A1628',
+          border: '1px solid #E2E8F0',
+          background: '#E2E8F0',
           backgroundImage: `
-            linear-gradient(rgba(30,41,59,0.3) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(30,41,59,0.3) 1px, transparent 1px)
+            linear-gradient(rgba(148,163,184,0.35) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(148,163,184,0.35) 1px, transparent 1px)
           `,
           backgroundSize: '40px 40px',
         }}>
           {/* Overlay elements */}
-          <div style={{ position: 'absolute', top: 16, right: 16, background: '#0A1628', padding: '8px 12px', borderRadius: 8, backdropFilter: 'blur(8px)', border: '1px solid rgba(29,112,184,0.2)', color: '#94A3B8', fontSize: 11, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ position: 'absolute', top: 16, right: 16, background: '#FFFFFF', padding: '8px 12px', borderRadius: 8, border: '1px solid #CBD5E1', color: '#475569', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Navigation size={14} /> Adama Live Map Simulation
           </div>
 
@@ -207,14 +207,14 @@ export default function MapView() {
           {selected && (
             <div style={{
               position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-              background: '#0D1928', backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(29,112,184,0.25)', borderRadius: 16,
-              padding: 20, width: 400, boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+              background: '#FFFFFF',
+              border: '1px solid #E2E8F0', borderRadius: 16,
+              padding: 20, width: 400, boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
               display: 'flex', flexDirection: 'column', gap: 12,
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <h3 style={{ color: 'white', margin: '0 0 4px', fontSize: 16, fontWeight: 700 }}>
+                  <h3 style={{ color: '#0F172A', margin: '0 0 4px', fontSize: 16, fontWeight: 700 }}>
                     {selected.case_number}
                   </h3>
                   <div style={{ color: '#94A3B8', fontSize: 12 }}>{selected.department_name}</div>
@@ -225,7 +225,7 @@ export default function MapView() {
                   </span>
                 </div>
               </div>
-              <p style={{ color: '#F1F5F9', fontSize: 13, margin: 0, lineHeight: 1.5 }}>
+              <p style={{ color: '#1E293B', fontSize: 13, margin: 0, lineHeight: 1.5 }}>
                 {selected.description}
               </p>
               <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>

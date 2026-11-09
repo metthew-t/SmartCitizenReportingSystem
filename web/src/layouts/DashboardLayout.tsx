@@ -194,10 +194,10 @@ export default function DashboardLayout() {
     },
     department_manager: {
       id: 'department_manager',
-      appBg: `linear-gradient(160deg, ${GOV_NAVY} 0%, #0D1B2E 60%, #091420 100%)`,
-      sidebarBg: `linear-gradient(180deg, #0D1928 0%, ${GOV_NAVY} 100%)`,
-      headerBg: `rgba(10,22,40,0.94)`,
-      borderColor: BORDER_DIM,
+      appBg: '#F8FAFC',
+      sidebarBg: `linear-gradient(180deg, #0F2942 0%, #0A1628 100%)`,
+      headerBg: '#FFFFFF',
+      borderColor: '#E2E8F0',
       brandGradient: `linear-gradient(135deg, ${GOV_BLUE}30, ${GOV_BLUE2}30)`,
       brandShadow: `0 0 20px ${GOV_BLUE}25`,
       brandIconColor: '#93c5fd',
@@ -206,27 +206,27 @@ export default function DashboardLayout() {
       badgeBorder: `${GOV_BLUE}30`,
       badgeColor: '#93c5fd',
       navText: '#94a3b8',
-      activeNavBg: `linear-gradient(90deg, ${GOV_BLUE}20 0%, transparent 100%)`,
+      activeNavBg: `linear-gradient(90deg, ${GOV_BLUE}25 0%, transparent 100%)`,
       activeNavText: '#93c5fd',
       activeNavBorder: `3px solid ${GOV_BLUE}`,
       activeNavGlow: `inset 0 0 12px ${GOV_BLUE}0C`,
-      hoverNavBg: `${GOV_BLUE}08`,
-      hoverNavText: '#dbeafe',
+      hoverNavBg: `${GOV_BLUE}12`,
+      hoverNavText: '#ffffff',
       accentColor: GOV_BLUE,
       profileAvatarBg: `linear-gradient(135deg, ${GOV_BLUE} 0%, ${GOV_BLUE2} 100%)`,
       profileAvatarShadow: `0 0 16px ${GOV_BLUE}35`,
       roleTitle: 'Sector Director',
-      notifBtnBg: `${GOV_BLUE}10`,
-      notifBtnBorder: `${GOV_BLUE}22`,
-      notifBtnColor: '#93c5fd',
-      dropdownBg: '#0D1928',
+      notifBtnBg: '#F1F5F9',
+      notifBtnBorder: '#E2E8F0',
+      notifBtnColor: '#475569',
+      dropdownBg: '#FFFFFF',
     },
     officer: {
       id: 'officer',
-      appBg: `linear-gradient(160deg, ${GOV_NAVY} 0%, #0D1B2E 60%, #091420 100%)`,
-      sidebarBg: `linear-gradient(180deg, #0D1928 0%, ${GOV_NAVY} 100%)`,
-      headerBg: `rgba(10,22,40,0.94)`,
-      borderColor: BORDER_DIM,
+      appBg: '#F8FAFC',
+      sidebarBg: `linear-gradient(180deg, #0F2942 0%, #0A1628 100%)`,
+      headerBg: '#FFFFFF',
+      borderColor: '#E2E8F0',
       brandGradient: `linear-gradient(135deg, ${GOV_BLUE}30, #10b98130)`,
       brandShadow: `0 0 20px ${GOV_BLUE}20`,
       brandIconColor: '#6ee7b7',
@@ -235,27 +235,27 @@ export default function DashboardLayout() {
       badgeBorder: `${GOV_BLUE}30`,
       badgeColor: '#93c5fd',
       navText: '#94a3b8',
-      activeNavBg: `linear-gradient(90deg, ${GOV_BLUE}20 0%, transparent 100%)`,
+      activeNavBg: `linear-gradient(90deg, ${GOV_BLUE}25 0%, transparent 100%)`,
       activeNavText: '#93c5fd',
       activeNavBorder: `3px solid ${GOV_BLUE}`,
       activeNavGlow: `inset 0 0 12px ${GOV_BLUE}0C`,
-      hoverNavBg: `${GOV_BLUE}08`,
-      hoverNavText: '#dbeafe',
+      hoverNavBg: `${GOV_BLUE}12`,
+      hoverNavText: '#ffffff',
       accentColor: GOV_BLUE,
       profileAvatarBg: `linear-gradient(135deg, ${GOV_BLUE} 0%, #10b981 100%)`,
       profileAvatarShadow: `0 0 16px ${GOV_BLUE}30`,
       roleTitle: 'Field Officer',
-      notifBtnBg: `${GOV_BLUE}10`,
-      notifBtnBorder: `${GOV_BLUE}22`,
-      notifBtnColor: '#93c5fd',
-      dropdownBg: '#0D1928',
+      notifBtnBg: '#F1F5F9',
+      notifBtnBorder: '#E2E8F0',
+      notifBtnColor: '#475569',
+      dropdownBg: '#FFFFFF',
     },
     default: {
       id: 'default',
-      appBg: `linear-gradient(160deg, ${GOV_NAVY} 0%, #0D1B2E 60%, #091420 100%)`,
-      sidebarBg: `linear-gradient(180deg, #0F1E30 0%, ${GOV_NAVY} 100%)`,
-      headerBg: `rgba(10,22,40,0.94)`,
-      borderColor: BORDER_DIM,
+      appBg: '#F8FAFC',
+      sidebarBg: `linear-gradient(180deg, #0F2942 0%, #0A1628 100%)`,
+      headerBg: '#FFFFFF',
+      borderColor: '#E2E8F0',
       brandGradient: `linear-gradient(135deg, ${GOV_BLUE}30, ${GOV_NAVY}80)`,
       brandShadow: `0 0 20px ${GOV_BLUE}20`,
       brandIconColor: '#93c5fd',
@@ -264,20 +264,20 @@ export default function DashboardLayout() {
       badgeBorder: `${GOV_BLUE}25`,
       badgeColor: '#93c5fd',
       navText: '#94a3b8',
-      activeNavBg: `linear-gradient(90deg, ${GOV_BLUE}22 0%, transparent 100%)`,
+      activeNavBg: `linear-gradient(90deg, ${GOV_BLUE}25 0%, transparent 100%)`,
       activeNavText: '#93c5fd',
       activeNavBorder: `3px solid ${GOV_BLUE}`,
       activeNavGlow: `inset 0 0 12px ${GOV_BLUE}0C`,
-      hoverNavBg: `${GOV_BLUE}08`,
-      hoverNavText: '#e2e8f0',
+      hoverNavBg: `${GOV_BLUE}12`,
+      hoverNavText: '#ffffff',
       accentColor: GOV_BLUE,
       profileAvatarBg: `linear-gradient(135deg, ${GOV_BLUE} 0%, #10b981 100%)`,
       profileAvatarShadow: `0 0 14px ${GOV_BLUE}28`,
       roleTitle: role === 'super_admin' ? 'Super Administrator' : 'City Administrator',
-      notifBtnBg: `${GOV_BLUE}08`,
-      notifBtnBorder: 'transparent',
-      notifBtnColor: '#94a3b8',
-      dropdownBg: '#0D1928',
+      notifBtnBg: '#F1F5F9',
+      notifBtnBorder: '#E2E8F0',
+      notifBtnColor: '#475569',
+      dropdownBg: '#FFFFFF',
     }
   }
 
@@ -338,12 +338,14 @@ export default function DashboardLayout() {
     return `${Math.floor(hrs / 24)}d ago`
   }
 
+  const isMayor = role === 'mayor' || location.pathname === '/mayor'
+
   return (
     <div style={{
       display: 'flex', height: '100vh',
-      background: 'linear-gradient(160deg, #0A1628 0%, #0D1B2E 60%, #091420 100%)',
+      background: isMayor ? 'linear-gradient(160deg, #0A1628 0%, #0D1020 60%, #070C18 100%)' : '#F8FAFC',
       fontFamily: "'Inter', 'Segoe UI', sans-serif",
-      color: '#F1F5F9',
+      color: isMayor ? '#F1F5F9' : '#0F172A',
     }}>
       <SessionTimeoutManager />
       {/* Sidebar */}
@@ -521,11 +523,12 @@ export default function DashboardLayout() {
       }}>
         {/* Top Header */}
         <header style={{
-          height: 64, background: theme.headerBg,
+          height: 64, background: isMayor ? theme.headerBg : '#FFFFFF',
           backdropFilter: 'blur(12px)',
-          borderBottom: `1px solid ${theme.borderColor}`,
+          borderBottom: `1px solid ${isMayor ? theme.borderColor : '#E2E8F0'}`,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '0 24px', flexShrink: 0, zIndex: 50,
+          boxShadow: isMayor ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
         }}>
           <div>
             {/* Contextual role identifier */}
@@ -534,7 +537,7 @@ export default function DashboardLayout() {
                 display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
                 background: theme.accentColor, boxShadow: `0 0 8px ${theme.accentColor}`
               }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', letterSpacing: 0.5 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: isMayor ? '#94a3b8' : '#64748B', letterSpacing: 0.5 }}>
                 {theme.brandSubtitle.toUpperCase()}
               </span>
             </div>
@@ -596,7 +599,7 @@ export default function DashboardLayout() {
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   }}>
                     <div>
-                      <h3 style={{ color: '#e2e8f0', fontSize: 15, fontWeight: 700, margin: 0 }}>Notifications</h3>
+                      <h3 style={{ color: isMayor ? '#e2e8f0' : '#0F172A', fontSize: 15, fontWeight: 700, margin: 0 }}>Notifications</h3>
                       <p style={{ color: '#64748b', fontSize: 11, margin: '2px 0 0' }}>
                         {unreadCount > 0 ? `${unreadCount} new case${unreadCount > 1 ? 's' : ''}` : 'All cases viewed'}
                       </p>
@@ -736,7 +739,8 @@ export default function DashboardLayout() {
         {/* Page Content — dark navy background matching mobile */}
         <div style={{
           flex: 1, overflowY: 'auto', padding: '24px',
-          background: `linear-gradient(160deg, #0A1628 0%, #0D1B2E 60%, #091420 100%)`,
+          background: isMayor ? theme.appBg : '#F8FAFC',
+          color: isMayor ? '#F1F5F9' : '#0F172A',
         }}>
           <div style={{ maxWidth: 1200, margin: '0 auto' }}>
             <Outlet />

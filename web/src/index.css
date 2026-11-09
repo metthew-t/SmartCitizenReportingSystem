@@ -10,24 +10,25 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Global navy background — OUTSIDE @layer so it wins over Tailwind preflight ── */
+/* ── Global canvas background — exact mobile app background (#F8FAFC) ── */
 html {
-  background: linear-gradient(160deg, #0A1628 0%, #0D1B2E 60%, #091420 100%) !important;
+  background-color: #F8FAFC !important;
+  background: #F8FAFC !important;
   background-attachment: fixed !important;
   min-height: 100%;
 }
 
 body {
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif !important;
-  background: transparent !important;
-  color: #F1F5F9 !important;
+  background: #F8FAFC !important;
+  color: #0F172A !important;
   margin: 0;
   min-height: 100vh;
 }
 
 #root {
   min-height: 100vh;
-  background: transparent;
+  background: #F8FAFC;
 }
 
 /* ── CSS Custom Properties (Design Tokens) ─────────────────────────────────── */
@@ -220,12 +221,13 @@ body {
     transform: translateY(-1px);
   }
 
-  /* ── Dark card (navy surface matching mobile CivicColors.surfaceDark) ── */
+  /* ── Card (white surface matching mobile CivicColors.surfaceLight) ── */
   .dark-card {
-    background: #111F35;
-    border: 1px solid rgba(29,112,184,0.18);
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
     border-radius: 14px;
-    color: #F1F5F9;
+    color: #0F172A;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   }
 
   /* ── Buttons ── */

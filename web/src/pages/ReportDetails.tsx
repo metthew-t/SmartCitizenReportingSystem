@@ -637,14 +637,13 @@ export default function ReportDetails() {
 
       {/* Description */}
       <div style={{
-        background: '#111F35', backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(29,112,184,0.15)', borderRadius: 16,
+        background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
         padding: 24, marginBottom: 20,
       }}>
-        <h3 style={{ color: '#F1F5F9', fontSize: 15, fontWeight: 700, margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h3 style={{ color: '#0F172A', fontSize: 15, fontWeight: 700, margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
           <FileText size={18} color="#1D70B8" /> Description
         </h3>
-        <p style={{ color: '#E2E8F0', fontSize: 14, lineHeight: 1.8, margin: 0 }}>
+        <p style={{ color: '#1E293B', fontSize: 14, lineHeight: 1.8, margin: 0 }}>
           {report.description}
         </p>
 
@@ -705,7 +704,7 @@ export default function ReportDetails() {
         border: '1px solid rgba(16,185,129,0.15)', borderRadius: 16,
         padding: 24, marginBottom: 20,
       }}>
-        <h3 style={{ color: '#F1F5F9', fontSize: 15, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h3 style={{ color: '#0F172A', fontSize: 15, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
           <MapPin size={18} color="#10b981" /> Location Details
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginBottom: 16 }}>
@@ -762,7 +761,7 @@ export default function ReportDetails() {
         {/* Coordinates */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16,
-          padding: '10px 14px', borderRadius: 10, background: 'rgba(10,22,40,0.6)',
+          padding: '10px 14px', borderRadius: 10, background: '#F8FAFC', border: '1px solid #E2E8F0',
         }}>
           <MapPinned size={14} color="#10b981" />
           <span style={{ color: '#94A3B8', fontSize: 12 }}>Coordinates:</span>
@@ -822,11 +821,10 @@ export default function ReportDetails() {
 
       {/* Status workflow */}
       <div style={{
-        background: '#111F35', backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(29,112,184,0.15)', borderRadius: 16,
+        background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
         padding: 24, marginBottom: 20,
       }}>
-        <h3 style={{ color: '#F1F5F9', fontSize: 15, fontWeight: 700, margin: '0 0 16px' }}>
+        <h3 style={{ color: '#0F172A', fontSize: 15, fontWeight: 700, margin: '0 0 16px' }}>
           Report Workflow
         </h3>
 
@@ -925,7 +923,7 @@ export default function ReportDetails() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
             {/* Before: Citizen Incident Media */}
-            <div style={{ background: 'rgba(10,22,40,0.9)', borderRadius: 12, padding: 14, border: '1px solid rgba(29,112,184,0.2)' }}>
+            <div style={{ background: '#F8FAFC', borderRadius: 12, padding: 14, border: '1px solid #E2E8F0' }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Camera size={14} /> Initial Citizen Evidence (Before)
               </div>
@@ -948,7 +946,7 @@ export default function ReportDetails() {
             </div>
 
             {/* After: Officer Resolution Proof Photo */}
-            <div style={{ background: 'rgba(10,22,40,0.9)', borderRadius: 12, padding: 14, border: '1px solid rgba(16,185,129,0.25)' }}>
+            <div style={{ background: '#F8FAFC', borderRadius: 12, padding: 14, border: '1px solid #E2E8F0' }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#34d399', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <CheckCircle2 size={14} color="#10b981" /> Field Repair Proof (After)
               </div>
@@ -1035,8 +1033,7 @@ export default function ReportDetails() {
 
       {/* ── Feature 7: Tamper-Proof Cryptographic Forensic Audit Trail ── */}
       <div style={{
-        background: '#111F35', backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(29,112,184,0.2)', borderRadius: 16,
+        background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
         padding: 24, marginBottom: 20,
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
@@ -1051,7 +1048,7 @@ export default function ReportDetails() {
               <Hash size={18} />
             </div>
             <div>
-              <h3 style={{ color: '#F1F5F9', fontSize: 15, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h3 style={{ color: '#0F172A', fontSize: 15, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                 Forensic Audit Trail & Cryptographic Chain
                 <span style={{
                   fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
@@ -1125,17 +1122,15 @@ export default function ReportDetails() {
       {/* Share Department: Exclusively for Department Managers for inter-departmental collaboration */}
       {useAuthStore.getState().role === 'department_manager' && departments.length > 0 && (
         <div style={{
-          background: '#111F35', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(29,112,184,0.15)', borderRadius: 16,
+          background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
           padding: 20, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 16
         }}>
-          <div style={{ color: '#F1F5F9', fontSize: 14, fontWeight: 600 }}>Share Report:</div>
+          <div style={{ color: '#0F172A', fontSize: 14, fontWeight: 600 }}>Share Report:</div>
           <select
             value={selectedDept}
             onChange={e => setSelectedDept(e.target.value)}
             style={{
-              flex: 1, padding: '10px 16px', borderRadius: 8, background: 'rgba(10,22,40,0.8)',
-              border: '1px solid rgba(29,112,184,0.25)', color: 'white', outline: 'none'
+              flex: 1, padding: '10px 16px', borderRadius: 8, background: '#FFFFFF', border: '1px solid #CBD5E1', color: 'white', outline: 'none'
             }}
           >
             <option value="">Select a department...</option>
@@ -1194,8 +1189,7 @@ export default function ReportDetails() {
       {/* Officer Update Status Panel or Locked Banner */}
       {isOfficer && !isAssignedToCurrentOfficer ? (
         <div style={{
-          background: '#111F35',
-          border: '1px solid rgba(245,158,11,0.25)',
+          background: '#FFFFFF', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
           borderRadius: 16, padding: '20px 24px', marginBottom: 20,
           display: 'flex', alignItems: 'center', gap: 16,
         }}>
@@ -1222,7 +1216,7 @@ export default function ReportDetails() {
           border: '1px solid rgba(59,130,246,0.2)', borderRadius: 16,
           padding: 24, marginBottom: 20,
         }}>
-          <h3 style={{ color: '#F1F5F9', fontSize: 15, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h3 style={{ color: '#0F172A', fontSize: 15, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
             🔄 Update Case Status
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1261,7 +1255,7 @@ export default function ReportDetails() {
               rows={2}
               style={{
                 width: '100%', padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
-                background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(29,112,184,0.25)',
+                background: '#FFFFFF', border: '1px solid #CBD5E1',
                 color: '#F1F5F9', fontSize: 13, outline: 'none', resize: 'vertical',
               }}
             />
@@ -1272,11 +1266,10 @@ export default function ReportDetails() {
       {/* Status History Timeline */}
       {statusHistory.length > 0 && (
         <div style={{
-          background: '#111F35', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(29,112,184,0.15)', borderRadius: 16,
+          background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
           padding: 24, marginBottom: 20,
         }}>
-          <h3 style={{ color: '#F1F5F9', fontSize: 15, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h3 style={{ color: '#0F172A', fontSize: 15, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
             📋 Case Update History
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -1308,7 +1301,7 @@ export default function ReportDetails() {
                     )}
                   </div>
                   <div style={{ color: '#94A3B8', fontSize: 11, marginTop: 2 }}>
-                    by <span style={{ color: '#E2E8F0', fontWeight: 600 }}>{h.changed_by_name}</span>
+                    by <span style={{ color: '#0F172A', fontWeight: 600 }}>{h.changed_by_name}</span>
                     {' · '}
                     {new Date(h.changed_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </div>
@@ -1338,8 +1331,7 @@ export default function ReportDetails() {
               value={selectedOfficer}
               onChange={e => setSelectedOfficer(e.target.value)}
               style={{
-                padding: '12px 16px', borderRadius: 12, background: 'rgba(10,22,40,0.8)',
-                border: '1px solid rgba(29,112,184,0.25)', color: 'white', outline: 'none'
+                padding: '12px 16px', borderRadius: 12, background: '#FFFFFF', border: '1px solid #CBD5E1', color: 'white', outline: 'none'
               }}
             >
               <option value="">Assign to officer...</option>
@@ -1431,11 +1423,10 @@ export default function ReportDetails() {
 
       {/* Chat Section */}
       <div style={{
-        marginTop: 8, background: '#111F35', backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(29,112,184,0.15)', borderRadius: 16,
+        marginTop: 8, background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
         padding: 24,
       }}>
-        <h3 style={{ color: '#F1F5F9', fontSize: 16, fontWeight: 700, margin: '0 0 16px' }}>💬 Chat & Updates</h3>
+        <h3 style={{ color: '#0F172A', fontSize: 16, fontWeight: 700, margin: '0 0 16px' }}>💬 Chat & Updates</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16, maxHeight: 300, overflowY: 'auto' }}>
           {messages.length === 0 ? (
             <div style={{ color: '#64748B', fontSize: 14, textAlign: 'center', padding: 20 }}>No messages yet.</div>
@@ -1451,7 +1442,7 @@ export default function ReportDetails() {
                 <div style={{ fontSize: 11, color: isMe ? '#93c5fd' : '#94a3b8', marginBottom: 4, fontWeight: 600 }}>
                   {isMe ? 'You' : (msg.sender_name || 'Citizen')}
                 </div>
-                <div style={{ fontSize: 14, color: '#F1F5F9' }}>{msg.content}</div>
+                <div style={{ fontSize: 14, color: isMe ? '#FFFFFF' : '#0F172A' }}>{msg.content}</div>
                 <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 4, textAlign: 'right' }}>
                   {new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                 </div>
@@ -1462,8 +1453,7 @@ export default function ReportDetails() {
         {isOfficer && !isAssignedToCurrentOfficer ? (
           <div style={{
             display: 'flex', gap: 10, alignItems: 'center',
-            background: 'rgba(10,22,40,0.9)', padding: '14px 18px', borderRadius: 12,
-            border: '1px solid rgba(245,158,11,0.2)'
+            background: '#F8FAFC', padding: '14px 18px', borderRadius: 12, border: '1px solid #E2E8F0'
           }}>
             <Lock size={16} color="#fbbf24" />
             <span style={{ color: '#fbbf24', fontSize: 13, fontWeight: 600 }}>
@@ -1480,7 +1470,7 @@ export default function ReportDetails() {
               onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
               style={{
                 flex: 1, padding: '12px 16px', borderRadius: 12,
-                background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)',
+                background: '#FFFFFF', border: '1px solid #CBD5E1',
                 color: 'white', outline: 'none', fontSize: 14,
               }}
             />
@@ -1516,7 +1506,7 @@ export default function ReportDetails() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 16 }}>
-            <div style={{ background: 'rgba(10,22,40,0.9)', padding: '12px 16px', borderRadius: 12, border: '1px solid rgba(29,112,184,0.2)' }}>
+            <div style={{ background: '#F8FAFC', padding: '12px 16px', borderRadius: 12, border: '1px solid #E2E8F0' }}>
               <div style={{ fontSize: 11, color: '#94A3B8', textTransform: 'uppercase', fontWeight: 600 }}>Overall Rating</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                 <span style={{ fontSize: 20, fontWeight: 800, color: '#fbbf24' }}>{report.feedback.rating} / 5</span>
@@ -1529,7 +1519,7 @@ export default function ReportDetails() {
             </div>
 
             {report.feedback.timeliness_rating && (
-              <div style={{ background: 'rgba(10,22,40,0.9)', padding: '12px 16px', borderRadius: 12, border: '1px solid rgba(29,112,184,0.2)' }}>
+              <div style={{ background: '#F8FAFC', padding: '12px 16px', borderRadius: 12, border: '1px solid #E2E8F0' }}>
                 <div style={{ fontSize: 11, color: '#94A3B8', textTransform: 'uppercase', fontWeight: 600 }}>Response Timeliness</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                   <span style={{ fontSize: 18, fontWeight: 700, color: '#1D70B8' }}>{report.feedback.timeliness_rating} / 5</span>
@@ -1543,7 +1533,7 @@ export default function ReportDetails() {
             )}
 
             {report.feedback.quality_rating && (
-              <div style={{ background: 'rgba(10,22,40,0.9)', padding: '12px 16px', borderRadius: 12, border: '1px solid rgba(29,112,184,0.2)' }}>
+              <div style={{ background: '#F8FAFC', padding: '12px 16px', borderRadius: 12, border: '1px solid #E2E8F0' }}>
                 <div style={{ fontSize: 11, color: '#94A3B8', textTransform: 'uppercase', fontWeight: 600 }}>Resolution Quality</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                   <span style={{ fontSize: 18, fontWeight: 700, color: '#34d399' }}>{report.feedback.quality_rating} / 5</span>
@@ -1558,7 +1548,7 @@ export default function ReportDetails() {
           </div>
 
           {report.feedback.comment && (
-            <div style={{ background: 'rgba(10,22,40,0.8)', padding: 14, borderRadius: 12, border: '1px solid rgba(29,112,184,0.2)' }}>
+            <div style={{ background: '#F8FAFC', padding: 14, borderRadius: 12, border: '1px solid #E2E8F0' }}>
               <div style={{ fontSize: 12, color: '#E2E8F0', fontStyle: 'italic', lineHeight: 1.6 }}>
                 "{report.feedback.comment}"
               </div>
@@ -1585,7 +1575,7 @@ export default function ReportDetails() {
         padding: 24,
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
-          <h3 style={{ color: '#F1F5F9', fontSize: 16, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h3 style={{ color: '#0F172A', fontSize: 16, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
             <Scale size={20} color="#93c5fd" /> Citizen Administrative Appeals
             {report.appeals && report.appeals.length > 0 && (
               <span style={{
@@ -1713,11 +1703,9 @@ export default function ReportDetails() {
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
         }}>
           <div style={{
-            background: '#111F35', border: '1px solid rgba(29,112,184,0.2)',
-            borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', padding: 24,
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)'
+            background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', padding: 24, boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
           }}>
-            <h3 style={{ color: '#F1F5F9', margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>
+            <h3 style={{ color: '#0F172A', margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>
               ✅ Resolve Report
             </h3>
             <p style={{ color: '#94A3B8', fontSize: 13, marginBottom: 16 }}>
@@ -1733,7 +1721,7 @@ export default function ReportDetails() {
               rows={4}
               style={{
                 width: '100%', padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
-                background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(29,112,184,0.25)',
+                background: '#FFFFFF', border: '1px solid #CBD5E1',
                 color: '#F1F5F9', fontSize: 13, outline: 'none', resize: 'vertical', marginBottom: 16
               }}
             />
@@ -1801,9 +1789,7 @@ export default function ReportDetails() {
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16
         }}>
           <div style={{
-            background: '#0A1628', border: '1px solid rgba(239,68,68,0.3)',
-            borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', padding: 24,
-            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.7)'
+            background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', padding: 24, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)'
           }}>
             <h3 style={{ color: '#f87171', margin: '0 0 10px', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
               ⚠️ Reject Incident Report
@@ -1822,7 +1808,7 @@ export default function ReportDetails() {
               </div>
             )}
 
-            <label style={{ color: '#E2E8F0', fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6 }}>
+            <label style={{ color: '#475569', fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6 }}>
               Mandatory Rejection Justification / Sababa Kufaa *
             </label>
             <textarea
@@ -1832,8 +1818,7 @@ export default function ReportDetails() {
               rows={4}
               style={{
                 width: '100%', padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
-                background: '#0A1628', border: '1px solid rgba(148,163,184,0.25)',
-                color: '#F1F5F9', fontSize: 13, outline: 'none', resize: 'vertical', marginBottom: 20
+                background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#0F172A', fontSize: 13, outline: 'none', resize: 'vertical', marginBottom: 20
               }}
             />
 
@@ -1874,9 +1859,7 @@ export default function ReportDetails() {
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16
         }}>
           <div style={{
-            background: '#0A1628', border: '1px solid rgba(29,112,184,0.3)',
-            borderRadius: 16, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', padding: 24,
-            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.7)'
+            background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 16, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', padding: 24, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)'
           }}>
             <h3 style={{ color: '#93c5fd', margin: '0 0 8px', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
               <Scale size={20} color="#93c5fd" /> Adjudicate Administrative Appeal
@@ -1885,9 +1868,9 @@ export default function ReportDetails() {
               Review the citizen's grievance for case #{report.caseNumber} ({appealModal.appeal.appeal_number}). Upholding an appeal will immediately return the case to <strong style={{ color: '#f87171' }}>REOPENED</strong> status for mandatory department corrective action.
             </p>
 
-            <div style={{ background: '#0A1628', padding: 12, borderRadius: 10, marginBottom: 16, border: '1px solid rgba(29,112,184,0.2)' }}>
+            <div style={{ background: '#F8FAFC', padding: 12, borderRadius: 10, marginBottom: 16, border: '1px solid #E2E8F0' }}>
               <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>CITIZEN'S GROUNDS:</div>
-              <div style={{ color: '#F1F5F9', fontSize: 13, marginTop: 4, fontStyle: 'italic' }}>
+              <div style={{ color: '#0F172A', fontSize: 13, marginTop: 4, fontStyle: 'italic' }}>
                 "{appealModal.appeal.reason}"
               </div>
             </div>
@@ -1941,8 +1924,7 @@ export default function ReportDetails() {
                 rows={4}
                 style={{
                   width: '100%', padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
-                  background: '#0A1628', border: '1px solid rgba(148,163,184,0.25)',
-                  color: '#F1F5F9', fontSize: 13, outline: 'none', resize: 'vertical', marginBottom: 20
+                  background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#0F172A', fontSize: 13, outline: 'none', resize: 'vertical', marginBottom: 20
                 }}
               />
 
@@ -1994,7 +1976,7 @@ function DetailCard({ icon, label, value, sublabel, accentColor = '#1D70B8' }: {
           {label}
         </span>
       </div>
-      <div style={{ color: '#F1F5F9', fontSize: 15, fontWeight: 700 }}>{value}</div>
+      <div style={{ color: '#0F172A', fontSize: 15, fontWeight: 700 }}>{value}</div>
       {sublabel && <div style={{ color: '#64748B', fontSize: 12, marginTop: 4 }}>{sublabel}</div>}
     </div>
   )

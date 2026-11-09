@@ -152,7 +152,7 @@ export default function PublicDashboard() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: `linear-gradient(160deg, ${Colors.canvasDark} 0%, #0D1B2E 60%, #091420 100%)`,
+      background: Colors.canvasDark,
       color: Colors.textDark1,
       fontFamily: "'Inter', sans-serif",
       padding: '24px 20px 60px',
@@ -196,13 +196,13 @@ export default function PublicDashboard() {
             fontWeight: 800,
             lineHeight: 1.15,
             marginBottom: 16,
-            background: 'linear-gradient(135deg, #ffffff 0%, #93c5fd 50%, #1D70B8 100%)',
+            background: 'linear-gradient(135deg, #0F172A 0%, #1D70B8 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}>
             Adama City Transparency Dashboard
           </h1>
-          <p style={{ color: '#94a3b8', fontSize: 'clamp(15px, 2vw, 18px)', maxWidth: 680, margin: '0 auto', lineHeight: 1.6 }}>
+          <p style={{ color: '#64748B', fontSize: 'clamp(15px, 2vw, 18px)', maxWidth: 680, margin: '0 auto', lineHeight: 1.6 }}>
             Track city incidents, resolution metrics, and community responsiveness in real time. Powered by AI triage and open accountability across all municipal sectors.
           </p>
         </div>
@@ -307,14 +307,14 @@ export default function PublicDashboard() {
                     placeholder="Latitude (e.g. 8.5400)"
                     value={searchCoords.lat}
                     onChange={e => setSearchCoords({ ...searchCoords, lat: e.target.value })}
-                    style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(148,163,184,0.2)', color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, width: 140 }}
+                    style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#0F172A', padding: '8px 12px', borderRadius: 8, fontSize: 12, width: 140 }}
                   />
                   <input
                     type="text"
                     placeholder="Longitude (e.g. 39.2700)"
                     value={searchCoords.lng}
                     onChange={e => setSearchCoords({ ...searchCoords, lng: e.target.value })}
-                    style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(148,163,184,0.2)', color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, width: 140 }}
+                    style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#0F172A', padding: '8px 12px', borderRadius: 8, fontSize: 12, width: 140 }}
                   />
                   <button
                     onClick={handleCheckDuplicates}
@@ -335,7 +335,7 @@ export default function PublicDashboard() {
                     </div>
                     {duplicatesFound.map((dup: any) => (
                       <div key={dup.id} style={{
-                        background: 'rgba(30,41,59,0.5)', padding: '8px 12px', borderRadius: 8,
+                        background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '8px 12px', borderRadius: 8,
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12
                       }}>
                         <span style={{ color: '#38bdf8', fontWeight: 700 }}>{dup.case_number} ({dup.distance_meters}m away)</span>

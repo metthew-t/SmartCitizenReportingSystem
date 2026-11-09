@@ -294,7 +294,7 @@ export default function AdminUsers() {
     <div style={{ fontFamily: "'Inter', sans-serif" }}>
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
-          <h2 style={{ color: '#F1F5F9', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>User Management</h2>
+          <h2 style={{ color: '#0F172A', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>User Management</h2>
           <p style={{ color: '#64748B', fontSize: 13, margin: 0 }}>
             {role === 'super_admin' ? 'Full system user management. Create and manage all users including City Admins.' : role === 'city_admin' ? 'View and manage all system users.' : role === 'mayor' ? 'Read-only view of all system users. No administrative actions available.' : 'Manage officers in your department.'}
           </p>
@@ -319,16 +319,17 @@ export default function AdminUsers() {
       {error && <div style={{ color: 'red', marginBottom: 16 }}>{error}</div>}
 
       <div style={{
-        background: '#111F35', backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(29,112,184,0.15)', borderRadius: 16,
-        overflow: 'hidden'
+        background: '#FFFFFF',
+        border: '1px solid #E2E8F0', borderRadius: 16,
+        overflow: 'hidden',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
       }}>
         {/* Toolbar */}
-        <div style={{ padding: 16, borderBottom: '1px solid rgba(29,112,184,0.12)', display: 'flex', gap: 16, alignItems: 'center' }}>
+        <div style={{ padding: 16, borderBottom: '1px solid #E2E8F0', display: 'flex', gap: 16, alignItems: 'center' }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
-            background: 'rgba(10,22,40,0.6)', borderRadius: 10,
-            padding: '8px 12px', border: '1px solid rgba(29,112,184,0.15)',
+            background: '#F8FAFC', borderRadius: 10,
+            padding: '8px 12px', border: '1px solid #CBD5E1',
             flex: 1, maxWidth: 300,
           }}>
             <Search size={16} color="#64748b" />
@@ -338,7 +339,7 @@ export default function AdminUsers() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               style={{
-                background: 'transparent', border: 'none', color: '#F1F5F9',
+                background: 'transparent', border: 'none', color: '#0F172A',
                 fontSize: 13, outline: 'none', width: '100%',
               }}
             />
@@ -351,9 +352,9 @@ export default function AdminUsers() {
                 onClick={() => setFilterRole(r as any)}
                 style={{
                   padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                  background: filterRole === r ? 'rgba(99,102,241,0.15)' : 'transparent',
-                  color: filterRole === r ? '#93c5fd' : '#94a3b8',
-                  border: filterRole === r ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent',
+                  background: filterRole === r ? 'rgba(29,112,184,0.12)' : 'transparent',
+                  color: filterRole === r ? '#1D70B8' : '#64748B',
+                  border: filterRole === r ? '1px solid rgba(29,112,184,0.3)' : '1px solid transparent',
                   cursor: 'pointer', transition: 'all 0.2s',
                 }}
               >
@@ -367,13 +368,13 @@ export default function AdminUsers() {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(29,112,184,0.12)' }}>
-                <th style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Name</th>
-                <th style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Contact</th>
-                <th style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Role</th>
-                <th style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Department</th>
-                <th style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Status</th>
-                <th style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Date Joined</th>
+              <tr style={{ borderBottom: '1px solid #E2E8F0' }}>
+                <th style={{ padding: '12px 16px', color: '#64748B', fontSize: 12, fontWeight: 600 }}>Name</th>
+                <th style={{ padding: '12px 16px', color: '#64748B', fontSize: 12, fontWeight: 600 }}>Contact</th>
+                <th style={{ padding: '12px 16px', color: '#64748B', fontSize: 12, fontWeight: 600 }}>Role</th>
+                <th style={{ padding: '12px 16px', color: '#64748B', fontSize: 12, fontWeight: 600 }}>Department</th>
+                <th style={{ padding: '12px 16px', color: '#64748B', fontSize: 12, fontWeight: 600 }}>Status</th>
+                <th style={{ padding: '12px 16px', color: '#64748B', fontSize: 12, fontWeight: 600 }}>Date Joined</th>
                 <th style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 12, fontWeight: 600, textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
@@ -384,16 +385,16 @@ export default function AdminUsers() {
                 <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: '#64748B' }}>No users found.</td></tr>
               ) : (
                 filteredUsers.map(user => (
-                  <tr key={user.id} style={{ borderBottom: '1px solid rgba(148,163,184,0.04)', transition: 'background 0.2s' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(15,23,42,0.4)'}
+                  <tr key={user.id} style={{ borderBottom: '1px solid #F1F5F9', transition: 'background 0.2s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <td style={{ padding: '12px 16px', color: '#F1F5F9', fontSize: 13, fontWeight: 500 }}>
+                    <td style={{ padding: '12px 16px', color: '#0F172A', fontSize: 13, fontWeight: 600 }}>
                       {user.full_name || 'N/A'}
                     </td>
                     <td style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 13 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         {user.email && (
-                          <span style={{ color: '#F1F5F9', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ color: '#0F172A', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
                             <Mail size={11} color="#1D70B8" /> {user.email}
                           </span>
                         )}
@@ -506,23 +507,23 @@ export default function AdminUsers() {
       {showModal && (
         <div style={{
           position: 'fixed', inset: 0,
-          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)',
+          background: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
           padding: 16
         }}>
           <div style={{
-            background: '#111F35', border: '1px solid rgba(29,112,184,0.25)',
+            background: '#FFFFFF', border: '1px solid #E2E8F0',
             borderRadius: 20, width: '100%', maxWidth: 480, maxHeight: '90vh',
             display: 'flex', flexDirection: 'column',
-            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6)', overflow: 'hidden'
+            boxShadow: '0 20px 40px rgba(0,0,0,0.15)', overflow: 'hidden'
           }}>
             {/* Header */}
             <div style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '18px 24px', borderBottom: '1px solid rgba(148,163,184,0.12)',
-              background: 'rgba(30, 41, 59, 0.8)'
+              padding: '18px 24px', borderBottom: '1px solid #E2E8F0',
+              background: '#F8FAFC'
             }}>
-              <h3 style={{ margin: 0, color: '#F1F5F9', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h3 style={{ margin: 0, color: '#0F172A', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Plus size={18} color="#93c5fd" />
                 Add New {role === 'city_admin' || role === 'super_admin' ? 'Official' : 'Officer'}
               </h3>
@@ -543,7 +544,7 @@ export default function AdminUsers() {
                   placeholder="e.g. Abebe Bikila"
                   value={formData.full_name}
                   onChange={e => setFormData({...formData, full_name: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 12px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: 8, color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -554,7 +555,7 @@ export default function AdminUsers() {
                   placeholder="official@adama.gov.et"
                   value={formData.email}
                   onChange={e => setFormData({...formData, email: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 12px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: 8, color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -565,7 +566,7 @@ export default function AdminUsers() {
                   placeholder="09xxxxxxxx (receives login SMS)"
                   value={formData.phone_number}
                   onChange={e => setFormData({...formData, phone_number: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 12px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: 8, color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -589,7 +590,7 @@ export default function AdminUsers() {
                   value={formData.password}
                   placeholder="Click Auto-Generate or enter 12+ char password"
                   onChange={e => setFormData({...formData, password: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none', fontFamily: 'monospace', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 12px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: 8, color: '#0F172A', outline: 'none', fontFamily: 'monospace', boxSizing: 'border-box' }}
                 />
               </div>
 
@@ -614,7 +615,7 @@ export default function AdminUsers() {
                   <ShieldAlert size={16} />
                   <span>Mandatory First-Login Password Change</span>
                 </div>
-                <div style={{ color: '#F1F5F9', fontSize: 11.5 }}>
+                <div style={{ color: '#1E293B', fontSize: 11.5 }}>
                   The user will receive an SMS notification and will be <strong>directed to change their temporary password</strong> immediately upon first logging into the system.
                 </div>
               </div>
@@ -626,7 +627,7 @@ export default function AdminUsers() {
                     <select 
                       value={formData.department_name}
                       onChange={e => setFormData({...formData, department_name: e.target.value})}
-                      style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '10px 12px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: 8, color: '#0F172A', outline: 'none', boxSizing: 'border-box' }}
                     >
                       <option value="">None (City Admin / Super Admin)</option>
                       {departments.map(d => (
@@ -635,8 +636,8 @@ export default function AdminUsers() {
                     </select>
                   </div>
 
-                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', padding: '10px 12px', background: 'rgba(10,22,40,0.6)', borderRadius: 8, border: '1px solid rgba(29,112,184,0.2)' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#F1F5F9', fontSize: 13, cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', padding: '10px 12px', background: '#F8FAFC', borderRadius: 8, border: '1px solid #E2E8F0' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#1E293B', fontSize: 13, cursor: 'pointer' }}>
                       <input 
                         type="checkbox" 
                         checked={formData.is_manager}
@@ -646,7 +647,7 @@ export default function AdminUsers() {
                     </label>
                     {role === 'super_admin' && (
                       <>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#F1F5F9', fontSize: 13, cursor: 'pointer' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#1E293B', fontSize: 13, cursor: 'pointer' }}>
                           <input 
                             type="checkbox" 
                             checked={formData.is_city_admin && !formData.is_super_admin && !formData.is_mayor}
@@ -697,15 +698,15 @@ export default function AdminUsers() {
             {/* Footer - ALL BUTTONS ALWAYS VISIBLE */}
             <div style={{
               display: 'flex', justifyContent: 'flex-end', gap: 12,
-              padding: '16px 24px', borderTop: '1px solid rgba(148,163,184,0.12)',
-              background: 'rgba(15, 23, 42, 0.6)'
+              padding: '16px 24px', borderTop: '1px solid #E2E8F0',
+              background: '#F8FAFC'
             }}>
               <button 
                 type="button" 
                 onClick={() => setShowModal(false)}
                 style={{
-                  padding: '10px 18px', background: 'rgba(148,163,184,0.1)',
-                  border: '1px solid rgba(29,112,184,0.25)', color: '#E2E8F0',
+                  padding: '10px 18px', background: '#FFFFFF',
+                  border: '1px solid #CBD5E1', color: '#475569',
                   borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer'
                 }}
               >
@@ -738,10 +739,10 @@ export default function AdminUsers() {
           padding: 16
         }}>
           <div style={{
-            background: '#111F35', border: '1px solid rgba(29,112,184,0.25)',
+            background: '#FFFFFF', border: '1px solid #E2E8F0',
             borderRadius: 20, width: '100%', maxWidth: 440, maxHeight: '90vh',
             display: 'flex', flexDirection: 'column',
-            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6)', overflow: 'hidden'
+            boxShadow: '0 20px 40px rgba(0,0,0,0.15)', overflow: 'hidden'
           }}>
             {/* Header */}
             <div style={{
@@ -749,7 +750,7 @@ export default function AdminUsers() {
               padding: '18px 24px', borderBottom: '1px solid rgba(148,163,184,0.12)',
               background: 'rgba(30, 41, 59, 0.8)'
             }}>
-              <h3 style={{ color: '#F1F5F9', margin: 0, fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h3 style={{ color: '#0F172A', margin: 0, fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <KeyRound size={18} color="#f59e0b" />
                 Reset Password for {resetModal.userName}
               </h3>
@@ -782,14 +783,14 @@ export default function AdminUsers() {
                 onChange={e => setResetPassword(e.target.value)}
                 style={{
                   width: '100%', padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
-                  background: 'rgba(10,22,40,0.9)', border: '1px solid rgba(29,112,184,0.25)',
-                  color: '#F1F5F9', fontSize: 13, outline: 'none', marginBottom: 12, fontFamily: 'monospace'
+                  background: '#FFFFFF', border: '1px solid #CBD5E1',
+                  color: '#0F172A', fontSize: 13, outline: 'none', marginBottom: 12, fontFamily: 'monospace'
                 }}
               />
 
               {resetPassword && (
                 <div style={{
-                  background: 'rgba(15, 23, 42, 0.4)', border: '1px solid rgba(148, 163, 184, 0.1)',
+                  background: '#F8FAFC', border: '1px solid #E2E8F0',
                   borderRadius: 8, padding: '10px 12px', marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 6
                 }}>
                   {validatePasswordRules(resetPassword).map(r => (
@@ -822,7 +823,7 @@ export default function AdminUsers() {
                   <ShieldAlert size={16} />
                   <span>Password Reset Directive</span>
                 </div>
-                <div style={{ color: '#F1F5F9', fontSize: 11.5 }}>
+                <div style={{ color: '#1E293B', fontSize: 11.5 }}>
                   User will receive an SMS notification and will be <strong>forced to establish a new password upon next login</strong>.
                 </div>
               </div>
@@ -874,12 +875,12 @@ export default function AdminUsers() {
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
         }}>
           <div style={{
-            background: '#111F35', border: '1px solid rgba(29,112,184,0.2)',
+            background: '#FFFFFF', border: '1px solid #E2E8F0',
             borderRadius: 16, width: '100%', maxWidth: 420, padding: 24,
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)'
+            boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, color: '#F1F5F9', fontSize: 18 }}>
+              <h3 style={{ margin: 0, color: '#0F172A', fontSize: 18 }}>
                 Edit {editModal.user.full_name || 'User'}
               </h3>
               <button onClick={() => setEditModal({ show: false, user: null })} style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer' }}>
@@ -894,7 +895,7 @@ export default function AdminUsers() {
                   type="text" required
                   value={editFormData.full_name}
                   onChange={e => setEditFormData({...editFormData, full_name: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none' }}
+                  style={{ width: '100%', padding: '10px 12px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: 8, color: '#0F172A', outline: 'none' }}
                 />
               </div>
 
@@ -907,7 +908,7 @@ export default function AdminUsers() {
                   type="email" required
                   value={editFormData.email}
                   onChange={e => setEditFormData({...editFormData, email: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none' }}
+                  style={{ width: '100%', padding: '10px 12px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: 8, color: '#0F172A', outline: 'none' }}
                 />
               </div>
 
@@ -921,7 +922,7 @@ export default function AdminUsers() {
                   placeholder="09xxxxxxxx"
                   value={editFormData.phone_number}
                   onChange={e => setEditFormData({...editFormData, phone_number: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: 'rgba(10,22,40,0.8)', border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8, color: '#F1F5F9', outline: 'none' }}
+                  style={{ width: '100%', padding: '10px 12px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: 8, color: '#0F172A', outline: 'none' }}
                 />
               </div>
 
@@ -929,7 +930,7 @@ export default function AdminUsers() {
                 <button 
                   type="button" 
                   onClick={() => setEditModal({ show: false, user: null })}
-                  style={{ padding: '8px 16px', background: 'transparent', border: '1px solid rgba(29,112,184,0.25)', color: '#94A3B8', borderRadius: 8, cursor: 'pointer' }}
+                  style={{ padding: '8px 16px', background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#475569', borderRadius: 8, cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
