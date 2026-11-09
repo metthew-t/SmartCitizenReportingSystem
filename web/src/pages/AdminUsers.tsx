@@ -274,6 +274,11 @@ export default function AdminUsers() {
   }
 
   const filteredUsers = users.filter(u => {
+    // City Admin can only oversee officers, managers, and citizens; cannot view or manage City Admins or Super Admins
+    if (role === 'city_admin' && (u.is_super_admin || u.is_city_admin || u.is_mayor)) {
+      return false
+    }
+
     const searchMatch = 
       (u.full_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (u.phone_number || '').includes(searchQuery) ||
@@ -295,9 +300,11 @@ export default function AdminUsers() {
     <div style={{ fontFamily: "'Inter', sans-serif" }}>
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
-          <h2 style={{ color: '#0F172A', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>User Management</h2>
+          <h2 style={{ color: '#0F172A', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>
+            {role === 'super_admin' ? '🛡️ System User & Administrator Governance' : role === 'city_admin' ? '🏛️ Municipal Staff & Officer Management' : role === 'mayor' ? 'Municipal Personnel Registry' : 'Department Officer Roster'}
+          </h2>
           <p style={{ color: '#64748B', fontSize: 13, margin: 0 }}>
-            {role === 'super_admin' ? 'Full system user management. Create and manage all users including City Admins.' : role === 'city_admin' ? 'View and manage all system users.' : role === 'mayor' ? 'Read-only view of all system users. No administrative actions available.' : 'Manage officers in your department.'}
+            {role === 'super_admin' ? 'Root system administration. Provision and govern City Administrators, Sector Directors, and Field Staff.' : role === 'city_admin' ? 'Manage department managers and field officers across municipal sectors.' : role === 'mayor' ? 'Read-only view of municipal personnel.' : 'Manage officers in your department.'}
           </p>
         </div>
         {role !== 'mayor' && (
@@ -347,7 +354,7 @@ export default function AdminUsers() {
           </div>
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {(['ALL', 'CITIZEN', 'OFFICER', 'MANAGER', 'ADMIN', ...(role === 'super_admin' ? ['MAYOR', 'SUPER_ADMIN'] : [])] as const).map(r => (
+            {(['ALL', 'CITIZEN', 'OFFICER', 'MANAGER', ...(role === 'super_admin' ? ['ADMIN', 'MAYOR', 'SUPER_ADMIN'] : [])] as const).map(r => (
               <button
                 key={r}
                 onClick={() => setFilterRole(r as any)}

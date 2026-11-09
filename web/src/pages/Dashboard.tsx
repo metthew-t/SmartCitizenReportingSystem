@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
-import { Activity, CheckCircle, AlertTriangle, Clock, TrendingUp, BarChart3, ScrollText, ArrowRight } from 'lucide-react'
+import { Activity, CheckCircle, AlertTriangle, Clock, TrendingUp, BarChart3, ScrollText, ArrowRight, ShieldAlert, ShieldCheck, Users, Building2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Colors, darkCard, darkCardElevated, statusBadgeStyle, priorityBadgeStyle, getStatusColors, getPriorityColor, Styles, statusLabel } from '../theme'
 
@@ -161,12 +161,69 @@ export default function Dashboard() {
     <div style={{ fontFamily: "'Inter', sans-serif", color: Colors.textDark1 }}>
       <div style={{ marginBottom: 24 }}>
         <h2 style={{ color: Colors.textDark1, fontSize: 22, fontWeight: 800, margin: '0 0 4px', letterSpacing: -0.3 }}>
-          {departmentName ? `${departmentName} Dashboard` : 'Dashboard'}
+          {role === 'super_admin'
+            ? '🛡️ System Governance & Security Dashboard'
+            : role === 'city_admin'
+            ? '🏛️ City Operations Administration Dashboard'
+            : departmentName
+            ? `${departmentName} Sector Command Dashboard`
+            : 'Dashboard'}
         </h2>
         <p style={{ color: Colors.textDark2, fontSize: 13, margin: 0 }}>
-          Real-time overview of citizen reports
+          {role === 'super_admin'
+            ? 'Root system security oversight, cryptographic audit logs & administrator governance'
+            : role === 'city_admin'
+            ? 'Real-time overview of citizen complaints, sector assignments & municipal operations'
+            : 'Real-time overview of citizen reports and field operations'}
         </p>
       </div>
+
+      {/* Super Admin Exclusive Governance & Administrator Control Panel */}
+      {role === 'super_admin' && (
+        <div style={{
+          marginBottom: 24, padding: 18, borderRadius: 14,
+          background: 'linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(217,119,6,0.03) 100%)',
+          border: '1px solid rgba(245,158,11,0.35)',
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 12, background: 'rgba(245,158,11,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <ShieldCheck size={24} color="#D97706" />
+            </div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#92400E' }}>Administrator Governance</div>
+              <div style={{ fontSize: 11, color: '#B45309' }}>Exclusive authority to manage & audit City Admins</div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => navigate('/users')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 8, background: '#D97706', color: 'white',
+                border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(217,119,6,0.25)'
+              }}
+            >
+              <Users size={14} /> Manage City Admins
+            </button>
+            <button
+              onClick={() => navigate('/audit-logs')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 8, background: '#0F172A', color: '#FCD34D',
+                border: '1px solid rgba(245,158,11,0.4)', fontWeight: 700, fontSize: 12, cursor: 'pointer'
+              }}
+            >
+              <ShieldAlert size={14} /> Cryptographic Audit Logs
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Operational Official Reports Pending Action Alert Banner */}
       {pendingOfficialCount > 0 && (

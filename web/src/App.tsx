@@ -90,8 +90,9 @@ function Login() {
 
         const isMayor = Boolean(me?.is_mayor)
         const isSuperAdmin = Boolean(me?.is_super_admin && !isMayor)
-        const role = isMayor ? 'mayor' : (isSuperAdmin ? 'super_admin' : (me?.is_city_admin ? 'city_admin' : (me?.is_department_manager ? 'department_manager' : 'officer')))
-        const deptName = isMayor ? 'Office of the Mayor' : (me?.department_name || (me?.is_city_admin ? 'City Administration' : null))
+        const isCityAdmin = Boolean(me?.is_city_admin && !isSuperAdmin && !isMayor)
+        const role = isMayor ? 'mayor' : (isSuperAdmin ? 'super_admin' : (isCityAdmin ? 'city_admin' : (me?.is_department_manager ? 'department_manager' : 'officer')))
+        const deptName = isMayor ? 'Office of the Mayor' : (isSuperAdmin ? 'System Administration' : (me?.department_name || (isCityAdmin ? 'City Administration' : null)))
 
         const mustChange = Boolean(data.must_change_password || me?.must_change_password)
 
@@ -101,8 +102,8 @@ function Login() {
           email: cleanEmail,
           name: cleanName,
           profile_photo_url: me?.profile_photo_url || null,
-          department_name: isMayor ? 'Waajjira Kantiibaa' : me?.department_name || null,
-          is_city_admin: me?.is_city_admin || false,
+          department_name: isMayor ? 'Waajjira Kantiibaa' : (isSuperAdmin ? 'System Administration' : me?.department_name || (isCityAdmin ? 'City Administration' : null)),
+          is_city_admin: isCityAdmin,
           is_super_admin: isSuperAdmin,
           is_mayor: isMayor,
           must_change_password: mustChange,

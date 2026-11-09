@@ -70,6 +70,24 @@ export default function ReportDetails() {
           localStorage.setItem(key, JSON.stringify(current))
           window.dispatchEvent(new Event('cases_viewed_updated'))
         }
+
+        // Mark in-app case notifications as read on backend
+        const token = useAuthStore.getState().token
+        if (token) {
+          fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/notifications/`, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(r => r.ok ? r.json() : [])
+            .then(list => {
+              const arr = Array.isArray(list) ? list : (list.results || [])
+              for (const n of arr) {
+                if (String(n.report_id) === String(id) && !n.is_read) {
+                  fetch(`https://smartcitizenreportingsystem.onrender.com/api/v1/notifications/${n.id}/mark_read/`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  }).catch(() => {})
+                }
+              }
+            }).catch(() => {})
+        }
       } catch (_) {}
     }
   }, [id])

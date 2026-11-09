@@ -523,33 +523,35 @@ class ReportViewSet(viewsets.ModelViewSet):
             User = get_user_model()
 
             # 1. Dedicated Super Admin (admin@adama.gov.et / Admin@123)
-            super_admin = User.objects.filter(email__iexact='admin@adama.gov.et').first() or User.objects.filter(is_city_admin=True, is_mayor=False).first()
-            if super_admin:
-                super_admin.email = 'admin@adama.gov.et'
-                super_admin.full_name = 'City Super Administrator'
-                super_admin.is_super_admin = True
-                super_admin.is_city_admin = True
-                super_admin.is_mayor = False
-                super_admin.is_superuser = True
-                super_admin.is_staff = True
-                super_admin.set_password('Admin@123')
-                super_admin.save()
-                results['super_admin'] = 'configured (admin@adama.gov.et / Admin@123)'
-            else:
-                super_admin = User(
-                    email='admin@adama.gov.et',
-                    full_name='City Super Administrator',
-                    is_super_admin=True,
-                    is_city_admin=True,
-                    is_mayor=False,
-                    is_staff=True,
-                    is_superuser=True
-                )
-                super_admin.set_password('Admin@123')
-                super_admin.save()
-                results['super_admin'] = 'created (admin@adama.gov.et / Admin@123)'
+            super_admin = User.objects.filter(email__iexact='admin@adama.gov.et').first()
+            if not super_admin:
+                super_admin = User(email='admin@adama.gov.et')
+            super_admin.full_name = 'City Super Administrator'
+            super_admin.is_super_admin = True
+            super_admin.is_city_admin = False
+            super_admin.is_mayor = False
+            super_admin.is_superuser = True
+            super_admin.is_staff = True
+            super_admin.set_password('Admin@123')
+            super_admin.save()
+            results['super_admin'] = 'configured (admin@adama.gov.et / Admin@123)'
 
-            # 2. Dedicated Mayor Account (mayor@adama.gov.et / Mayor@123)
+            # 2. Dedicated City Admin (cityadmin@adama.gov.et / Admin@123)
+            city_admin = User.objects.filter(email__iexact='cityadmin@adama.gov.et').first()
+            if not city_admin:
+                city_admin = User(email='cityadmin@adama.gov.et')
+            city_admin.full_name = 'Adama City Administrator'
+            city_admin.is_super_admin = False
+            city_admin.is_city_admin = True
+            city_admin.is_mayor = False
+            city_admin.is_superuser = False
+            city_admin.is_staff = True
+            city_admin.is_officer = True
+            city_admin.set_password('Admin@123')
+            city_admin.save()
+            results['city_admin'] = 'configured (cityadmin@adama.gov.et / Admin@123)'
+
+            # 3. Dedicated Mayor Account (mayor@adama.gov.et / Mayor@123)
             mayor_dept = Department.objects.filter(name__iexact='Waajjira Kantiibaa').first()
             mayor = User.objects.filter(email__iexact='mayor@adama.gov.et').first()
             if mayor:
@@ -557,7 +559,7 @@ class ReportViewSet(viewsets.ModelViewSet):
                 mayor.is_mayor = True
                 mayor.is_super_admin = False
                 mayor.is_city_admin = False
-                mayor.is_department_manager = True
+                mayor.is_department_manager = False
                 mayor.is_staff = True
                 mayor.set_password('Mayor@123')
                 mayor.save()
@@ -591,23 +593,37 @@ class ReportViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post', 'get'], permission_classes=[permissions.AllowAny])
     def setup_admin(self, request):
-        """Bootstrap or recover both dedicated Super Admin and Mayor accounts."""
+        """Bootstrap or recover dedicated Super Admin, City Admin, and Mayor accounts."""
         from django.contrib.auth import get_user_model
         from core.models import Department, OfficerProfile
         User = get_user_model()
 
-        # Super Admin
+        # Super Admin (admin@adama.gov.et)
         super_admin = User.objects.filter(email__iexact='admin@adama.gov.et').first()
         if not super_admin:
             super_admin = User(email='admin@adama.gov.et')
         super_admin.full_name = 'City Super Administrator'
         super_admin.is_super_admin = True
-        super_admin.is_city_admin = True
+        super_admin.is_city_admin = False
         super_admin.is_mayor = False
         super_admin.is_superuser = True
         super_admin.is_staff = True
         super_admin.set_password('Admin@123')
         super_admin.save()
+
+        # City Admin (cityadmin@adama.gov.et)
+        city_admin = User.objects.filter(email__iexact='cityadmin@adama.gov.et').first()
+        if not city_admin:
+            city_admin = User(email='cityadmin@adama.gov.et')
+        city_admin.full_name = 'Adama City Administrator'
+        city_admin.is_super_admin = False
+        city_admin.is_city_admin = True
+        city_admin.is_mayor = False
+        city_admin.is_superuser = False
+        city_admin.is_staff = True
+        city_admin.is_officer = True
+        city_admin.set_password('Admin@123')
+        city_admin.save()
 
         # Mayor
         mayor_dept = Department.objects.filter(name__iexact='Waajjira Kantiibaa').first()
@@ -618,7 +634,7 @@ class ReportViewSet(viewsets.ModelViewSet):
         mayor.is_mayor = True
         mayor.is_super_admin = False
         mayor.is_city_admin = False
-        mayor.is_department_manager = True
+        mayor.is_department_manager = False
         mayor.is_staff = True
         mayor.is_officer = True
         mayor.set_password('Mayor@123')
@@ -626,7 +642,7 @@ class ReportViewSet(viewsets.ModelViewSet):
         if mayor_dept:
             prof, _ = OfficerProfile.objects.get_or_create(user=mayor, defaults={'full_name': 'H.E. Mayor of Adama City'})
             prof.department = mayor_dept
-            prof.is_manager = True
+            prof.is_manager = False
             prof.save()
 
         return Response({
@@ -635,6 +651,12 @@ class ReportViewSet(viewsets.ModelViewSet):
                 'email': 'admin@adama.gov.et',
                 'password': 'Admin@123',
                 'role': 'super_admin',
+                'dashboard': '/dashboard'
+            },
+            'city_admin': {
+                'email': 'cityadmin@adama.gov.et',
+                'password': 'Admin@123',
+                'role': 'city_admin',
                 'dashboard': '/dashboard'
             },
             'mayor': {
@@ -1261,7 +1283,45 @@ class MessageViewSet(viewsets.ModelViewSet):
                 if not report.assigned_officer or report.assigned_officer != getattr(user, 'officer_profile', None):
                     raise PermissionDenied("You cannot communicate on this report until your Department Manager assigns it to you.")
                     
-        serializer.save(sender=user)
+        msg = serializer.save(sender=user)
+
+        # Dispatch in-app notification to the counterparty (citizen or assigned officer/manager)
+        try:
+            from core.notifications import Notification
+            content_preview = (msg.content[:80] + '...') if len(msg.content) > 80 else msg.content
+            # If sender is officer/manager/admin, notify citizen
+            if report.citizen and report.citizen != user:
+                Notification.objects.create(
+                    recipient=report.citizen,
+                    notification_type='NEW_MESSAGE',
+                    title=f"New Message on Case #{report.case_number}",
+                    body=f"Official message: {content_preview}",
+                    report_id=report.id,
+                    is_read=False,
+                )
+            # If sender is citizen, notify assigned officer or department managers
+            elif report.citizen == user:
+                recipients = []
+                if report.assigned_officer and report.assigned_officer.user:
+                    recipients.append(report.assigned_officer.user)
+                elif report.primary_department:
+                    from core.models import OfficerProfile
+                    managers = OfficerProfile.objects.filter(department=report.primary_department, is_manager=True).select_related('user')
+                    for m in managers:
+                        if m.user:
+                            recipients.append(m.user)
+                for rec in recipients:
+                    if rec != user:
+                        Notification.objects.create(
+                            recipient=rec,
+                            notification_type='NEW_MESSAGE',
+                            title=f"Citizen Reply on Case #{report.case_number}",
+                            body=f"Citizen message: {content_preview}",
+                            report_id=report.id,
+                            is_read=False,
+                        )
+        except Exception as ne:
+            print(f"[Notification] Case chat notification error: {ne}")
 
 
 class DepartmentMessageViewSet(viewsets.ModelViewSet):
@@ -1327,6 +1387,29 @@ class DepartmentMessageViewSet(viewsets.ModelViewSet):
             )
         except Exception:
             pass
+
+        # Dispatch in-app notification to department colleagues
+        try:
+            from core.notifications import Notification
+            from core.models import OfficerProfile
+            dept_name = msg.department.name if msg.department else 'Department'
+            sender_name = getattr(self.request.user, 'full_name', '') or self.request.user.email or 'Colleague'
+            content_preview = (msg.content[:80] + '...') if len(msg.content) > 80 else msg.content
+            dept_officers = OfficerProfile.objects.filter(department_id=msg.department_id).exclude(user=self.request.user).select_related('user')
+            notifs = []
+            for off in dept_officers:
+                if off.user and off.user.is_active:
+                    notifs.append(Notification(
+                        recipient=off.user,
+                        notification_type='NEW_MESSAGE',
+                        title=f"Chat in {dept_name}",
+                        body=f"{sender_name}: {content_preview}",
+                        is_read=False,
+                    ))
+            if notifs:
+                Notification.objects.bulk_create(notifs[:25])
+        except Exception as cne:
+            print(f"[Notification] Dept chat notification error: {cne}")
 
     @action(detail=False, methods=['post'], url_path='mark-seen')
     def mark_seen(self, request):

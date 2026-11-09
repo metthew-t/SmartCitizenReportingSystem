@@ -10,12 +10,15 @@ import {
 
 interface Notification {
   id: number
-  case_number: string
+  case_number?: string
+  title?: string
   description: string
-  status: string
-  priority: string
+  status?: string
+  priority?: string
   created_at: string
-  type: 'report' | 'message'
+  type: 'report' | 'message' | 'chat'
+  report_id?: number | null
+  is_read?: boolean
 }
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
@@ -68,12 +71,18 @@ export default function DashboardLayout() {
     setUnreadCount(unread.length)
   }, [notifications, viewedIds])
 
-  const markAsViewed = (id: number) => {
+  const markAsViewed = async (notif: Notification) => {
     try {
+      if ((notif.type === 'chat' || notif.type === 'message') && notif.id < 1000000) {
+        await fetch(`${API}/notifications/${notif.id}/mark_read/`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).catch(() => {})
+      }
       const key = getStorageKey()
       const current: number[] = JSON.parse(localStorage.getItem(key) || '[]')
-      if (!current.includes(id)) {
-        current.push(id)
+      if (!current.includes(notif.id)) {
+        current.push(notif.id)
         localStorage.setItem(key, JSON.stringify(current))
         setViewedIds([...current])
         window.dispatchEvent(new Event('cases_viewed_updated'))
@@ -81,8 +90,13 @@ export default function DashboardLayout() {
     } catch {}
   }
 
-  const markAllAsViewed = () => {
+  const markAllAsViewed = async () => {
     try {
+      await fetch(`${API}/notifications/mark_all_read/`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).catch(() => {})
+
       const key = getStorageKey()
       const current: number[] = JSON.parse(localStorage.getItem(key) || '[]')
       const allIds = notifications.map(n => n.id)
@@ -94,30 +108,57 @@ export default function DashboardLayout() {
     } catch {}
   }
 
-  // Fetch notifications (recent reports)
+  // Fetch notifications (both system chat notifications & citizen reports)
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const res = await fetch(`${API}/reports/`, {
+        const notifPromise = fetch(`${API}/notifications/`, {
           headers: { 'Authorization': `Bearer ${token}` }
-        })
-        if (res.ok) {
-          const data = await res.json()
-          const list = Array.isArray(data) ? data : (data.results || [])
-          const sorted = list
-            .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-            .slice(0, 10)
-            .map((item: any) => ({
-              id: item.id,
-              case_number: item.case_number,
-              description: item.description?.substring(0, 80) || '',
-              status: item.status,
-              priority: item.priority,
-              created_at: item.created_at,
-              type: 'report' as const,
-            }))
-          setNotifications(sorted)
-        }
+        }).then(r => r.ok ? r.json() : []).catch(() => [])
+
+        const reportPromise = fetch(`${API}/reports/`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.ok ? r.json() : []).catch(() => [])
+
+        const [notifData, repData] = await Promise.all([notifPromise, reportPromise])
+
+        const notifList = Array.isArray(notifData) ? notifData : (notifData.results || [])
+        const repList = Array.isArray(repData) ? repData : (repData.results || [])
+
+        // Map system notifications (includes case messages and department chat)
+        const mappedNotifs: Notification[] = notifList.map((n: any) => ({
+          id: n.id,
+          case_number: n.report_id ? `CASE-${n.report_id}` : 'CHAT',
+          title: n.title,
+          description: n.body,
+          status: n.notification_type === 'NEW_MESSAGE' ? 'NEW CHAT' : 'NOTICE',
+          priority: 'HIGH',
+          created_at: n.created_at,
+          type: n.notification_type === 'NEW_MESSAGE' ? 'chat' : 'message',
+          report_id: n.report_id,
+          is_read: n.is_read,
+        }))
+
+        // Map recent citizen reports for situational awareness
+        const mappedReports: Notification[] = repList.slice(0, 8).map((item: any) => ({
+          id: 1000000 + item.id,
+          case_number: item.case_number,
+          title: `Report: ${item.case_number}`,
+          description: item.description?.substring(0, 80) || '',
+          status: item.status,
+          priority: item.priority,
+          created_at: item.created_at,
+          type: 'report',
+          report_id: item.id,
+          is_read: false,
+        }))
+
+        // Combine and sort by recency
+        const combined = [...mappedNotifs, ...mappedReports]
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 15)
+
+        setNotifications(combined)
       } catch (err) {
         console.error('Failed to fetch notifications', err)
       }
@@ -714,13 +755,21 @@ export default function DashboardLayout() {
                       </div>
                     ) : notifications.map((notif) => {
                       const isUnread = !viewedIds.includes(notif.id)
+                      const isChat = notif.type === 'chat'
                       return (
                         <div
                           key={notif.id}
                           onClick={() => {
-                            markAsViewed(notif.id)
+                            markAsViewed(notif)
                             setShowNotifications(false)
-                            navigate(`/reports/${notif.id}`)
+                            if (isChat && !notif.report_id) {
+                              navigate('/dept-chat')
+                            } else if (notif.report_id) {
+                              navigate(`/reports/${notif.report_id}`)
+                            } else {
+                              const repId = notif.id >= 1000000 ? notif.id - 1000000 : notif.id
+                              navigate(`/reports/${repId}`)
+                            }
                           }}
                           style={{
                             padding: '14px 20px', cursor: 'pointer',
@@ -734,20 +783,22 @@ export default function DashboardLayout() {
                           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                             <div style={{
                               width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                              background: `${PRIORITY_COLORS[notif.priority] || theme.accentColor}15`,
+                              background: isChat ? 'rgba(29,112,184,0.15)' : `${PRIORITY_COLORS[notif.priority || 'MEDIUM'] || theme.accentColor}15`,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
-                              {notif.priority === 'CRITICAL' ? (
+                              {isChat ? (
+                                <MessageSquare size={16} color="#1D70B8" />
+                              ) : notif.priority === 'CRITICAL' ? (
                                 <AlertTriangle size={16} color="#ef4444" />
                               ) : (
-                                <FileText size={16} color={PRIORITY_COLORS[notif.priority] || theme.accentColor} />
+                                <FileText size={16} color={PRIORITY_COLORS[notif.priority || 'MEDIUM'] || theme.accentColor} />
                               )}
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                   <span style={{ color: isUnread ? (isMayor ? '#ffffff' : '#0F172A') : '#64748B', fontSize: 12, fontWeight: isUnread ? 800 : 600 }}>
-                                    {notif.case_number}
+                                    {notif.title || notif.case_number}
                                   </span>
                                   {isUnread && (
                                     <span style={{
@@ -760,10 +811,10 @@ export default function DashboardLayout() {
                                 </div>
                                 <span style={{
                                   padding: '2px 8px', borderRadius: 6, fontSize: 9, fontWeight: 600,
-                                  background: `${PRIORITY_COLORS[notif.priority]}20`,
-                                  color: PRIORITY_COLORS[notif.priority],
+                                  background: isChat ? 'rgba(29,112,184,0.15)' : `${PRIORITY_COLORS[notif.priority || 'MEDIUM']}20`,
+                                  color: isChat ? '#1D70B8' : (PRIORITY_COLORS[notif.priority || 'MEDIUM'] || '#64748B'),
                                 }}>
-                                  {notif.priority}
+                                  {isChat ? '💬 CHAT' : (notif.priority || 'CASE')}
                                 </span>
                               </div>
                               <div style={{

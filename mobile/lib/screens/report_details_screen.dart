@@ -268,6 +268,23 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
             'sender_name': m['sender_name'] ?? 'Unknown',
           }).toList();
         });
+
+        // Automatically mark chat notification as read when citizen views the case messages
+        try {
+          final notifRes = await http.get(Uri.parse('$_baseUrl/notifications/'), headers: headers);
+          if (notifRes.statusCode == 200) {
+            final notifs = jsonDecode(notifRes.body);
+            final List list = notifs is List ? notifs : (notifs['results'] ?? []);
+            for (final n in list) {
+              if (n['report_id'] == widget.reportId && n['is_read'] == false) {
+                http.post(
+                  Uri.parse('$_baseUrl/notifications/${n['id']}/mark_read/'),
+                  headers: headers,
+                );
+              }
+            }
+          }
+        } catch (_) {}
       }
     } catch (e) {
       debugPrint('Error fetching messages: $e');

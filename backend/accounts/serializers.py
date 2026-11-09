@@ -15,6 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     department_name = serializers.SerializerMethodField()
     profile_photo_url = serializers.SerializerMethodField()
+    is_city_admin = serializers.SerializerMethodField()
     is_super_admin = serializers.SerializerMethodField()
     is_mayor = serializers.SerializerMethodField()
     officer_profile_id = serializers.SerializerMethodField()
@@ -44,7 +45,11 @@ class UserSerializer(serializers.ModelSerializer):
         return ret
 
     def get_is_super_admin(self, obj):
-        return bool(obj.is_superuser or getattr(obj, 'is_super_admin', False))
+        return bool((obj.is_superuser or getattr(obj, 'is_super_admin', False)) and not getattr(obj, 'is_mayor', False))
+
+    def get_is_city_admin(self, obj):
+        is_super = bool((obj.is_superuser or getattr(obj, 'is_super_admin', False)) and not getattr(obj, 'is_mayor', False))
+        return bool(getattr(obj, 'is_city_admin', False) and not is_super and not getattr(obj, 'is_mayor', False))
 
     def get_is_mayor(self, obj):
         return bool(getattr(obj, 'is_mayor', False))
@@ -83,16 +88,17 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Add custom claims
         is_mayor = bool(getattr(user, 'is_mayor', False))
         is_super = bool((user.is_superuser or getattr(user, 'is_super_admin', False)) and not is_mayor)
+        is_city = bool(getattr(user, 'is_city_admin', False) and not is_super and not is_mayor)
         token['phone_number'] = user.phone_number
         token['email'] = user.email
         token['is_citizen'] = user.is_citizen
         token['is_officer'] = user.is_officer
         token['is_department_manager'] = user.is_department_manager
-        token['is_city_admin'] = is_super or user.is_city_admin
+        token['is_city_admin'] = is_city
         token['is_super_admin'] = is_super
         token['is_mayor'] = is_mayor
         token['must_change_password'] = bool(getattr(user, 'must_change_password', False))
-        token['role'] = 'mayor' if is_mayor else ('super_admin' if is_super else ('city_admin' if user.is_city_admin else ('department_manager' if user.is_department_manager else ('officer' if user.is_officer else 'citizen'))))
+        token['role'] = 'mayor' if is_mayor else ('super_admin' if is_super else ('city_admin' if is_city else ('department_manager' if user.is_department_manager else ('officer' if user.is_officer else 'citizen'))))
 
         return token
 
@@ -195,14 +201,27 @@ class OfficerRegisterSerializer(serializers.Serializer):
         if is_mayor:
             dept_name = 'Waajjira Kantiibaa'
             is_city_admin = False
+            is_super_admin = False
+            is_manager = False
+            is_staff = True
+            is_superuser = False
+        elif is_super_admin:
+            is_city_admin = False
+            is_manager = False
+            is_staff = True
+            is_superuser = True
+        elif validated_data.get('is_city_admin', False) or dept_name in ['City Administration', 'All Departments', 'Bulchiinsa Magaalaa']:
+            is_city_admin = True
+            is_super_admin = False
             is_manager = False
             is_staff = True
             is_superuser = False
         else:
-            is_city_admin = validated_data.get('is_city_admin', False) or is_super_admin or dept_name in ['City Administration', 'All Departments', 'Bulchiinsa Magaalaa']
-            is_manager = validated_data.get('is_manager', False) or is_super_admin
-            is_staff = is_city_admin or is_super_admin
-            is_superuser = is_super_admin
+            is_city_admin = False
+            is_super_admin = False
+            is_manager = validated_data.get('is_manager', False)
+            is_staff = False
+            is_superuser = False
 
         dept = Department.objects.filter(name__iexact=dept_name).first() if dept_name else None
         phone = validated_data.get('phone_number', '').strip() or None

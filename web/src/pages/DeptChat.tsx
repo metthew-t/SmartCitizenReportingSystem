@@ -1,5 +1,5 @@
-﻿import React from 'react'
-import { MessageSquare, Send, Building2, Users, Search, Circle, CheckCheck, Eye } from 'lucide-react'
+import React from 'react'
+import { MessageSquare, Send, Building2, Users, Search, Circle, CheckCheck, Eye, X, Clock } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
@@ -10,6 +10,7 @@ export default function DeptChat() {
   const [selectedDept, setSelectedDept] = React.useState<any>(null)
   const [messages, setMessages] = React.useState<any[]>([])
   const [seenUsers, setSeenUsers] = React.useState<any[]>([])
+  const [selectedSeenMsg, setSelectedSeenMsg] = React.useState<{ msg: any; viewers: any[] } | null>(null)
   const [newMsg, setNewMsg] = React.useState('')
   const [loading, setLoading] = React.useState(true)
   const [sending, setSending] = React.useState(false)
@@ -360,9 +361,42 @@ export default function DeptChat() {
                       boxShadow: isMe ? '0 2px 8px rgba(29,112,184,0.25)' : '0 1px 3px rgba(0,0,0,0.04)',
                     }}>
                       <div style={{ color: isMe ? '#FFFFFF' : '#0F172A', fontSize: 14, lineHeight: 1.5, wordBreak: 'break-word' }}>{msg.content}</div>
-                      <div style={{ fontSize: 10, marginTop: 6, textAlign: 'right', color: isMe ? 'rgba(255,255,255,0.75)' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-                        <span>{msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                        {isMe && <CheckCheck size={12} color="#93C5FD" />}
+                      <div style={{
+                        fontSize: 10, marginTop: 6,
+                        color: isMe ? 'rgba(255,255,255,0.8)' : '#64748B',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        gap: 8, flexWrap: 'wrap'
+                      }}>
+                        {/* Seen By clickable badge directly on the text bubble */}
+                        {seenUsers.length > 0 ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedSeenMsg({ msg, viewers: seenUsers })
+                            }}
+                            title="Click to view full reader details"
+                            style={{
+                              background: isMe ? 'rgba(255,255,255,0.18)' : '#EFF6FF',
+                              border: isMe ? '1px solid rgba(255,255,255,0.28)' : '1px solid #BFDBFE',
+                              color: isMe ? '#FFFFFF' : '#1D70B8',
+                              borderRadius: 10, padding: '2px 8px',
+                              fontSize: 10, fontWeight: 700,
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              cursor: 'pointer', transition: 'all 0.15s'
+                            }}
+                          >
+                            <Eye size={11} />
+                            <span>Seen by {seenUsers.length}</span>
+                          </button>
+                        ) : (
+                          <span />
+                        )}
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span>{msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                          {isMe && <CheckCheck size={12} color="#93C5FD" />}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -385,37 +419,6 @@ export default function DeptChat() {
             })}
             <div ref={messagesEndRef} />
           </div>
-
-          {/* Seen By Bar */}
-          {seenUsers.length > 0 && (
-            <div style={{
-              padding: '8px 24px', background: '#F8FAFC', borderTop: '1px solid #E2E8F0',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 11
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#334155', fontWeight: 600 }}>
-                <Eye size={13} color="#1D70B8" />
-                <span>Seen by ({seenUsers.length}):</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                  {seenUsers.slice(0, 6).map((su: any) => (
-                    <span key={su.id} style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 4,
-                      padding: '2px 8px', borderRadius: 12, background: '#EFF6FF',
-                      color: '#1D70B8', fontWeight: 600, border: '1px solid #BFDBFE'
-                    }}>
-                      {su.user_photo_url ? (
-                        <img src={su.user_photo_url} alt="" style={{ width: 14, height: 14, borderRadius: '50%', objectFit: 'cover' }} />
-                      ) : null}
-                      {su.user_name} ({su.user_role})
-                    </span>
-                  ))}
-                  {seenUsers.length > 6 && (
-                    <span style={{ color: '#64748B' }}>+{seenUsers.length - 6} more</span>
-                  )}
-                </div>
-              </div>
-              <span style={{ color: '#94A3B8', fontSize: 10 }}>Active presence</span>
-            </div>
-          )}
 
           <div style={{
             padding: '16px 24px', borderTop: '1px solid #E2E8F0',
@@ -450,6 +453,140 @@ export default function DeptChat() {
             >
               <Send size={18} />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Seen-By Full Information Dossier Modal */}
+      {selectedSeenMsg && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16
+        }} onClick={() => setSelectedSeenMsg(null)}>
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 480, maxHeight: '85vh',
+              background: '#FFFFFF', borderRadius: 16,
+              border: '1px solid #CBD5E1', boxShadow: '0 20px 45px rgba(15,23,42,0.25)',
+              display: 'flex', flexDirection: 'column', overflow: 'hidden'
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{
+              padding: '16px 20px', borderBottom: '1px solid #E2E8F0',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              background: '#F8FAFC'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Eye size={18} color="#1D70B8" />
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#0F172A' }}>
+                    Message Read Receipts
+                  </h3>
+                  <div style={{ fontSize: 11, color: '#64748B', marginTop: 1 }}>
+                    {selectedSeenMsg.viewers.length} colleague(s) opened this channel
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedSeenMsg(null)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: '#64748B', padding: 4, borderRadius: 6
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Message Preview Quote */}
+            <div style={{
+              margin: '14px 20px 8px', padding: '10px 14px', borderRadius: 10,
+              background: '#F1F5F9', borderLeft: '3px solid #1D70B8',
+              fontSize: 12, color: '#334155', fontStyle: 'italic', wordBreak: 'break-word'
+            }}>
+              "{selectedSeenMsg.msg?.content}"
+            </div>
+
+            {/* Viewers List */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '10px 20px 16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {selectedSeenMsg.viewers.map((viewer: any, vIdx: number) => (
+                  <div
+                    key={viewer.id || vIdx}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '10px 12px', borderRadius: 10,
+                      background: '#FFFFFF', border: '1px solid #E2E8F0',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{
+                        width: 38, height: 38, borderRadius: 10,
+                        background: 'linear-gradient(135deg, #1D70B8, #0D5C99)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: 'white', fontWeight: 800, fontSize: 14, overflow: 'hidden'
+                      }}>
+                        {viewer.user_photo_url ? (
+                          <img src={viewer.user_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          (viewer.user_name || 'U').charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>
+                          {viewer.user_name}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                          <span style={{
+                            padding: '1px 6px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+                            background: '#EFF6FF', color: '#1D70B8', border: '1px solid #BFDBFE'
+                          }}>
+                            {viewer.user_role}
+                          </span>
+                          {viewer.user_dept_name && (
+                            <span style={{ fontSize: 11, color: '#64748B' }}>
+                              · {viewer.user_dept_name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 11, color: '#10B981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
+                        <Circle size={6} color="#10B981" fill="#10B981" />
+                        <span>Seen</span>
+                      </div>
+                      {viewer.last_seen_at && (
+                        <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>
+                          {new Date(viewer.last_seen_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: '12px 20px', borderTop: '1px solid #E2E8F0',
+              background: '#F8FAFC', display: 'flex', justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => setSelectedSeenMsg(null)}
+                style={{
+                  padding: '7px 16px', borderRadius: 8, background: '#1D70B8',
+                  color: 'white', border: 'none', fontWeight: 600, fontSize: 12, cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
