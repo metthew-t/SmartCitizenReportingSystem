@@ -166,7 +166,7 @@ export default function AuditLogs() {
       <div style={{ textAlign: 'center', padding: 80, color: '#ef4444' }}>
         <ShieldAlert size={48} style={{ marginBottom: 16 }} />
         <h2>Access Restricted</h2>
-        <p style={{ color: '#94A3B8' }}>
+        <p style={{ color: '#475569' }}>
           System Audit Vault access is reserved exclusively for Super Administrators and City Administration.
         </p>
       </div>
@@ -194,7 +194,7 @@ export default function AuditLogs() {
               <h2 style={{ color: '#0F172A', fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: -0.3 }}>
                 System Audit Vault & Traceability
               </h2>
-              <p style={{ color: '#94A3B8', fontSize: 13, margin: '2px 0 0' }}>
+              <p style={{ color: '#475569', fontSize: 13, margin: '2px 0 0' }}>
                 Immutable historical telemetry of all operations across all rules and actors
               </p>
             </div>
@@ -247,7 +247,7 @@ export default function AuditLogs() {
             <Terminal size={20} color="#93c5fd" />
           </div>
           <div>
-            <div style={{ color: '#94A3B8', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>Total Actions Logged</div>
+            <div style={{ color: '#475569', fontSize: 11, fontWeight: 700, textTransform: 'uppercase' }}>Total Actions Logged</div>
             <div style={{ color: '#0F172A', fontSize: 22, fontWeight: 800 }}>{stats.total}</div>
           </div>
         </div>
@@ -263,7 +263,7 @@ export default function AuditLogs() {
             <AlertTriangle size={20} color="#ef4444" />
           </div>
           <div>
-            <div style={{ color: '#94A3B8', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>Security & Critical Ops</div>
+            <div style={{ color: '#475569', fontSize: 11, fontWeight: 700, textTransform: 'uppercase' }}>Security & Critical Ops</div>
             <div style={{ color: '#ef4444', fontSize: 22, fontWeight: 800 }}>{stats.criticalOps}</div>
           </div>
         </div>
@@ -279,7 +279,7 @@ export default function AuditLogs() {
             <User size={20} color="#60a5fa" />
           </div>
           <div>
-            <div style={{ color: '#94A3B8', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>Unique Active Actors</div>
+            <div style={{ color: '#475569', fontSize: 11, fontWeight: 700, textTransform: 'uppercase' }}>Unique Active Actors</div>
             <div style={{ color: '#1D70B8', fontSize: 22, fontWeight: 800 }}>{stats.actors}</div>
           </div>
         </div>
@@ -295,7 +295,7 @@ export default function AuditLogs() {
             <Clock size={20} color="#34d399" />
           </div>
           <div>
-            <div style={{ color: '#94A3B8', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>Recorded Today</div>
+            <div style={{ color: '#475569', fontSize: 11, fontWeight: 700, textTransform: 'uppercase' }}>Recorded Today</div>
             <div style={{ color: '#10b981', fontSize: 22, fontWeight: 800 }}>{stats.todayCount}</div>
           </div>
         </div>
@@ -327,7 +327,7 @@ export default function AuditLogs() {
 
           {/* Role Filter */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Role:</span>
+            <span style={{ color: '#334155', fontSize: 12, fontWeight: 700 }}>Role:</span>
             <select
               value={selectedRole}
               onChange={e => setSelectedRole(e.target.value)}
@@ -349,7 +349,7 @@ export default function AuditLogs() {
 
           {/* Action Category Filter */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Category:</span>
+            <span style={{ color: '#334155', fontSize: 12, fontWeight: 700 }}>Category:</span>
             <select
               value={selectedActionCat}
               onChange={e => setSelectedActionCat(e.target.value)}
@@ -368,7 +368,7 @@ export default function AuditLogs() {
 
           {/* Entity Type Filter */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Entity:</span>
+            <span style={{ color: '#334155', fontSize: 12, fontWeight: 700 }}>Entity:</span>
             <select
               value={selectedEntity}
               onChange={e => setSelectedEntity(e.target.value)}
@@ -400,7 +400,7 @@ export default function AuditLogs() {
         ) : filteredLogs.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 60, color: '#64748B' }}>
             <Lock size={36} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#94A3B8' }}>No audit records found matching your filters</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#0F172A' }}>No audit records found matching your filters</div>
             <div style={{ fontSize: 12, marginTop: 4 }}>Try clearing search or filter terms to view more entries</div>
           </div>
         ) : (
@@ -474,7 +474,7 @@ export default function AuditLogs() {
                           {log.action}
                         </span>
                         {log.changes?.note && (
-                          <div style={{ color: '#94A3B8', fontSize: 11, marginTop: 4, maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ color: '#475569', fontSize: 11, marginTop: 4, maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {log.changes.note}
                           </div>
                         )}
@@ -556,7 +556,7 @@ export default function AuditLogs() {
               </div>
               <button
                 onClick={() => setInspectRecord(null)}
-                style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer' }}
+                style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer' }}
               >
                 <X size={20} />
               </button>

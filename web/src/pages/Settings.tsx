@@ -259,7 +259,7 @@ export default function Settings() {
           </div>
           <div>
             <div style={{ color: '#0F172A', fontWeight: 600, fontSize: 16 }}>{user?.name || 'N/A'}</div>
-            <div style={{ color: '#94A3B8', fontSize: 12 }}>{role?.replace('_', ' ').toUpperCase() || 'OFFICER'}</div>
+            <div style={{ color: '#475569', fontSize: 12, fontWeight: 600 }}>{role?.replace('_', ' ').toUpperCase() || 'OFFICER'}</div>
             {uploadMsg && <div style={{ color: uploadMsg.includes('updated') ? '#10b981' : '#ef4444', fontSize: 12, marginTop: 4 }}>{uploadMsg}</div>}
           </div>
         </div>
@@ -285,7 +285,7 @@ export default function Settings() {
         ) : (
           <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <label style={{ display: 'block', color: '#94A3B8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>{t('full_name')}</label>
+              <label style={{ display: 'block', color: '#334155', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>{t('full_name')}</label>
               <input
                 type="text"
                 value={profileForm.fullName}
@@ -296,7 +296,7 @@ export default function Settings() {
 
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <label style={{ color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>{t('phone_number')}</label>
+                <label style={{ color: '#334155', fontSize: 12, fontWeight: 600 }}>{t('phone_number')}</label>
                 <span style={{ fontSize: 10, color: '#10b981', fontWeight: 600 }}>{t('editable')}</span>
               </div>
               <input
@@ -310,7 +310,7 @@ export default function Settings() {
 
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <label style={{ color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Email Address</label>
+                <label style={{ color: '#334155', fontSize: 12, fontWeight: 600 }}>Email Address</label>
                 {role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? (
                   <span style={{ fontSize: 10, color: '#1D70B8', fontWeight: 600 }}>Admin Editable</span>
                 ) : (
@@ -341,7 +341,7 @@ export default function Settings() {
                 onClick={() => setIsEditingProfile(false)}
                 style={{
                   padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(29,112,184,0.25)',
-                  background: 'transparent', color: '#94A3B8', fontSize: 13, cursor: 'pointer',
+                  background: 'transparent', color: '#475569', fontSize: 13, cursor: 'pointer',
                 }}
               >
                 {t('cancel')}
@@ -406,11 +406,11 @@ export default function Settings() {
                 }}
                 style={{
                   flex: '1 1 180px', padding: '14px', borderRadius: 12, cursor: 'pointer',
-                  background: isSelected ? 'rgba(99,102,241,0.2)' : 'rgba(15,23,42,0.5)',
-                  border: isSelected ? '2px solid #1D70B8' : '1px solid rgba(29,112,184,0.2)',
-                  color: isSelected ? '#ffffff' : '#94a3b8', textAlign: 'center',
+                  background: isSelected ? '#EFF6FF' : '#FFFFFF',
+                  border: isSelected ? '2px solid #1D70B8' : '1px solid #CBD5E1',
+                  color: isSelected ? '#1D70B8' : '#0F172A', textAlign: 'center',
                   transition: 'all 0.2s', position: 'relative',
-                  boxShadow: isSelected ? '0 0 16px rgba(99,102,241,0.25)' : 'none',
+                  boxShadow: isSelected ? '0 2px 10px rgba(29,112,184,0.18)' : '0 1px 3px rgba(0,0,0,0.05)',
                 }}
               >
                 {isSelected && (
@@ -423,10 +423,10 @@ export default function Settings() {
                   </span>
                 )}
                 <span style={{ fontSize: 22 }}>{lang.flag}</span>
-                <div style={{ fontSize: 13, fontWeight: 700, marginTop: 6, color: isSelected ? '#ffffff' : '#e2e8f0' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginTop: 6, color: isSelected ? '#1D70B8' : '#0F172A' }}>
                   {lang.name}
                 </div>
-                <div style={{ fontSize: 11, color: isSelected ? '#93c5fd' : '#64748b', marginTop: 2 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: isSelected ? '#1E40AF' : '#475569', marginTop: 2 }}>
                   {lang.localName}
                 </div>
               </button>
@@ -452,7 +452,7 @@ export default function Settings() {
 
         <form onSubmit={handlePasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <label style={{ display: 'block', color: '#94A3B8', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+            <label style={{ display: 'block', color: '#334155', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
               Current Password
             </label>
             <input
@@ -469,7 +469,7 @@ export default function Settings() {
           </div>
 
           <div>
-            <label style={{ display: 'block', color: '#94A3B8', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+            <label style={{ display: 'block', color: '#334155', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
               New Password (12+ Characters Government Standard)
             </label>
             <input
@@ -487,12 +487,12 @@ export default function Settings() {
 
           {newPassword && (
             <div style={{
-              maxWidth: 420, background: 'rgba(15, 23, 42, 0.5)', border: '1px solid rgba(148, 163, 184, 0.1)',
+              maxWidth: 420, background: '#F8FAFC', border: '1px solid #E2E8F0',
               borderRadius: 8, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4
             }}>
               {passwordRules.map(r => (
-                <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: r.valid ? '#4ade80' : '#94a3b8' }}>
-                  <Check size={12} color={r.valid ? '#4ade80' : '#64748b'} />
+                <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, fontWeight: 600, color: r.valid ? '#059669' : '#64748B' }}>
+                  <Check size={12} color={r.valid ? '#059669' : '#94A3B8'} />
                   <span>{r.label}</span>
                 </div>
               ))}
@@ -500,7 +500,7 @@ export default function Settings() {
           )}
 
           <div>
-            <label style={{ display: 'block', color: '#94A3B8', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+            <label style={{ display: 'block', color: '#334155', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
               Confirm New Password
             </label>
             <input

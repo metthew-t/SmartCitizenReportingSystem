@@ -189,7 +189,7 @@ export default function Dashboard() {
                   ? `${pendingOfficialCount} Officer Field Report${pendingOfficialCount > 1 ? 's' : ''} Awaiting Review`
                   : `${pendingOfficialCount} Department Executive Report${pendingOfficialCount > 1 ? 's' : ''} Awaiting Review`}
               </div>
-              <div style={{ fontSize: 12, color: '#94a3b8' }}>
+              <div style={{ fontSize: 12, color: '#475569', fontWeight: 500 }}>
                 {role === 'department_manager'
                   ? 'Field officers from your sector have submitted investigation dossiers for your evaluation.'
                   : 'Executive departmental briefs from sector directors have been submitted for city administration oversight.'}

@@ -511,7 +511,7 @@ export default function OfficialReports() {
           </div>
           <div>
             <div style={{ fontSize: 22, fontWeight: 700, color: '#0F172A' }}>{totalCount}</div>
-            <div style={{ fontSize: 12, color: '#94A3B8' }}>Total Dossiers Filed</div>
+            <div style={{ fontSize: 12, color: '#475569', fontWeight: 600 }}>Total Dossiers Filed</div>
           </div>
         </div>
 
@@ -524,7 +524,7 @@ export default function OfficialReports() {
           </div>
           <div>
             <div style={{ fontSize: 22, fontWeight: 700, color: '#fbbf24' }}>{pendingCount}</div>
-            <div style={{ fontSize: 12, color: '#94A3B8' }}>Pending Official Review</div>
+            <div style={{ fontSize: 12, color: '#475569', fontWeight: 600 }}>Pending Official Review</div>
           </div>
         </div>
 
@@ -537,7 +537,7 @@ export default function OfficialReports() {
           </div>
           <div>
             <div style={{ fontSize: 22, fontWeight: 700, color: '#34d399' }}>{approvedCount}</div>
-            <div style={{ fontSize: 12, color: '#94A3B8' }}>Approved / Endorsed</div>
+            <div style={{ fontSize: 12, color: '#475569', fontWeight: 600 }}>Approved / Endorsed</div>
           </div>
         </div>
 
@@ -550,7 +550,7 @@ export default function OfficialReports() {
           </div>
           <div>
             <div style={{ fontSize: 22, fontWeight: 700, color: '#c084fc' }}>{directivesCount}</div>
-            <div style={{ fontSize: 12, color: '#94A3B8' }}>Executive Directives Issued</div>
+            <div style={{ fontSize: 12, color: '#475569', fontWeight: 600 }}>Executive Directives Issued</div>
           </div>
         </div>
       </div>
@@ -699,7 +699,7 @@ export default function OfficialReports() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Filter size={14} color="#94a3b8" />
-          <span style={{ fontSize: 12, color: '#94A3B8' }}>Type:</span>
+          <span style={{ fontSize: 12, color: '#334155', fontWeight: 700 }}>Type:</span>
           <select
             value={typeFilter}
             onChange={e => setTypeFilter(e.target.value)}
@@ -715,7 +715,7 @@ export default function OfficialReports() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 12, color: '#94A3B8' }}>Status:</span>
+          <span style={{ fontSize: 12, color: '#334155', fontWeight: 700 }}>Status:</span>
           <select
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
@@ -770,7 +770,7 @@ export default function OfficialReports() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
                     <span style={{
                       fontFamily: 'monospace', fontSize: 12, fontWeight: 700,
-                      color: '#93c5fd', background: 'rgba(29,112,184,0.12)',
+                      color: '#1D70B8', background: 'rgba(29,112,184,0.1)',
                       padding: '3px 8px', borderRadius: 6, border: '1px solid rgba(29,112,184,0.2)',
                     }}>
                       {report.reference_number}
@@ -799,12 +799,12 @@ export default function OfficialReports() {
                     </span>
                   </div>
 
-                  <h3 style={{ fontSize: 16, fontWeight: 600, color: '#f1f5f9', margin: '0 0 8px' }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0F172A', margin: '0 0 8px' }}>
                     {report.title}
                   </h3>
 
                   <p style={{
-                    fontSize: 13, color: '#94A3B8', margin: '0 0 10px',
+                    fontSize: 13, color: '#475569', margin: '0 0 10px',
                     display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
                   }}>
                     {report.executive_summary}
@@ -813,7 +813,7 @@ export default function OfficialReports() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', fontSize: 12, color: '#64748B' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                       <User size={13} color="#94a3b8" />
-                      <span style={{ color: '#E2E8F0' }}>{report.sender_name || 'Staff Member'}</span>
+                      <span style={{ color: '#0F172A', fontWeight: 600 }}>{report.sender_name || 'Staff Member'}</span>
                       <span style={{ color: '#64748B' }}>({report.sender_role || 'Staff'})</span>
                     </div>
 
@@ -883,7 +883,7 @@ export default function OfficialReports() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 6,
                       background: 'rgba(29,112,184,0.15)', border: '1px solid rgba(29,112,184,0.3)',
-                      color: '#93c5fd', padding: '9px 16px', borderRadius: 10,
+                      color: '#1D70B8', padding: '9px 16px', borderRadius: 10,
                       fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
                     }}
                   >
@@ -1023,7 +1023,7 @@ export default function OfficialReports() {
               }}>
                 <div>
                   <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Reference Number</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#93c5fd', fontFamily: 'monospace', marginTop: 2 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#1D70B8', fontFamily: 'monospace', marginTop: 2 }}>
                     {selectedReport.reference_number}
                   </div>
                 </div>
@@ -1037,7 +1037,7 @@ export default function OfficialReports() {
 
                 <div>
                   <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Reporting Level</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#E2E8F0', marginTop: 2 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', marginTop: 2 }}>
                     {selectedReport.level === 'OFFICER_TO_MANAGER' ? 'Officer to Department Manager' : 'Department Manager to City Admin'}
                   </div>
                 </div>
@@ -1087,7 +1087,7 @@ export default function OfficialReports() {
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>
                     {selectedReport.sender_name}
                   </div>
-                  <div style={{ fontSize: 11, color: '#93c5fd', fontWeight: 600 }}>
+                  <div style={{ fontSize: 11, color: '#1D70B8', fontWeight: 600 }}>
                     {selectedReport.sender_role} &bull; {selectedReport.department_name}
                   </div>
                   <div style={{ marginTop: 24, borderTop: '1px solid #475569', paddingTop: 6, fontSize: 11, color: '#64748B' }}>
@@ -1099,7 +1099,7 @@ export default function OfficialReports() {
                   padding: 16, borderRadius: 10, background: '#F8FAFC',
                   border: '1.5pt dashed rgba(99,102,241,0.3)', textAlign: 'center', position: 'relative'
                 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#93c5fd', textTransform: 'uppercase', marginBottom: 4 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#1D70B8', textTransform: 'uppercase', marginBottom: 4 }}>
                     MUNICIPAL EXECUTIVE REGISTRY SEAL
                   </div>
                   <div style={{ fontSize: 10, color: '#94A3B8', fontStyle: 'italic', marginBottom: 12 }}>
@@ -1133,7 +1133,7 @@ export default function OfficialReports() {
               {/* Section I: Executive Summary */}
               <div style={{ marginBottom: 24 }}>
                 <h4 style={{
-                  fontSize: 12, fontWeight: 700, color: '#93c5fd', letterSpacing: '0.05em',
+                  fontSize: 12, fontWeight: 700, color: '#1D70B8', letterSpacing: '0.05em',
                   textTransform: 'uppercase', borderBottom: '1px solid rgba(148,163,184,0.12)',
                   paddingBottom: 6, margin: '0 0 10px',
                 }}>
@@ -1141,7 +1141,7 @@ export default function OfficialReports() {
                 </h4>
                 <div style={{
                   background: '#F8FAFC', padding: 14, borderRadius: 8, border: '1px solid #E2E8F0',
-                  fontSize: 13, lineHeight: '1.6', color: '#E2E8F0', whiteSpace: 'pre-wrap'
+                  fontSize: 13, lineHeight: '1.6', color: '#0F172A', whiteSpace: 'pre-wrap'
                 }}>
                   {selectedReport.executive_summary}
                 </div>
@@ -1150,7 +1150,7 @@ export default function OfficialReports() {
               {/* Section II: Detailed Findings & Observations */}
               <div style={{ marginBottom: 24 }}>
                 <h4 style={{
-                  fontSize: 12, fontWeight: 700, color: '#93c5fd', letterSpacing: '0.05em',
+                  fontSize: 12, fontWeight: 700, color: '#1D70B8', letterSpacing: '0.05em',
                   textTransform: 'uppercase', borderBottom: '1px solid rgba(148,163,184,0.12)',
                   paddingBottom: 6, margin: '0 0 10px',
                 }}>
@@ -1158,7 +1158,7 @@ export default function OfficialReports() {
                 </h4>
                 <div style={{
                   background: '#F8FAFC', padding: 14, borderRadius: 8, border: '1px solid #E2E8F0',
-                  fontSize: 13, lineHeight: '1.6', color: '#E2E8F0', whiteSpace: 'pre-wrap'
+                  fontSize: 13, lineHeight: '1.6', color: '#0F172A', whiteSpace: 'pre-wrap'
                 }}>
                   {selectedReport.findings}
                 </div>
@@ -1168,7 +1168,7 @@ export default function OfficialReports() {
               {selectedReport.recommendations && (
                 <div style={{ marginBottom: 24 }}>
                   <h4 style={{
-                    fontSize: 12, fontWeight: 700, color: '#93c5fd', letterSpacing: '0.05em',
+                    fontSize: 12, fontWeight: 700, color: '#1D70B8', letterSpacing: '0.05em',
                     textTransform: 'uppercase', borderBottom: '1px solid rgba(148,163,184,0.12)',
                     paddingBottom: 6, margin: '0 0 10px',
                   }}>
@@ -1176,7 +1176,7 @@ export default function OfficialReports() {
                   </h4>
                   <div style={{
                     background: '#F8FAFC', padding: 14, borderRadius: 8, border: '1px solid #E2E8F0',
-                    fontSize: 13, lineHeight: '1.6', color: '#E2E8F0', whiteSpace: 'pre-wrap'
+                    fontSize: 13, lineHeight: '1.6', color: '#0F172A', whiteSpace: 'pre-wrap'
                   }}>
                     {selectedReport.recommendations}
                   </div>
@@ -1224,7 +1224,7 @@ export default function OfficialReports() {
                 </div>
 
                 {selectedReport.reviewed_at ? (
-                  <div style={{ fontSize: 13, color: '#E2E8F0' }}>
+                  <div style={{ fontSize: 13, color: '#0F172A' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                       <ShieldCheck size={16} color="#10b981" />
                       <strong>Reviewed & Endorsed by:</strong> {selectedReport.reviewer_name || 'Designated Authority'}
@@ -1236,7 +1236,7 @@ export default function OfficialReports() {
                       <div style={{
                         marginTop: 10, padding: 12, borderRadius: 8,
                         background: '#FFFFFF', border: '1px solid #CBD5E1',
-                        color: '#f1f5f9', fontStyle: 'italic',
+                        color: '#0F172A', fontStyle: 'italic',
                       }}>
                         &ldquo;{selectedReport.reviewer_feedback}&rdquo;
                       </div>
@@ -1251,7 +1251,7 @@ export default function OfficialReports() {
                 {/* Review Form (Only visible to authorized reviewers) */}
                 {canReviewSelected() && (
                   <form onSubmit={handleReviewReport} style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid rgba(29,112,184,0.2)' }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#93c5fd', marginBottom: 10 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#1D70B8', marginBottom: 10 }}>
                       SUBMIT OFFICIAL ADMINISTRATIVE DECISION:
                     </div>
 
@@ -1453,7 +1453,7 @@ export default function OfficialReports() {
                   background: '#F8FAFC', border: '1px solid #E2E8F0',
                   borderRadius: 10, padding: 14, display: 'flex', flexDirection: 'column', gap: 10
                 }}>
-                  <label style={{ fontSize: 12, color: '#93c5fd', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  <label style={{ fontSize: 12, color: '#1D70B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                     Reporting Objective & Routing Channel
                   </label>
                   <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -1509,7 +1509,7 @@ export default function OfficialReports() {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', fontWeight: 600, marginBottom: 4 }}>
+                  <label style={{ display: 'block', fontSize: 12, color: '#334155', fontWeight: 700, marginBottom: 4 }}>
                     Report Classification / Type
                   </label>
                   <select
@@ -1526,7 +1526,7 @@ export default function OfficialReports() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', fontWeight: 600, marginBottom: 4 }}>
+                  <label style={{ display: 'block', fontSize: 12, color: '#334155', fontWeight: 700, marginBottom: 4 }}>
                     Priority Level
                   </label>
                   <select
@@ -1545,7 +1545,7 @@ export default function OfficialReports() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', fontWeight: 600, marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: 12, color: '#334155', fontWeight: 700, marginBottom: 4 }}>
                   Report Title *
                 </label>
                 <input
@@ -1562,7 +1562,7 @@ export default function OfficialReports() {
 
               {role === 'city_admin' && (
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', fontWeight: 600, marginBottom: 4 }}>
+                  <label style={{ display: 'block', fontSize: 12, color: '#334155', fontWeight: 700, marginBottom: 4 }}>
                     Department / Sector (Optional)
                   </label>
                   <select
@@ -1581,7 +1581,7 @@ export default function OfficialReports() {
               )}
 
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', fontWeight: 600, marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: 12, color: '#334155', fontWeight: 700, marginBottom: 4 }}>
                   Linked Citizen Case (Optional)
                 </label>
                 <select
@@ -1599,7 +1599,7 @@ export default function OfficialReports() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', fontWeight: 600, marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: 12, color: '#334155', fontWeight: 700, marginBottom: 4 }}>
                   Executive Summary *
                 </label>
                 <textarea
@@ -1615,7 +1615,7 @@ export default function OfficialReports() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', fontWeight: 600, marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: 12, color: '#334155', fontWeight: 700, marginBottom: 4 }}>
                   Detailed Findings & Evidence *
                 </label>
                 <textarea
@@ -1631,7 +1631,7 @@ export default function OfficialReports() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', fontWeight: 600, marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: 12, color: '#334155', fontWeight: 700, marginBottom: 4 }}>
                   Recommendations / Requested Directives (Optional)
                 </label>
                 <textarea
@@ -1646,7 +1646,7 @@ export default function OfficialReports() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', fontWeight: 600, marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: 12, color: '#334155', fontWeight: 700, marginBottom: 4 }}>
                   Attachment URL / File Reference (Optional)
                 </label>
                 <input
@@ -1665,8 +1665,8 @@ export default function OfficialReports() {
                   type="button"
                   onClick={() => setIsCreateOpen(false)}
                   style={{
-                    padding: '9px 16px', borderRadius: 8, border: '1px solid rgba(29,112,184,0.25)',
-                    background: 'transparent', color: '#E2E8F0', fontSize: 13, cursor: 'pointer',
+                    padding: '9px 16px', borderRadius: 8,
+                    background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#475569', fontSize: 13, fontWeight: 600, cursor: 'pointer',
                   }}
                 >
                   Cancel

@@ -265,8 +265,7 @@ export default function PublicDashboard() {
                 value={statusFilter}
                 onChange={e => setStatusFilter(e.target.value)}
                 style={{
-                  background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(148, 163, 184, 0.2)',
-                  color: '#e2e8f0', borderRadius: 10, padding: '8px 12px', fontSize: 13, outline: 'none', cursor: 'pointer'
+                  color: '#0F172A', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: 10, padding: '8px 12px', fontSize: 13, outline: 'none', cursor: 'pointer'
                 }}
               >
                 <option value="ALL">All Statuses</option>
@@ -299,7 +298,7 @@ export default function PublicDashboard() {
                     <Search size={16} color={Colors.govBlue} />
                     Spatial Duplicate Detection Tool (150m Haversine Radius)
                   </div>
-                  <span style={{ fontSize: 11, color: '#94a3b8' }}>Check if your issue is already registered</span>
+                  <span style={{ fontSize: 12, color: '#475569', fontWeight: 500 }}>Check if your issue is already registered</span>
                 </div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                   <input
@@ -339,7 +338,7 @@ export default function PublicDashboard() {
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12
                       }}>
                         <span style={{ color: '#38bdf8', fontWeight: 700 }}>{dup.case_number} ({dup.distance_meters}m away)</span>
-                        <span style={{ color: '#cbd5e1' }}>{dup.description}</span>
+                        <span style={{ color: '#0F172A', fontWeight: 500 }}>{dup.description}</span>
                         <span style={{ color: Colors.govBlue, fontWeight: 600 }}>{dup.status}</span>
                       </div>
                     ))}

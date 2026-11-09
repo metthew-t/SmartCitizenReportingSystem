@@ -142,7 +142,7 @@ export default function DeptChat() {
             <>
               {myDept && (
                 <div style={{ marginBottom: 16 }}>
-                  <div style={{ padding: '0 16px', fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', marginBottom: 4 }}>
+                  <div style={{ padding: '0 16px', fontSize: 11, fontWeight: 700, color: '#334155', textTransform: 'uppercase', marginBottom: 4 }}>
                     My Department
                   </div>
                   <div
@@ -175,7 +175,7 @@ export default function DeptChat() {
 
               {isManagerOrAdmin && otherDepts.length > 0 && (
                 <div>
-                  <div style={{ padding: '0 16px', fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', marginBottom: 4 }}>
+                  <div style={{ padding: '0 16px', fontSize: 11, fontWeight: 700, color: '#334155', textTransform: 'uppercase', marginBottom: 4 }}>
                     {myDept ? 'Other Departments' : 'All Departments'}
                   </div>
                   {otherDepts.map(dept => (

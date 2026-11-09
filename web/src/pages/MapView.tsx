@@ -105,7 +105,7 @@ export default function MapView() {
 
           {/* Filters */}
           <div style={{ padding: '12px 16px', borderBottom: '1px solid #E2E8F0' }}>
-            <label style={{ color: '#94A3B8', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6 }}>Priority Filter</label>
+            <label style={{ color: '#334155', fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 6 }}>Priority Filter</label>
             <select
               value={priorityFilter}
               onChange={e => setPriorityFilter(e.target.value)}
@@ -146,7 +146,7 @@ export default function MapView() {
                     padding: '2px 6px', background: `${PRIORITY_COLORS[r.priority] || '#6b7280'}15`, borderRadius: 4,
                   }}>{r.priority}</span>
                 </div>
-                <div style={{ color: '#94A3B8', fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ color: '#475569', fontSize: 11, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {r.department_name}
                 </div>
               </button>
@@ -217,7 +217,7 @@ export default function MapView() {
                   <h3 style={{ color: '#0F172A', margin: '0 0 4px', fontSize: 16, fontWeight: 700 }}>
                     {selected.case_number}
                   </h3>
-                  <div style={{ color: '#94A3B8', fontSize: 12 }}>{selected.department_name}</div>
+                  <div style={{ color: '#475569', fontSize: 12, fontWeight: 600 }}>{selected.department_name}</div>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <span style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: `${STATUS_COLORS[selected.status] || '#1D70B8'}15`, color: STATUS_COLORS[selected.status] || '#1D70B8' }}>

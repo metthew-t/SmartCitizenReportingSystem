@@ -375,7 +375,7 @@ export default function AdminUsers() {
                 <th style={{ padding: '12px 16px', color: '#64748B', fontSize: 12, fontWeight: 600 }}>Department</th>
                 <th style={{ padding: '12px 16px', color: '#64748B', fontSize: 12, fontWeight: 600 }}>Status</th>
                 <th style={{ padding: '12px 16px', color: '#64748B', fontSize: 12, fontWeight: 600 }}>Date Joined</th>
-                <th style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 12, fontWeight: 600, textAlign: 'right' }}>Actions</th>
+                <th style={{ padding: '12px 16px', color: '#475569', fontSize: 12, fontWeight: 700, textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -391,7 +391,7 @@ export default function AdminUsers() {
                     <td style={{ padding: '12px 16px', color: '#0F172A', fontSize: 13, fontWeight: 600 }}>
                       {user.full_name || 'N/A'}
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 13 }}>
+                    <td style={{ padding: '12px 16px', color: '#475569', fontSize: 13 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         {user.email && (
                           <span style={{ color: '#0F172A', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -399,7 +399,7 @@ export default function AdminUsers() {
                           </span>
                         )}
                         {user.phone_number && (
-                          <span style={{ color: '#94A3B8', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ color: '#475569', fontSize: 12, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
                             <Phone size={10} color="#10b981" /> {user.phone_number}
                           </span>
                         )}
@@ -412,11 +412,11 @@ export default function AdminUsers() {
                         {user.is_super_admin && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', fontSize: 10, fontWeight: 600 }}><Shield size={10} style={{ display: 'inline', marginRight: 2 }} /> SUPER ADMIN</span>}
                         {user.is_city_admin && !user.is_super_admin && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(16,185,129,0.1)', color: '#10b981', fontSize: 10, fontWeight: 600 }}><Shield size={10} style={{ display: 'inline', marginRight: 2 }} /> ADMIN</span>}
                         {user.is_department_manager && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(236,72,153,0.1)', color: '#ec4899', fontSize: 10, fontWeight: 600 }}><Building2 size={10} style={{ display: 'inline', marginRight: 2 }} /> MANAGER</span>}
-                        {user.is_officer && !user.is_department_manager && !user.is_city_admin && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(99,102,241,0.1)', color: '#93c5fd', fontSize: 10, fontWeight: 600 }}><Building2 size={10} style={{ display: 'inline', marginRight: 2 }} /> OFFICER</span>}
+                        {user.is_officer && !user.is_department_manager && !user.is_city_admin && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(29,112,184,0.1)', color: '#1D70B8', fontSize: 10, fontWeight: 700 }}><Building2 size={10} style={{ display: 'inline', marginRight: 2 }} /> OFFICER</span>}
                         {user.is_citizen && <span style={{ padding: '2px 6px', borderRadius: 4, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', fontSize: 10, fontWeight: 600 }}><User size={10} style={{ display: 'inline', marginRight: 2 }} /> CITIZEN</span>}
                       </div>
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 13 }}>
+                    <td style={{ padding: '12px 16px', color: '#0F172A', fontSize: 13, fontWeight: 500 }}>
                       {user.department_name || '-'}
                     </td>
                     <td style={{ padding: '12px 16px' }}>
@@ -434,7 +434,7 @@ export default function AdminUsers() {
                         {user.is_active !== false ? 'Active' : 'Deactivated'}
                       </span>
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#94A3B8', fontSize: 13 }}>
+                    <td style={{ padding: '12px 16px', color: '#475569', fontSize: 13, fontWeight: 500 }}>
                       {new Date(user.date_joined).toLocaleDateString()}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
@@ -527,7 +527,7 @@ export default function AdminUsers() {
                 <Plus size={18} color="#93c5fd" />
                 Add New {role === 'city_admin' || role === 'super_admin' ? 'Official' : 'Officer'}
               </h3>
-              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: 4 }}>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', padding: 4 }}>
                 <X size={20} />
               </button>
             </div>
@@ -538,7 +538,7 @@ export default function AdminUsers() {
               padding: '20px 24px', overflowY: 'auto', flex: 1
             }}>
               <div>
-                <label style={{ display: 'block', color: '#94A3B8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Full Name</label>
+                <label style={{ display: 'block', color: '#334155', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Full Name</label>
                 <input 
                   type="text" required
                   placeholder="e.g. Abebe Bikila"
@@ -549,7 +549,7 @@ export default function AdminUsers() {
               </div>
 
               <div>
-                <label style={{ display: 'block', color: '#94A3B8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Email Address</label>
+                <label style={{ display: 'block', color: '#334155', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Email Address</label>
                 <input 
                   type="email" required
                   placeholder="official@adama.gov.et"
@@ -560,7 +560,7 @@ export default function AdminUsers() {
               </div>
 
               <div>
-                <label style={{ display: 'block', color: '#94A3B8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Phone Number</label>
+                <label style={{ display: 'block', color: '#334155', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Phone Number</label>
                 <input 
                   type="text"
                   placeholder="09xxxxxxxx (receives login SMS)"
@@ -572,13 +572,13 @@ export default function AdminUsers() {
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <label style={{ color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>Initial Temporary Password (Min 12 Characters)</label>
+                  <label style={{ color: '#334155', fontSize: 12, fontWeight: 600 }}>Initial Temporary Password (Min 12 Characters)</label>
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, password: generateStrongPassword() })}
                     style={{
-                      background: 'rgba(29,112,184,0.15)', border: '1px solid rgba(29,112,184,0.3)',
-                      color: '#93c5fd', fontSize: 11, padding: '4px 10px', borderRadius: 6,
+                      background: 'rgba(29,112,184,0.1)', border: '1px solid rgba(29,112,184,0.3)',
+                      color: '#1D70B8', fontSize: 11, padding: '4px 10px', borderRadius: 6,
                       cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600
                     }}
                   >
@@ -623,7 +623,7 @@ export default function AdminUsers() {
               {(role === 'city_admin' || role === 'super_admin') && (
                 <>
                   <div>
-                    <label style={{ display: 'block', color: '#94A3B8', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Department</label>
+                    <label style={{ display: 'block', color: '#334155', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Department</label>
                     <select 
                       value={formData.department_name}
                       onChange={e => setFormData({...formData, department_name: e.target.value})}
@@ -660,7 +660,7 @@ export default function AdminUsers() {
                           />
                           Is City Admin
                         </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#93c5fd', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#1D70B8', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                           <input 
                             type="checkbox" 
                             checked={formData.is_super_admin}
@@ -754,7 +754,7 @@ export default function AdminUsers() {
                 <KeyRound size={18} color="#f59e0b" />
                 Reset Password for {resetModal.userName}
               </h3>
-              <button onClick={() => { setResetModal({show: false, userId: null, userName: ''}); setResetPassword(''); }} style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: 4 }}>
+              <button onClick={() => { setResetModal({show: false, userId: null, userName: ''}); setResetPassword(''); }} style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', padding: 4 }}>
                 <X size={20} />
               </button>
             </div>
@@ -762,7 +762,7 @@ export default function AdminUsers() {
             {/* Scrollable Body */}
             <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <label style={{ color: '#94A3B8', fontSize: 12, fontWeight: 600 }}>New 12+ Character Password</label>
+                <label style={{ color: '#334155', fontSize: 12, fontWeight: 600 }}>New 12+ Character Password</label>
                 <button
                   type="button"
                   onClick={() => setResetPassword(generateStrongPassword())}
@@ -839,8 +839,8 @@ export default function AdminUsers() {
                 type="button"
                 onClick={() => { setResetModal({show: false, userId: null, userName: ''}); setResetPassword(''); }}
                 style={{
-                  padding: '10px 18px', background: 'rgba(148,163,184,0.1)',
-                  border: '1px solid rgba(29,112,184,0.25)', color: '#E2E8F0',
+                  padding: '10px 18px', background: '#FFFFFF',
+                  border: '1px solid #CBD5E1', color: '#475569',
                   borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer'
                 }}
               >
@@ -890,7 +890,7 @@ export default function AdminUsers() {
 
             <form onSubmit={handleUpdateUser} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <label style={{ display: 'block', color: '#94A3B8', fontSize: 12, marginBottom: 4 }}>Full Name</label>
+                <label style={{ display: 'block', color: '#334155', fontSize: 12, marginBottom: 4 }}>Full Name</label>
                 <input 
                   type="text" required
                   value={editFormData.full_name}
@@ -901,7 +901,7 @@ export default function AdminUsers() {
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <label style={{ color: '#94A3B8', fontSize: 12 }}>Email Address</label>
+                  <label style={{ color: '#334155', fontSize: 12 }}>Email Address</label>
                   <span style={{ fontSize: 10, color: '#10b981', fontWeight: 600 }}>Editable</span>
                 </div>
                 <input 
@@ -914,7 +914,7 @@ export default function AdminUsers() {
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <label style={{ color: '#94A3B8', fontSize: 12 }}>Phone Number</label>
+                  <label style={{ color: '#334155', fontSize: 12 }}>Phone Number</label>
                   <span style={{ fontSize: 10, color: '#10b981', fontWeight: 600 }}>Editable</span>
                 </div>
                 <input 
