@@ -317,6 +317,15 @@ export default function DeptChat() {
                 (user?.email && msg.sender_email && msg.sender_email.toLowerCase() === user.email.toLowerCase()) ||
                 (user?.name && msg.sender_name && msg.sender_name.toLowerCase() === user.name.toLowerCase())
               )
+              const otherViewers = seenUsers.filter(su => {
+                const isCurrentUser = Boolean(
+                  (user?.id && String(su.user_id || su.id) === String(user.id)) ||
+                  (user?.email && su.user_email && su.user_email.toLowerCase() === user.email.toLowerCase()) ||
+                  (user?.name && su.user_name && su.user_name.toLowerCase() === user.name.toLowerCase())
+                )
+                return !isCurrentUser
+              })
+
               return (
                 <div key={idx} style={{
                   display: 'flex',
@@ -367,15 +376,15 @@ export default function DeptChat() {
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         gap: 8, flexWrap: 'wrap'
                       }}>
-                        {/* Seen By clickable badge directly on the text bubble */}
-                        {seenUsers.length > 0 ? (
+                        {/* Seen By clickable badge directly on the text bubble (excludes sender/me) */}
+                        {otherViewers.length > 0 ? (
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation()
-                              setSelectedSeenMsg({ msg, viewers: seenUsers })
+                              setSelectedSeenMsg({ msg, viewers: otherViewers })
                             }}
-                            title="Click to view full reader details"
+                            title="Click to view colleagues who saw this message"
                             style={{
                               background: isMe ? 'rgba(255,255,255,0.18)' : '#EFF6FF',
                               border: isMe ? '1px solid rgba(255,255,255,0.28)' : '1px solid #BFDBFE',
@@ -387,7 +396,7 @@ export default function DeptChat() {
                             }}
                           >
                             <Eye size={11} />
-                            <span>Seen by {seenUsers.length}</span>
+                            <span>Seen by {otherViewers.length}</span>
                           </button>
                         ) : (
                           <span />

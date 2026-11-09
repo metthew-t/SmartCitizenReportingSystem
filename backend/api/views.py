@@ -649,19 +649,16 @@ class ReportViewSet(viewsets.ModelViewSet):
             'status': 'success',
             'super_admin': {
                 'email': 'admin@adama.gov.et',
-                'password': 'Admin@123',
                 'role': 'super_admin',
                 'dashboard': '/dashboard'
             },
             'city_admin': {
                 'email': 'cityadmin@adama.gov.et',
-                'password': 'Admin@123',
                 'role': 'city_admin',
                 'dashboard': '/dashboard'
             },
             'mayor': {
                 'email': 'mayor@adama.gov.et',
-                'password': 'Mayor@123',
                 'role': 'mayor',
                 'command_center': '/mayor'
             }

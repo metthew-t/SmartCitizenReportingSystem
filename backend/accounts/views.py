@@ -575,15 +575,18 @@ class UserListView(APIView):
         if not (user.is_city_admin or is_super or user.is_department_manager):
             return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         
-        if user.is_city_admin or is_super:
-            users = User.objects.all().order_by('-date_joined')
-        else:
-            # Department manager can only see users in their department
-            dept = user.officer_profile.department
-            users = User.objects.filter(officer_profile__department=dept).order_by('-date_joined')
-            
-        serializer = UserSerializer(users, many=True)
-        return Response(serializer.data)
+        try:
+            if user.is_city_admin or is_super:
+                users = User.objects.all().order_by('-date_joined')
+            else:
+                # Department manager can only see users in their department
+                dept = user.officer_profile.department if _safe_hasattr(user, 'officer_profile') else None
+                users = User.objects.filter(officer_profile__department=dept).order_by('-date_joined')
+                
+            serializer = UserSerializer(users, many=True, context={'request': request})
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'error': f'Failed to load users: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete(self, request, pk=None):
         user = request.user

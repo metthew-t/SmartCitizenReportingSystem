@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
-import { Trash2, User, Building2, Shield, Search, Plus, X, KeyRound, Edit2, Phone, Mail, Crown, Sparkles, Check, ShieldAlert } from 'lucide-react'
+import { Trash2, User, Building2, Shield, Search, Plus, X, KeyRound, Edit2, Phone, Mail, Crown, Sparkles, Check, ShieldAlert, Eye, EyeOff } from 'lucide-react'
 import { validatePasswordRules, isStrongPassword, generateStrongPassword } from '../utils/passwordPolicy'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
@@ -51,6 +51,10 @@ export default function AdminUsers() {
   const [editModal, setEditModal] = useState<{ show: boolean, user: UserData | null }>({ show: false, user: null })
   const [editFormData, setEditFormData] = useState({ full_name: '', email: '', phone_number: '' })
   const [updatingUser, setUpdatingUser] = useState(false)
+
+  // Password visibility security states
+  const [showCreatePassword, setShowCreatePassword] = useState(false)
+  const [showResetPassword, setShowResetPassword] = useState(false)
 
   // Reset Password modal state
   const [resetModal, setResetModal] = useState<{show: boolean, userId: number | null, userName: string}>({show: false, userId: null, userName: ''})
@@ -607,13 +611,27 @@ export default function AdminUsers() {
                     <Sparkles size={12} color="#93c5fd" /> Auto-Generate
                   </button>
                 </div>
-                <input 
-                  type="text" required minLength={12}
-                  value={formData.password}
-                  placeholder="Click Auto-Generate or enter 12+ char password"
-                  onChange={e => setFormData({...formData, password: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: 8, color: '#0F172A', outline: 'none', fontFamily: 'monospace', boxSizing: 'border-box' }}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input 
+                    type={showCreatePassword ? 'text' : 'password'} required minLength={12}
+                    autoComplete="new-password"
+                    value={formData.password}
+                    placeholder="Click Auto-Generate or enter 12+ char password"
+                    onChange={e => setFormData({...formData, password: e.target.value})}
+                    style={{ width: '100%', padding: '10px 40px 10px 12px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: 8, color: '#0F172A', outline: 'none', fontFamily: showCreatePassword ? 'monospace' : 'inherit', boxSizing: 'border-box' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCreatePassword(!showCreatePassword)}
+                    style={{
+                      position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                      background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: 4
+                    }}
+                    title={showCreatePassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showCreatePassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
               {/* Centered Directing Text Banner - Positioned in the Middle */}
@@ -868,17 +886,31 @@ export default function AdminUsers() {
                 </button>
               </div>
 
-              <input
-                type="text"
-                placeholder="Enter or auto-generate strong password"
-                value={resetPassword}
-                onChange={e => setResetPassword(e.target.value)}
-                style={{
-                  width: '100%', padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
-                  background: '#FFFFFF', border: '1px solid #CBD5E1',
-                  color: '#0F172A', fontSize: 13, outline: 'none', marginBottom: 12, fontFamily: 'monospace'
-                }}
-              />
+              <div style={{ position: 'relative', marginBottom: 12 }}>
+                <input
+                  type={showResetPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="Enter or auto-generate strong password"
+                  value={resetPassword}
+                  onChange={e => setResetPassword(e.target.value)}
+                  style={{
+                    width: '100%', padding: '10px 40px 10px 12px', borderRadius: 8, boxSizing: 'border-box',
+                    background: '#FFFFFF', border: '1px solid #CBD5E1',
+                    color: '#0F172A', fontSize: 13, outline: 'none', fontFamily: showResetPassword ? 'monospace' : 'inherit'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowResetPassword(!showResetPassword)}
+                  style={{
+                    position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: 4
+                  }}
+                  title={showResetPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showResetPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
 
               {resetPassword && (
                 <div style={{
