@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useAuthStore } from '../store/authStore'
 import {
-  ShieldAlert, Search, Filter, RefreshCw, Download, Eye,
+  ShieldAlert, Search, Filter, RefreshCw, Download,
   Calendar, Clock, User, ShieldCheck, FileText, CheckCircle2,
   AlertTriangle, ArrowUpRight, Crown, Building2, Key, Terminal,
   SlidersHorizontal, X, FileSpreadsheet, Lock
@@ -59,8 +59,6 @@ export default function AuditLogs() {
   const [selectedRole, setSelectedRole] = useState('ALL')
   const [selectedEntity, setSelectedEntity] = useState('ALL')
   const [selectedActionCat, setSelectedActionCat] = useState('ALL')
-  const [inspectRecord, setInspectRecord] = useState<AuditRecord | null>(null)
-
   const isAuthorized = role === 'super_admin' || role === 'city_admin'
 
   const fetchLogs = async () => {
@@ -415,7 +413,7 @@ export default function AuditLogs() {
                   <th style={{ padding: '14px 18px', color: '#64748B', fontWeight: 600 }}>Action</th>
                   <th style={{ padding: '14px 18px', color: '#64748B', fontWeight: 600 }}>Target Entity</th>
                   <th style={{ padding: '14px 18px', color: '#64748B', fontWeight: 600 }}>IP / Origin</th>
-                  <th style={{ padding: '14px 18px', color: '#64748B', fontWeight: 600, textAlign: 'right' }}>Inspection</th>
+
                 </tr>
               </thead>
               <tbody>
@@ -510,24 +508,7 @@ export default function AuditLogs() {
                         <div style={{ color: '#64748B', fontSize: 10 }}>Secure Gateway</div>
                       </td>
 
-                      {/* Inspection Button */}
-                      <td style={{ padding: '14px 18px', textAlign: 'right' }}>
-                        <button
-                          onClick={() => setInspectRecord(log)}
-                          style={{
-                            padding: '6px 12px', borderRadius: 8,
-                            background: 'rgba(29,112,184,0.1)', border: '1px solid rgba(29,112,184,0.25)',
-                            color: '#1D70B8', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                            display: 'inline-flex', alignItems: 'center', gap: 5,
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.25)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'rgba(99,102,241,0.12)'}
-                        >
-                          <Eye size={13} />
-                          Inspect
-                        </button>
-                      </td>
+
                     </tr>
                   )
                 })}
@@ -537,133 +518,6 @@ export default function AuditLogs() {
         )}
       </div>
 
-      {/* Audit Detail Inspection Modal */}
-      {inspectRecord && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)',
-          backdropFilter: 'blur(4px)', zIndex: 1000,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
-        }}>
-          <div style={{
-            width: '100%', maxWidth: 650, background: '#FFFFFF',
-            border: '1px solid #E2E8F0', borderRadius: 20,
-            overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
-          }}>
-            {/* Modal Header */}
-            <div style={{
-              padding: '18px 24px', borderBottom: '1px solid #E2E8F0',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              background: '#F8FAFC'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <ShieldCheck size={20} color="#10b981" />
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#0F172A' }}>
-                  Audit Evidence Dossier #{inspectRecord.id}
-                </h3>
-              </div>
-              <button
-                onClick={() => setInspectRecord(null)}
-                style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div style={{ padding: 24, maxHeight: '70vh', overflowY: 'auto' }}>
-              <div style={{
-                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14,
-                marginBottom: 20, background: '#F8FAFC', padding: 16, borderRadius: 12,
-                border: '1px solid #E2E8F0'
-              }}>
-                <div>
-                  <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Action Executed</div>
-                  <div style={{ color: '#0F172A', fontWeight: 700, fontSize: 13, marginTop: 2, fontFamily: 'monospace' }}>
-                    {inspectRecord.action}
-                  </div>
-                </div>
-
-                <div>
-                  <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Target Entity</div>
-                  <div style={{ color: '#1D70B8', fontWeight: 700, fontSize: 13, marginTop: 2 }}>
-                    {inspectRecord.entity_type} ({inspectRecord.entity_id})
-                  </div>
-                </div>
-
-                <div>
-                  <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Actor Credentials</div>
-                  <div style={{ color: '#0F172A', fontSize: 13, marginTop: 2, fontWeight: 600 }}>
-                    {inspectRecord.actor_name} [{inspectRecord.actor_role}]
-                  </div>
-                </div>
-
-                <div>
-                  <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Origin Network IP</div>
-                  <div style={{ color: '#1D70B8', fontSize: 13, marginTop: 2, fontFamily: 'monospace' }}>
-                    {inspectRecord.ip_address}
-                  </div>
-                </div>
-
-                <div style={{ gridColumn: 'span 2' }}>
-                  <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Applied Rule / Authority Mandate</div>
-                  <div style={{ color: '#0F172A', fontSize: 13, marginTop: 2, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <ShieldCheck size={16} color="#1D70B8" />
-                    {inspectRecord.rule || inspectRecord.changes?.rule || 'Standard Municipal Civic Procedure'}
-                  </div>
-                </div>
-
-                {inspectRecord.tamper_hash && (
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>SHA-256 Tamper Verification Hash</div>
-                    <div style={{ color: '#10B981', fontSize: 11, marginTop: 2, fontFamily: 'monospace', wordBreak: 'break-all', background: '#ECFDF5', padding: '6px 10px', borderRadius: 6, border: '1px solid #A7F3D0' }}>
-                      🔒 {inspectRecord.tamper_hash}
-                    </div>
-                  </div>
-                )}
-
-                <div style={{ gridColumn: 'span 2' }}>
-                  <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Timestamp</div>
-                  <div style={{ color: '#0F172A', fontSize: 13, marginTop: 2 }}>
-                    {new Date(inspectRecord.timestamp).toLocaleString()} ({inspectRecord.timestamp})
-                  </div>
-                </div>
-              </div>
-
-              {/* Payload Changes JSON Block */}
-              <div>
-                <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Terminal size={14} color="#93c5fd" />
-                  State Changes & Telemetry Payload (JSON)
-                </div>
-                <pre style={{
-                  background: 'rgba(15,23,42,0.9)', padding: 16, borderRadius: 10,
-                  border: '1px solid rgba(29,112,184,0.2)', color: '#34d399',
-                  fontSize: 12, lineHeight: 1.6, overflowX: 'auto',
-                  fontFamily: "Consolas, Monaco, 'Courier New', monospace"
-                }}>
-                  {JSON.stringify(inspectRecord.changes, null, 2)}
-                </pre>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div style={{
-              padding: '14px 24px', borderTop: '1px solid #E2E8F0',
-              background: '#F8FAFC', display: 'flex', justifyContent: 'flex-end'
-            }}>
-              <button
-                onClick={() => setInspectRecord(null)}
-                style={{
-                  padding: '8px 18px', borderRadius: 8, background: '#3b82f6',
-                  color: 'white', border: 'none', fontWeight: 600, fontSize: 12, cursor: 'pointer'
-                }}
-              >
-                Close Inspection
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

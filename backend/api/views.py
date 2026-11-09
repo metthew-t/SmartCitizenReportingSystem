@@ -1435,10 +1435,22 @@ class DepartmentMessageViewSet(viewsets.ModelViewSet):
         try:
             from core.models import DepartmentChatSeen
             from api.serializers import DepartmentChatSeenSerializer
-            seen_entries = DepartmentChatSeen.objects.filter(department_id=dept_id).select_related('user', 'user__officer_profile', 'user__officer_profile__department').order_by('-last_seen_at')[:20]
+            from django.utils.dateparse import parse_datetime
+            qs = DepartmentChatSeen.objects.filter(department_id=dept_id).select_related(
+                'user', 'user__officer_profile', 'user__officer_profile__department'
+            )
+            # Only count a user as "seen" if they visited AFTER the message was sent.
+            # The frontend passes ?after=<ISO timestamp of the message> so we filter
+            # out stale presence records that pre-date the message.
+            after_param = request.query_params.get('after')
+            if after_param:
+                after_dt = parse_datetime(after_param)
+                if after_dt:
+                    qs = qs.filter(last_seen_at__gt=after_dt)
+            seen_entries = qs.order_by('-last_seen_at')[:20]
             serializer = DepartmentChatSeenSerializer(seen_entries, many=True, context={'request': request})
             return Response(serializer.data)
-        except Exception as e:
+        except Exception:
             return Response([])
 
 

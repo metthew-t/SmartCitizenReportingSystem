@@ -44,7 +44,7 @@ export default function DeptChat() {
     fetchDepts()
   }, [token])
 
-  const markAndFetchSeen = React.useCallback(async () => {
+  const markAndFetchSeen = React.useCallback(async (lastMessageTime?: string) => {
     if (!selectedDept) return
     try {
       // Mark current user presence as seen
@@ -53,8 +53,11 @@ export default function DeptChat() {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ department_id: selectedDept.id })
       })
-      // Fetch users who have viewed this channel
-      const res = await fetch(`${API}/dept-messages/seen-list/?department_id=${selectedDept.id}`, {
+      // Fetch users who have viewed this channel AFTER the last message was sent.
+      // The ?after= param filters out stale presence records that pre-date the message,
+      // preventing false "seen by" display before anyone actually reads it.
+      const afterParam = lastMessageTime ? `&after=${encodeURIComponent(lastMessageTime)}` : ''
+      const res = await fetch(`${API}/dept-messages/seen-list/?department_id=${selectedDept.id}${afterParam}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {
@@ -72,22 +75,30 @@ export default function DeptChat() {
       })
       if (res.ok) {
         const data = await res.json()
-        setMessages(Array.isArray(data) ? data : data.results || [])
+        const list: any[] = Array.isArray(data) ? data : data.results || []
+        setMessages(list)
+        // After loading messages, fetch seen-by filtered to AFTER the last message.
+        // This prevents stale "seen" records from before the message was sent
+        // from showing up as false positives (the core bug fix).
+        if (list.length > 0) {
+          const lastMsgTime = list[list.length - 1].created_at
+          markAndFetchSeen(lastMsgTime)
+        } else {
+          markAndFetchSeen()
+        }
       }
     } catch {}
-  }, [selectedDept, token])
+  }, [selectedDept, token, markAndFetchSeen])
 
   React.useEffect(() => {
     if (selectedDept) {
       fetchMessages()
-      markAndFetchSeen()
       const interval = setInterval(() => {
         fetchMessages()
-        markAndFetchSeen()
       }, 4000)
       return () => clearInterval(interval)
     }
-  }, [selectedDept, fetchMessages, markAndFetchSeen])
+  }, [selectedDept, fetchMessages])
 
   React.useEffect(() => { scrollToBottom() }, [messages])
 
