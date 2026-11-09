@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { Trash2, User, Building2, Shield, Search, Plus, X, KeyRound, Edit2, Phone, Mail, Crown, Sparkles, Check, ShieldAlert } from 'lucide-react'
 import { validatePasswordRules, isStrongPassword, generateStrongPassword } from '../utils/passwordPolicy'
@@ -747,8 +747,8 @@ export default function AdminUsers() {
             {/* Header */}
             <div style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '18px 24px', borderBottom: '1px solid rgba(148,163,184,0.12)',
-              background: 'rgba(30, 41, 59, 0.8)'
+              padding: '18px 24px', borderBottom: '1px solid #E2E8F0',
+              background: '#F8FAFC'
             }}>
               <h3 style={{ color: '#0F172A', margin: 0, fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <KeyRound size={18} color="#f59e0b" />
@@ -832,8 +832,8 @@ export default function AdminUsers() {
             {/* Footer - ALL BUTTONS ALWAYS VISIBLE */}
             <div style={{
               display: 'flex', justifyContent: 'flex-end', gap: 12,
-              padding: '16px 24px', borderTop: '1px solid rgba(148,163,184,0.12)',
-              background: 'rgba(15, 23, 42, 0.6)'
+              padding: '16px 24px', borderTop: '1px solid #E2E8F0',
+              background: '#F8FAFC'
             }}>
               <button
                 type="button"

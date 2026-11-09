@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { useLanguageStore, Language } from '../store/languageStore'
 import { Settings as SettingsIcon, User, Bell, Globe, Shield, Database, Camera, Edit2, Check, X, Lock, KeyRound, ShieldCheck } from 'lucide-react'
@@ -326,9 +326,9 @@ export default function Settings() {
                 onChange={e => setProfileForm({ ...profileForm, email: e.target.value })}
                 style={{
                   width: '100%', padding: '10px 12px',
-                  background: role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? 'rgba(15,23,42,0.5)' : 'rgba(15,23,42,0.2)',
-                  border: '1px solid rgba(29,112,184,0.25)', borderRadius: 8,
-                  color: role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? '#e2e8f0' : '#64748b',
+                  background: role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? '#FFFFFF' : '#F1F5F9',
+                  border: '1px solid #CBD5E1', borderRadius: 8,
+                  color: role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? '#0F172A' : '#64748B',
                   cursor: role === 'city_admin' || role === 'super_admin' || role === 'mayor' ? 'text' : 'not-allowed',
                   outline: 'none',
                 }}

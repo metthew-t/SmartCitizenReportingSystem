@@ -178,13 +178,13 @@ export default function Dashboard() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{
-              width: 40, height: 40, borderRadius: 10, background: `${Colors.govBlue}20`,
+              width: 40, height: 40, borderRadius: 10, background: `${Colors.govBlue}15`,
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
-              <ScrollText size={20} color="#93c5fd" />
+              <ScrollText size={20} color={Colors.govBlue} />
             </div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#f8fafc' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A' }}>
                 {role === 'department_manager'
                   ? `${pendingOfficialCount} Officer Field Report${pendingOfficialCount > 1 ? 's' : ''} Awaiting Review`
                   : `${pendingOfficialCount} Department Executive Report${pendingOfficialCount > 1 ? 's' : ''} Awaiting Review`}

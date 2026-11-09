@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, MapPin, Clock, User, FileText, Building2, Tag, AlertTriangle, ExternalLink, CheckCircle, XCircle, Navigation, Calendar, Phone, MapPinned, Home, Star, Scale, ShieldAlert, Check, X, Lock, ShieldCheck, Timer, Users, Camera, CheckCircle2, Hash, FileCheck2 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
@@ -1202,9 +1202,9 @@ export default function ReportDetails() {
         </div>
       ) : canPerformCaseActions ? (
         <div style={{
-          background: 'linear-gradient(135deg, rgba(30,41,59,0.8), rgba(59,130,246,0.06))',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(59,130,246,0.2)', borderRadius: 16,
+          background: '#FFFFFF',
+          border: '1px solid #E2E8F0', borderRadius: 16,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
           padding: 24, marginBottom: 20,
         }}>
           <h3 style={{ color: '#0F172A', fontSize: 15, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1482,16 +1482,16 @@ export default function ReportDetails() {
       {report.feedback ? (
         <div style={{
           marginTop: 20,
-          background: 'linear-gradient(135deg, rgba(30,41,59,0.85), rgba(245,158,11,0.06))',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(245,158,11,0.25)', borderRadius: 16,
+          background: '#FFFFFF',
+          border: '1px solid #E2E8F0', borderRadius: 16,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
           padding: 24,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
-            <h3 style={{ color: '#fbbf24', fontSize: 16, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h3 style={{ color: '#D97706', fontSize: 16, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
               ⭐ Citizen Service Feedback
             </h3>
-            <span style={{ fontSize: 12, color: '#94A3B8' }}>
+            <span style={{ fontSize: 12, color: '#64748B' }}>
               Submitted on {new Date(report.feedback.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </span>
           </div>
@@ -1500,10 +1500,10 @@ export default function ReportDetails() {
             <div style={{ background: '#F8FAFC', padding: '12px 16px', borderRadius: 12, border: '1px solid #E2E8F0' }}>
               <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', fontWeight: 600 }}>Overall Rating</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                <span style={{ fontSize: 20, fontWeight: 800, color: '#fbbf24' }}>{report.feedback.rating} / 5</span>
+                <span style={{ fontSize: 20, fontWeight: 800, color: '#D97706' }}>{report.feedback.rating} / 5</span>
                 <div style={{ display: 'flex', gap: 2 }}>
                   {[1, 2, 3, 4, 5].map((s) => (
-                    <Star key={s} size={14} fill={s <= report.feedback.rating ? '#fbbf24' : 'transparent'} color={s <= report.feedback.rating ? '#fbbf24' : '#64748b'} />
+                    <Star key={s} size={14} fill={s <= report.feedback.rating ? '#D97706' : 'transparent'} color={s <= report.feedback.rating ? '#D97706' : '#94A3B8'} />
                   ))}
                 </div>
               </div>
@@ -1516,7 +1516,7 @@ export default function ReportDetails() {
                   <span style={{ fontSize: 18, fontWeight: 700, color: '#1D70B8' }}>{report.feedback.timeliness_rating} / 5</span>
                   <div style={{ display: 'flex', gap: 2 }}>
                     {[1, 2, 3, 4, 5].map((s) => (
-                      <Star key={s} size={12} fill={s <= report.feedback.timeliness_rating ? '#38bdf8' : 'transparent'} color={s <= report.feedback.timeliness_rating ? '#38bdf8' : '#64748b'} />
+                      <Star key={s} size={12} fill={s <= report.feedback.timeliness_rating ? '#1D70B8' : 'transparent'} color={s <= report.feedback.timeliness_rating ? '#1D70B8' : '#94A3B8'} />
                     ))}
                   </div>
                 </div>
@@ -1527,10 +1527,10 @@ export default function ReportDetails() {
               <div style={{ background: '#F8FAFC', padding: '12px 16px', borderRadius: 12, border: '1px solid #E2E8F0' }}>
                 <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', fontWeight: 600 }}>Resolution Quality</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                  <span style={{ fontSize: 18, fontWeight: 700, color: '#34d399' }}>{report.feedback.quality_rating} / 5</span>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: '#059669' }}>{report.feedback.quality_rating} / 5</span>
                   <div style={{ display: 'flex', gap: 2 }}>
                     {[1, 2, 3, 4, 5].map((s) => (
-                      <Star key={s} size={12} fill={s <= report.feedback.quality_rating ? '#34d399' : 'transparent'} color={s <= report.feedback.quality_rating ? '#34d399' : '#64748b'} />
+                      <Star key={s} size={12} fill={s <= report.feedback.quality_rating ? '#059669' : 'transparent'} color={s <= report.feedback.quality_rating ? '#059669' : '#94A3B8'} />
                     ))}
                   </div>
                 </div>
@@ -1540,7 +1540,7 @@ export default function ReportDetails() {
 
           {report.feedback.comment && (
             <div style={{ background: '#F8FAFC', padding: 14, borderRadius: 12, border: '1px solid #E2E8F0' }}>
-              <div style={{ fontSize: 12, color: '#E2E8F0', fontStyle: 'italic', lineHeight: 1.6 }}>
+              <div style={{ fontSize: 13, color: '#0F172A', fontStyle: 'italic', lineHeight: 1.6 }}>
                 "{report.feedback.comment}"
               </div>
             </div>
@@ -1549,10 +1549,10 @@ export default function ReportDetails() {
       ) : (report.status === 'RESOLVED' || report.status === 'CLOSED') ? (
         <div style={{
           marginTop: 20, padding: 18, borderRadius: 16,
-          background: 'rgba(17,31,53,0.8)', border: '1px dashed rgba(148,163,184,0.15)',
+          background: '#FFFFFF', border: '1px dashed #CBD5E1', boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
           display: 'flex', alignItems: 'center', gap: 10, color: '#475569', fontSize: 13,
         }}>
-          <Star size={18} color="#f59e0b" />
+          <Star size={18} color="#D97706" />
           <span>Case is resolved. Waiting for citizen feedback rating.</span>
         </div>
       ) : null}
@@ -1560,18 +1560,18 @@ export default function ReportDetails() {
       {/* Citizen Administrative Appeals Section */}
       <div style={{
         marginTop: 20,
-        background: 'linear-gradient(135deg, rgba(30,41,59,0.85), rgba(99,102,241,0.06))',
-        backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(29,112,184,0.2)', borderRadius: 16,
+        background: '#FFFFFF',
+        border: '1px solid #E2E8F0', borderRadius: 16,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
         padding: 24,
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
           <h3 style={{ color: '#0F172A', fontSize: 16, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Scale size={20} color="#93c5fd" /> Citizen Administrative Appeals
+            <Scale size={20} color="#1D70B8" /> Citizen Administrative Appeals
             {report.appeals && report.appeals.length > 0 && (
               <span style={{
-                background: 'rgba(29,112,184,0.25)', color: '#c7d2fe', padding: '2px 8px',
-                borderRadius: 12, fontSize: 12, fontWeight: 700, border: '1px solid rgba(29,112,184,0.35)'
+                background: '#EFF6FF', color: '#1D70B8', padding: '2px 8px',
+                borderRadius: 12, fontSize: 12, fontWeight: 700, border: '1px solid #BFDBFE'
               }}>
                 {report.appeals.length}
               </span>
@@ -1724,8 +1724,8 @@ export default function ReportDetails() {
               onClick={() => resolveFileRef.current?.click()}
               style={{
                 padding: 16, borderRadius: 10, cursor: 'pointer',
-                border: '2px dashed rgba(148,163,184,0.2)', textAlign: 'center',
-                background: resolutionFile ? 'rgba(16,185,129,0.05)' : 'rgba(15,23,42,0.3)',
+                border: '2px dashed #CBD5E1', textAlign: 'center',
+                background: resolutionFile ? '#ECFDF5' : '#F8FAFC',
                 marginBottom: 20, transition: 'all 0.2s',
               }}
             >
@@ -1893,9 +1893,9 @@ export default function ReportDetails() {
                     onClick={() => setAppealStatus(opt.value as any)}
                     style={{
                       padding: '10px 8px', borderRadius: 8, cursor: 'pointer',
-                      background: appealStatus === opt.value ? `${opt.col}25` : 'rgba(15,23,42,0.5)',
-                      color: appealStatus === opt.value ? opt.col : '#94a3b8',
-                      border: `1px solid ${appealStatus === opt.value ? opt.col : 'rgba(148,163,184,0.2)'}`,
+                      background: appealStatus === opt.value ? `${opt.col}20` : '#F8FAFC',
+                      color: appealStatus === opt.value ? opt.col : '#475569',
+                      border: `1px solid ${appealStatus === opt.value ? opt.col : '#CBD5E1'}`,
                       fontWeight: 700, fontSize: 11, textAlign: 'center'
                     }}
                   >

@@ -386,21 +386,21 @@ export default function OfficialReports() {
         fontFamily: "'Inter', sans-serif",
         padding: '60px 20px',
         textAlign: 'center',
-        color: '#F1F5F9',
+        color: '#0F172A',
         maxWidth: 620,
         margin: '0 auto',
       }}>
         <div style={{
           width: 64, height: 64, borderRadius: 16,
-          background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)',
+          background: '#FEF3C7', border: '1px solid #FCD34D',
           display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px'
         }}>
-          <ShieldAlert size={32} color="#f59e0b" />
+          <ShieldAlert size={32} color="#D97706" />
         </div>
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#F1F5F9', marginBottom: 10 }}>
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#0F172A', marginBottom: 10 }}>
           Civil Staff Administrative Channel
         </h2>
-        <p style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.6, marginBottom: 24 }}>
+        <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.6, marginBottom: 24 }}>
           Official Administrative Reports (field investigations, departmental briefs, and resource requests) are filed and reviewed directly by Field Officers, Department Managers, and the City Administration.
           <br /><br />
           As <strong>Super Admin</strong>, you manage the complete system forensic <strong>Audit Logs</strong> which record every report submission, review, and directive issued across all departments.
@@ -1271,10 +1271,10 @@ export default function OfficialReports() {
                         type="button"
                         onClick={() => setReviewStatus('APPROVED')}
                         style={{
-                          padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                          background: reviewStatus === 'APPROVED' ? 'rgba(16,185,129,0.25)' : 'rgba(30,41,59,0.6)',
-                          border: reviewStatus === 'APPROVED' ? '1px solid #10b981' : '1px solid rgba(29,112,184,0.2)',
-                          color: reviewStatus === 'APPROVED' ? '#34d399' : '#94a3b8',
+                          padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                          background: reviewStatus === 'APPROVED' ? '#ECFDF5' : '#F8FAFC',
+                          border: reviewStatus === 'APPROVED' ? '1.5px solid #059669' : '1px solid #CBD5E1',
+                          color: reviewStatus === 'APPROVED' ? '#047857' : '#475569',
                         }}
                       >
                         ✓ Approve / Endorse
@@ -1285,10 +1285,10 @@ export default function OfficialReports() {
                           type="button"
                           onClick={() => setReviewStatus('DIRECTIVE_ISSUED')}
                           style={{
-                            padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                            background: reviewStatus === 'DIRECTIVE_ISSUED' ? 'rgba(168,85,247,0.25)' : 'rgba(30,41,59,0.6)',
-                            border: reviewStatus === 'DIRECTIVE_ISSUED' ? '1px solid #a855f7' : '1px solid rgba(29,112,184,0.2)',
-                            color: reviewStatus === 'DIRECTIVE_ISSUED' ? '#c084fc' : '#94a3b8',
+                            padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                            background: reviewStatus === 'DIRECTIVE_ISSUED' ? '#FAF5FF' : '#F8FAFC',
+                            border: reviewStatus === 'DIRECTIVE_ISSUED' ? '1.5px solid #9333EA' : '1px solid #CBD5E1',
+                            color: reviewStatus === 'DIRECTIVE_ISSUED' ? '#7E22CE' : '#475569',
                           }}
                         >
                           ★ Issue Directive
@@ -1299,10 +1299,10 @@ export default function OfficialReports() {
                         type="button"
                         onClick={() => setReviewStatus('REVISION_REQUESTED')}
                         style={{
-                          padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                          background: reviewStatus === 'REVISION_REQUESTED' ? 'rgba(249,115,22,0.25)' : 'rgba(30,41,59,0.6)',
-                          border: reviewStatus === 'REVISION_REQUESTED' ? '1px solid #f97316' : '1px solid rgba(29,112,184,0.2)',
-                          color: reviewStatus === 'REVISION_REQUESTED' ? '#fb923c' : '#94a3b8',
+                          padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                          background: reviewStatus === 'REVISION_REQUESTED' ? '#FFF7ED' : '#F8FAFC',
+                          border: reviewStatus === 'REVISION_REQUESTED' ? '1.5px solid #EA580C' : '1px solid #CBD5E1',
+                          color: reviewStatus === 'REVISION_REQUESTED' ? '#C2410C' : '#475569',
                         }}
                       >
                         ↺ Request Revision
@@ -1312,10 +1312,10 @@ export default function OfficialReports() {
                         type="button"
                         onClick={() => setReviewStatus('REJECTED')}
                         style={{
-                          padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                          background: reviewStatus === 'REJECTED' ? 'rgba(239,68,68,0.25)' : 'rgba(30,41,59,0.6)',
-                          border: reviewStatus === 'REJECTED' ? '1px solid #ef4444' : '1px solid rgba(29,112,184,0.2)',
-                          color: reviewStatus === 'REJECTED' ? '#f87171' : '#94a3b8',
+                          padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                          background: reviewStatus === 'REJECTED' ? '#FEF2F2' : '#F8FAFC',
+                          border: reviewStatus === 'REJECTED' ? '1.5px solid #DC2626' : '1px solid #CBD5E1',
+                          color: reviewStatus === 'REJECTED' ? '#B91C1C' : '#475569',
                         }}
                       >
                         ✕ Reject

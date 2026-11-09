@@ -245,17 +245,17 @@ export default function PublicDashboard() {
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 8,
-                background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(148, 163, 184, 0.15)',
+                background: '#FFFFFF', border: '1px solid #CBD5E1',
                 borderRadius: 10, padding: '8px 14px', width: 220
               }}>
-                <Search size={14} color="#64748b" />
+                <Search size={14} color="#64748B" />
                 <input
                   type="text"
                   placeholder="Search case, dept..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   style={{
-                    background: 'transparent', border: 'none', color: '#f8fafc',
+                    background: 'transparent', border: 'none', color: '#0F172A',
                     fontSize: 13, outline: 'none', width: '100%'
                   }}
                 />
@@ -278,24 +278,25 @@ export default function PublicDashboard() {
                 onClick={() => setDuplicateSearchOpen(!duplicateSearchOpen)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6,
-                  background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2))',
-                  border: '1px solid rgba(99,102,241,0.4)', borderRadius: 10,
-                  padding: '8px 14px', color: '#c7d2fe', fontSize: 13, fontWeight: 700, cursor: 'pointer'
+                  background: '#EEF2FF', border: '1px solid #C7D2FE',
+                  borderRadius: 10, padding: '8px 14px', color: '#4338CA',
+                  fontSize: 13, fontWeight: 700, cursor: 'pointer'
                 }}
               >
-                <Sparkles size={14} color={Colors.govBlue} />
+                <Sparkles size={14} color="#4338CA" />
                 <span>AI Duplicate Scanner</span>
               </button>
             </div>
 
             {duplicateSearchOpen && (
               <div style={{
-                background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(99,102,241,0.3)',
-                borderRadius: 16, padding: 18, marginTop: 14, marginBottom: 14
+                background: '#FFFFFF', border: '1px solid #C7D2FE',
+                borderRadius: 16, padding: 18, marginTop: 14, marginBottom: 14,
+                boxShadow: '0 4px 12px rgba(99,102,241,0.08)'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: '#e0e7ff', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Search size={16} color={Colors.govBlue} />
+                  <div style={{ fontWeight: 700, fontSize: 14, color: '#312E81', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Search size={16} color="#4338CA" />
                     Spatial Duplicate Detection Tool (150m Haversine Radius)
                   </div>
                   <span style={{ fontSize: 12, color: '#475569', fontWeight: 500 }}>Check if your issue is already registered</span>

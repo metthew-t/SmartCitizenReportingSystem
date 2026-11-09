@@ -672,7 +672,7 @@ export default function DashboardLayout() {
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                  <span style={{ color: isUnread ? '#ffffff' : '#94a3b8', fontSize: 12, fontWeight: isUnread ? 800 : 600 }}>
+                                  <span style={{ color: isUnread ? (isMayor ? '#ffffff' : '#0F172A') : '#64748B', fontSize: 12, fontWeight: isUnread ? 800 : 600 }}>
                                     {notif.case_number}
                                   </span>
                                   {isUnread && (
@@ -693,7 +693,7 @@ export default function DashboardLayout() {
                                 </span>
                               </div>
                               <div style={{
-                                color: isUnread ? '#f1f5f9' : '#94a3b8', fontSize: 12, marginTop: 4,
+                                color: isUnread ? (isMayor ? '#f1f5f9' : '#0F172A') : '#64748B', fontSize: 12, marginTop: 4,
                                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                                 fontWeight: isUnread ? 600 : 400,
                               }}>
