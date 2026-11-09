@@ -1422,19 +1422,25 @@ export default function ReportDetails() {
           {messages.length === 0 ? (
             <div style={{ color: '#64748B', fontSize: 14, textAlign: 'center', padding: 20 }}>No messages yet.</div>
           ) : messages.map((msg, idx) => {
-            const isMe = msg.sender === useAuthStore.getState().user?.id;
+            const currentUserId = useAuthStore.getState().user?.id;
+            const currentUserName = useAuthStore.getState().user?.name;
+            const isMe = Boolean(
+              (currentUserId && String(msg.sender) === String(currentUserId)) ||
+              (currentUserName && msg.sender_name === currentUserName)
+            );
             return (
               <div key={idx} style={{
                 alignSelf: isMe ? 'flex-end' : 'flex-start',
-                background: isMe ? 'rgba(99,102,241,0.2)' : 'rgba(148,163,184,0.1)',
-                padding: '12px 16px', borderRadius: 14, maxWidth: '80%',
-                border: `1px solid ${isMe ? 'rgba(99,102,241,0.4)' : 'rgba(148,163,184,0.2)'}`
+                background: isMe ? 'linear-gradient(135deg, #1D70B8, #0D5C99)' : '#F8FAFC',
+                padding: '12px 16px', borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px', maxWidth: '80%',
+                border: isMe ? 'none' : '1px solid #CBD5E1',
+                boxShadow: isMe ? '0 2px 8px rgba(29,112,184,0.25)' : '0 1px 3px rgba(0,0,0,0.04)',
               }}>
-                <div style={{ fontSize: 11, color: isMe ? '#93c5fd' : '#94a3b8', marginBottom: 4, fontWeight: 600 }}>
+                <div style={{ fontSize: 11, color: isMe ? 'rgba(255,255,255,0.85)' : '#1D70B8', marginBottom: 4, fontWeight: 700 }}>
                   {isMe ? 'You' : (msg.sender_name || 'Citizen')}
                 </div>
-                <div style={{ fontSize: 14, color: isMe ? '#FFFFFF' : '#0F172A' }}>{msg.content}</div>
-                <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 4, textAlign: 'right' }}>
+                <div style={{ fontSize: 14, color: isMe ? '#FFFFFF' : '#0F172A', lineHeight: 1.5 }}>{msg.content}</div>
+                <div style={{ fontSize: 10, color: isMe ? 'rgba(255,255,255,0.7)' : '#64748B', marginTop: 4, textAlign: 'right' }}>
                   {new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                 </div>
               </div>

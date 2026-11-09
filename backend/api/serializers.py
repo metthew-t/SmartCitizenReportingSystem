@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from core.models import Report, ReportCategory, Department, ReportMedia, Message, DepartmentMessage, ReportStatusHistory, OfficialReport
+from core.models import Report, ReportCategory, Department, ReportMedia, Message, DepartmentMessage, DepartmentChatSeen, ReportStatusHistory, OfficialReport
 
 def _safe_hasattr(obj, attr):
     try:
@@ -48,10 +48,13 @@ class MessageSerializer(serializers.ModelSerializer):
 class DepartmentMessageSerializer(serializers.ModelSerializer):
     sender_name = serializers.SerializerMethodField()
     sender_dept_name = serializers.SerializerMethodField()
+    sender_photo_url = serializers.SerializerMethodField()
+    sender_email = serializers.SerializerMethodField()
+    sender_role = serializers.SerializerMethodField()
 
     class Meta:
         model = DepartmentMessage
-        fields = ['id', 'department', 'sender', 'sender_name', 'sender_dept_name', 'content', 'created_at']
+        fields = ['id', 'department', 'sender', 'sender_name', 'sender_dept_name', 'sender_photo_url', 'sender_email', 'sender_role', 'content', 'created_at']
         read_only_fields = ['sender']
 
     def get_sender_name(self, obj):
@@ -60,12 +63,83 @@ class DepartmentMessageSerializer(serializers.ModelSerializer):
                 return obj.sender.officer_profile.full_name
             elif _safe_hasattr(obj.sender, 'citizen_profile'):
                 return obj.sender.citizen_profile.full_name
-            return obj.sender.phone_number
+            return obj.sender.full_name or obj.sender.email or obj.sender.phone_number
         return 'Unknown'
 
     def get_sender_dept_name(self, obj):
         if obj.sender and _safe_hasattr(obj.sender, 'officer_profile') and obj.sender.officer_profile.department:
             return obj.sender.officer_profile.department.name
+        return None
+
+    def get_sender_photo_url(self, obj):
+        if obj.sender and obj.sender.profile_photo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.sender.profile_photo.url)
+            return obj.sender.profile_photo.url
+        return None
+
+    def get_sender_email(self, obj):
+        return obj.sender.email if obj.sender else ''
+
+    def get_sender_role(self, obj):
+        if not obj.sender:
+            return 'user'
+        if getattr(obj.sender, 'is_mayor', False):
+            return 'Mayor'
+        if getattr(obj.sender, 'is_super_admin', False) or getattr(obj.sender, 'is_superuser', False):
+            return 'Super Admin'
+        if getattr(obj.sender, 'is_city_admin', False):
+            return 'City Admin'
+        if getattr(obj.sender, 'is_department_manager', False):
+            return 'Manager'
+        if getattr(obj.sender, 'is_officer', False):
+            return 'Officer'
+        return 'Citizen'
+
+class DepartmentChatSeenSerializer(serializers.ModelSerializer):
+    user_name = serializers.SerializerMethodField()
+    user_role = serializers.SerializerMethodField()
+    user_dept_name = serializers.SerializerMethodField()
+    user_photo_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DepartmentChatSeen
+        fields = ['id', 'department', 'user', 'user_name', 'user_role', 'user_dept_name', 'user_photo_url', 'last_seen_at']
+
+    def get_user_name(self, obj):
+        u = obj.user
+        if hasattr(u, 'officer_profile') and u.officer_profile:
+            return u.officer_profile.full_name
+        return getattr(u, 'full_name', '') or getattr(u, 'email', '') or getattr(u, 'phone_number', '') or 'User'
+
+    def get_user_role(self, obj):
+        u = obj.user
+        if getattr(u, 'is_mayor', False):
+            return 'Mayor'
+        if getattr(u, 'is_super_admin', False) or getattr(u, 'is_superuser', False):
+            return 'Super Admin'
+        if getattr(u, 'is_city_admin', False):
+            return 'City Admin'
+        if getattr(u, 'is_department_manager', False):
+            return 'Manager'
+        if getattr(u, 'is_officer', False):
+            return 'Officer'
+        return 'Citizen'
+
+    def get_user_dept_name(self, obj):
+        u = obj.user
+        if hasattr(u, 'officer_profile') and u.officer_profile and u.officer_profile.department:
+            return u.officer_profile.department.name
+        return None
+
+    def get_user_photo_url(self, obj):
+        u = obj.user
+        if u and u.profile_photo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(u.profile_photo.url)
+            return u.profile_photo.url
         return None
 
 class ReportSerializer(serializers.ModelSerializer):

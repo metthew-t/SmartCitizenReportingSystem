@@ -195,7 +195,7 @@ class OfficerRegisterSerializer(serializers.Serializer):
         if is_mayor:
             dept_name = 'Waajjira Kantiibaa'
             is_city_admin = False
-            is_manager = True
+            is_manager = False
             is_staff = True
             is_superuser = False
         else:
@@ -212,7 +212,7 @@ class OfficerRegisterSerializer(serializers.Serializer):
             email=validated_data['email'],
             password=validated_data['password'],
             is_officer=True,
-            is_department_manager=is_manager or is_city_admin,
+            is_department_manager=False if is_mayor else (is_manager or is_city_admin),
             is_city_admin=is_city_admin,
             is_super_admin=is_super_admin,
             is_mayor=is_mayor,
@@ -224,7 +224,7 @@ class OfficerRegisterSerializer(serializers.Serializer):
             user=user,
             full_name=validated_data['full_name'],
             department=dept,
-            is_manager=is_manager or is_city_admin,
+            is_manager=False if is_mayor else (is_manager or is_city_admin),
         )
 
         # Send immediate SMS notification to user instructing them to change their password

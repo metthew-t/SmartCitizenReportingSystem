@@ -168,6 +168,19 @@ class DepartmentMessage(models.Model):
     def __str__(self):
         return f"[{self.department.name}] {self.sender} - {self.content[:40]}"
 
+class DepartmentChatSeen(models.Model):
+    """Tracks read receipts / seen by identity for departmental channels"""
+    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='seen_receipts')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='dept_seen_receipts')
+    last_seen_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('department', 'user')
+        ordering = ['-last_seen_at']
+
+    def __str__(self):
+        return f"{self.user} seen {self.department} at {self.last_seen_at}"
+
 class AuditLog(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     actor_name = models.CharField(max_length=255, blank=True, null=True)

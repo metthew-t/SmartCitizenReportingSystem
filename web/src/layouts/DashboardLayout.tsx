@@ -250,6 +250,64 @@ export default function DashboardLayout() {
       notifBtnColor: '#475569',
       dropdownBg: '#FFFFFF',
     },
+    city_admin: {
+      id: 'city_admin',
+      appBg: '#F8FAFC',
+      sidebarBg: `linear-gradient(180deg, #0F2942 0%, #0A1628 100%)`,
+      headerBg: '#FFFFFF',
+      borderColor: '#E2E8F0',
+      brandGradient: `linear-gradient(135deg, ${GOV_BLUE}30, ${GOV_NAVY}80)`,
+      brandShadow: `0 0 20px ${GOV_BLUE}20`,
+      brandIconColor: '#93c5fd',
+      brandSubtitle: 'City Operations Administration',
+      badgeBg: 'rgba(29, 112, 184, 0.12)',
+      badgeBorder: 'rgba(29, 112, 184, 0.35)',
+      badgeColor: '#1D70B8',
+      navText: '#CBD5E1',
+      activeNavBg: `linear-gradient(90deg, ${GOV_BLUE}25 0%, transparent 100%)`,
+      activeNavText: '#93c5fd',
+      activeNavBorder: `3px solid ${GOV_BLUE}`,
+      activeNavGlow: `inset 0 0 12px ${GOV_BLUE}0C`,
+      hoverNavBg: `${GOV_BLUE}12`,
+      hoverNavText: '#ffffff',
+      accentColor: GOV_BLUE,
+      profileAvatarBg: `linear-gradient(135deg, ${GOV_BLUE} 0%, #0D5C99 100%)`,
+      profileAvatarShadow: `0 0 14px ${GOV_BLUE}28`,
+      roleTitle: 'City Administrator',
+      notifBtnBg: '#F1F5F9',
+      notifBtnBorder: '#E2E8F0',
+      notifBtnColor: '#475569',
+      dropdownBg: '#FFFFFF',
+    },
+    super_admin: {
+      id: 'super_admin',
+      appBg: '#F8FAFC',
+      sidebarBg: `linear-gradient(180deg, #0F2942 0%, #0A1628 100%)`,
+      headerBg: '#FFFFFF',
+      borderColor: '#E2E8F0',
+      brandGradient: `linear-gradient(135deg, rgba(245,158,11,0.25), ${GOV_NAVY}80)`,
+      brandShadow: `0 0 20px rgba(245,158,11,0.25)`,
+      brandIconColor: '#fbbf24',
+      brandSubtitle: 'System Governance & Security',
+      badgeBg: 'rgba(245, 158, 11, 0.12)',
+      badgeBorder: 'rgba(245, 158, 11, 0.35)',
+      badgeColor: '#fbbf24',
+      navText: '#CBD5E1',
+      activeNavBg: `linear-gradient(90deg, rgba(245,158,11,0.18) 0%, transparent 100%)`,
+      activeNavText: '#fbbf24',
+      activeNavBorder: `3px solid #f59e0b`,
+      activeNavGlow: `inset 0 0 12px rgba(245,158,11,0.08)`,
+      hoverNavBg: `rgba(245,158,11,0.08)`,
+      hoverNavText: '#ffffff',
+      accentColor: '#f59e0b',
+      profileAvatarBg: `linear-gradient(135deg, #f59e0b 0%, #d97706 100%)`,
+      profileAvatarShadow: `0 0 14px rgba(245,158,11,0.35)`,
+      roleTitle: 'Super Administrator',
+      notifBtnBg: '#F1F5F9',
+      notifBtnBorder: '#E2E8F0',
+      notifBtnColor: '#475569',
+      dropdownBg: '#FFFFFF',
+    },
     default: {
       id: 'default',
       appBg: '#F8FAFC',
@@ -283,6 +341,10 @@ export default function DashboardLayout() {
 
   const theme = role === 'mayor'
     ? THEMES.mayor
+    : role === 'super_admin'
+    ? THEMES.super_admin
+    : role === 'city_admin'
+    ? THEMES.city_admin
     : role === 'department_manager'
     ? THEMES.department_manager
     : role === 'officer'
@@ -413,11 +475,11 @@ export default function DashboardLayout() {
               }}
             >
               {role === 'mayor' ? (
-                <Crown size={14} color={theme.brandIconColor} />
+                <Crown size={14} color="#fbbf24" />
               ) : role === 'super_admin' ? (
                 <ShieldCheck size={14} color="#f59e0b" />
               ) : role === 'city_admin' ? (
-                <ShieldCheck size={14} color="#10b981" />
+                <Building2 size={14} color="#1D70B8" />
               ) : role === 'officer' ? (
                 <ShieldCheck size={14} color={theme.brandIconColor} />
               ) : (
@@ -484,8 +546,20 @@ export default function DashboardLayout() {
                 color: 'white', fontWeight: 800, fontSize: 14,
                 boxShadow: theme.profileAvatarShadow,
                 flexShrink: 0,
+                overflow: 'hidden',
               }}>
-                {user?.name?.charAt(0)?.toUpperCase() || 'A'}
+                {user?.profile_photo_url ? (
+                  <img
+                    src={user.profile_photo_url}
+                    alt={user.name || 'User'}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  user?.name?.charAt(0)?.toUpperCase() || 'A'
+                )}
               </div>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

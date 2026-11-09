@@ -262,51 +262,16 @@ class DepartmentPerformanceView(APIView):
 
 
 def log_audit_event(user, action, entity_type, entity_id, changes=None, request=None):
-    """System-wide helper to record an immutable audit log entry."""
+    """System-wide helper to record an immutable tamper-evident audit log entry."""
     try:
-        from core.models import AuditLog
-        ip = None
-        if request:
-            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-            if x_forwarded_for:
-                ip = x_forwarded_for.split(',')[0].strip()
-            else:
-                ip = request.META.get('REMOTE_ADDR')
-
-        payload_changes = dict(changes) if changes and isinstance(changes, dict) else {}
-        if ip and 'ip_address' not in payload_changes:
-            payload_changes['ip_address'] = ip
-
-        if user and getattr(user, 'is_authenticated', False):
-            if 'actor_name' not in payload_changes:
-                payload_changes['actor_name'] = getattr(user, 'full_name', '') or str(user)
-            if 'actor_role' not in payload_changes:
-                if getattr(user, 'is_super_admin', False) or getattr(user, 'is_superuser', False):
-                    payload_changes['actor_role'] = 'super_admin'
-                elif getattr(user, 'is_mayor', False):
-                    payload_changes['actor_role'] = 'mayor'
-                elif getattr(user, 'is_city_admin', False):
-                    payload_changes['actor_role'] = 'city_admin'
-                elif getattr(user, 'is_department_manager', False):
-                    payload_changes['actor_role'] = 'department_manager'
-                elif getattr(user, 'is_officer', False):
-                    payload_changes['actor_role'] = 'officer'
-                else:
-                    payload_changes['actor_role'] = 'citizen'
-            if 'actor_email' not in payload_changes:
-                payload_changes['actor_email'] = getattr(user, 'email', '') or ''
-        else:
-            if 'actor_name' not in payload_changes:
-                payload_changes['actor_name'] = 'System Automated Service'
-            if 'actor_role' not in payload_changes:
-                payload_changes['actor_role'] = 'system'
-
-        return AuditLog.objects.create(
-            user=user if (user and getattr(user, 'is_authenticated', False)) else None,
+        from core.robust_civic_engine import record_tamper_proof_audit
+        return record_tamper_proof_audit(
+            user=user,
             action=action,
             entity_type=entity_type,
-            entity_id=str(entity_id),
-            changes=payload_changes,
+            entity_id=entity_id,
+            changes=changes,
+            request=request
         )
     except Exception as e:
         import logging
@@ -377,8 +342,8 @@ class AuditLogView(APIView):
         for log in logs:
             u = log.user
             changes = log.changes if isinstance(log.changes, dict) else {}
-            actor_name = changes.get('actor_name') or (getattr(u, 'full_name', '') if u else 'System Core')
-            actor_role = changes.get('actor_role')
+            actor_name = log.actor_name or changes.get('actor_name') or (getattr(u, 'full_name', '') if u else 'System Core')
+            actor_role = log.actor_role or changes.get('actor_role')
             if not actor_role and u:
                 if getattr(u, 'is_super_admin', False) or getattr(u, 'is_superuser', False):
                     actor_role = 'super_admin'
@@ -398,6 +363,15 @@ class AuditLogView(APIView):
             if role_filter and role_filter != 'ALL' and actor_role != role_filter:
                 continue
 
+            rule_name = changes.get('rule') or (
+                'System Forensic Trace' if actor_role == 'system' else
+                ('Municipal Executive Command' if actor_role == 'mayor' else
+                ('System Security & Governance' if actor_role == 'super_admin' else
+                ('City Operational Administration' if actor_role == 'city_admin' else
+                ('Department Sector Direction' if actor_role == 'department_manager' else
+                ('Field Operations & Verification' if actor_role == 'officer' else 'Citizen Civic Reporting')))))
+            )
+
             data.append({
                 'id': log.id,
                 'user_id': u.id if u else None,
@@ -405,11 +379,13 @@ class AuditLogView(APIView):
                 'actor_name': actor_name,
                 'actor_email': getattr(u, 'email', '') or changes.get('actor_email', ''),
                 'actor_role': actor_role,
+                'rule': rule_name,
                 'action': log.action,
                 'entity_type': log.entity_type,
                 'entity_id': log.entity_id,
                 'changes': changes,
-                'ip_address': changes.get('ip_address', '197.156.104.18'),
+                'ip_address': log.ip_address or changes.get('ip_address', '197.156.104.18'),
+                'tamper_hash': log.tamper_hash or '',
                 'timestamp': log.timestamp.isoformat(),
             })
 

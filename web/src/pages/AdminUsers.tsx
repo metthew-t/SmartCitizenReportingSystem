@@ -18,6 +18,7 @@ interface UserData {
   is_super_admin: boolean
   is_mayor: boolean
   is_active?: boolean
+  profile_photo_url?: string | null
   department_name: string | null
   date_joined: string
 }
@@ -389,7 +390,21 @@ export default function AdminUsers() {
                       onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                     <td style={{ padding: '12px 16px', color: '#0F172A', fontSize: 13, fontWeight: 600 }}>
-                      {user.full_name || 'N/A'}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                          width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                          background: 'linear-gradient(135deg, #1D70B8, #0F2942)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#FFFFFF', fontSize: 12, fontWeight: 700, overflow: 'hidden'
+                        }}>
+                          {user.profile_photo_url ? (
+                            <img src={user.profile_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => ((e.currentTarget as HTMLElement).style.display = 'none')} />
+                          ) : (
+                            (user.full_name || user.email || 'U').charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <span>{user.full_name || 'N/A'}</span>
+                      </div>
                     </td>
                     <td style={{ padding: '12px 16px', color: '#475569', fontSize: 13 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -636,60 +651,130 @@ export default function AdminUsers() {
                     </select>
                   </div>
 
-                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', padding: '10px 12px', background: '#F8FAFC', borderRadius: 8, border: '1px solid #E2E8F0' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#1E293B', fontSize: 13, cursor: 'pointer' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={formData.is_manager}
-                        onChange={e => setFormData({...formData, is_manager: e.target.checked})}
-                      />
-                      Is Manager
+                  <div>
+                    <label style={{ display: 'block', color: '#334155', fontSize: 12, fontWeight: 700, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Designated Administrative Role / Gahee Hojii
                     </label>
-                    {role === 'super_admin' && (
-                      <>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#1E293B', fontSize: 13, cursor: 'pointer' }}>
-                          <input 
-                            type="checkbox" 
-                            checked={formData.is_city_admin && !formData.is_super_admin && !formData.is_mayor}
-                            onChange={e => setFormData({
-                              ...formData,
-                              is_city_admin: e.target.checked,
-                              is_super_admin: false,
-                              is_mayor: false
-                            })}
-                          />
-                          Is City Admin
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#1D70B8', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                          <input 
-                            type="checkbox" 
-                            checked={formData.is_super_admin}
-                            onChange={e => setFormData({
-                              ...formData,
-                              is_super_admin: e.target.checked,
-                              is_city_admin: e.target.checked,
-                              is_mayor: false
-                            })}
-                          />
-                          Is Super Admin
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#eab308', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                          <input 
-                            type="checkbox" 
-                            checked={formData.is_mayor}
-                            onChange={e => setFormData({
-                              ...formData,
-                              is_mayor: e.target.checked,
-                              is_super_admin: false,
-                              is_city_admin: false,
-                              is_manager: e.target.checked,
-                              department_name: e.target.checked ? 'Waajjira Kantiibaa' : formData.department_name
-                            })}
-                          />
-                          <Crown size={14} style={{ display: 'inline' }} /> Is Mayor
-                        </label>
-                      </>
-                    )}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8 }}>
+                      {/* Officer */}
+                      <button
+                        type="button"
+                        onClick={() => setFormData({
+                          ...formData,
+                          is_manager: false,
+                          is_city_admin: false,
+                          is_super_admin: false,
+                          is_mayor: false
+                        })}
+                        style={{
+                          padding: '10px 8px', borderRadius: 10, cursor: 'pointer', textAlign: 'center',
+                          background: (!formData.is_manager && !formData.is_city_admin && !formData.is_super_admin && !formData.is_mayor) ? '#EFF6FF' : '#FFFFFF',
+                          border: (!formData.is_manager && !formData.is_city_admin && !formData.is_super_admin && !formData.is_mayor) ? '2px solid #1D70B8' : '1px solid #CBD5E1',
+                          color: (!formData.is_manager && !formData.is_city_admin && !formData.is_super_admin && !formData.is_mayor) ? '#1D70B8' : '#475569',
+                          fontWeight: 700, fontSize: 12,
+                        }}
+                      >
+                        <div>👮 Officer</div>
+                        <div style={{ fontSize: 10, fontWeight: 500, opacity: 0.8, marginTop: 2 }}>Field Staff</div>
+                      </button>
+
+                      {/* Manager */}
+                      <button
+                        type="button"
+                        onClick={() => setFormData({
+                          ...formData,
+                          is_manager: true,
+                          is_city_admin: false,
+                          is_super_admin: false,
+                          is_mayor: false
+                        })}
+                        style={{
+                          padding: '10px 8px', borderRadius: 10, cursor: 'pointer', textAlign: 'center',
+                          background: (formData.is_manager && !formData.is_city_admin && !formData.is_super_admin && !formData.is_mayor) ? '#ECFDF5' : '#FFFFFF',
+                          border: (formData.is_manager && !formData.is_city_admin && !formData.is_super_admin && !formData.is_mayor) ? '2px solid #059669' : '1px solid #CBD5E1',
+                          color: (formData.is_manager && !formData.is_city_admin && !formData.is_super_admin && !formData.is_mayor) ? '#047857' : '#475569',
+                          fontWeight: 700, fontSize: 12,
+                        }}
+                      >
+                        <div>👔 Manager</div>
+                        <div style={{ fontSize: 10, fontWeight: 500, opacity: 0.8, marginTop: 2 }}>Sector Director</div>
+                      </button>
+
+                      {/* City Admin (Super Admin only can create) */}
+                      {role === 'super_admin' && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData({
+                            ...formData,
+                            is_manager: false,
+                            is_city_admin: true,
+                            is_super_admin: false,
+                            is_mayor: false,
+                            department_name: ''
+                          })}
+                          style={{
+                            padding: '10px 8px', borderRadius: 10, cursor: 'pointer', textAlign: 'center',
+                            background: (formData.is_city_admin && !formData.is_super_admin && !formData.is_mayor) ? '#EFF6FF' : '#FFFFFF',
+                            border: (formData.is_city_admin && !formData.is_super_admin && !formData.is_mayor) ? '2px solid #1D70B8' : '1px solid #CBD5E1',
+                            color: (formData.is_city_admin && !formData.is_super_admin && !formData.is_mayor) ? '#1D70B8' : '#475569',
+                            fontWeight: 700, fontSize: 12,
+                          }}
+                        >
+                          <div>🏛️ City Admin</div>
+                          <div style={{ fontSize: 10, fontWeight: 500, opacity: 0.8, marginTop: 2 }}>Municipal Operations</div>
+                        </button>
+                      )}
+
+                      {/* Super Admin (Super Admin only can create) */}
+                      {role === 'super_admin' && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData({
+                            ...formData,
+                            is_manager: false,
+                            is_city_admin: true,
+                            is_super_admin: true,
+                            is_mayor: false,
+                            department_name: ''
+                          })}
+                          style={{
+                            padding: '10px 8px', borderRadius: 10, cursor: 'pointer', textAlign: 'center',
+                            background: formData.is_super_admin ? '#FEF3C7' : '#FFFFFF',
+                            border: formData.is_super_admin ? '2px solid #D97706' : '1px solid #CBD5E1',
+                            color: formData.is_super_admin ? '#B45309' : '#475569',
+                            fontWeight: 700, fontSize: 12,
+                          }}
+                        >
+                          <div>🛡️ Super Admin</div>
+                          <div style={{ fontSize: 10, fontWeight: 500, opacity: 0.8, marginTop: 2 }}>System Governance</div>
+                        </button>
+                      )}
+
+                      {/* Mayor (Super Admin only can create) */}
+                      {role === 'super_admin' && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData({
+                            ...formData,
+                            is_mayor: true,
+                            is_super_admin: false,
+                            is_city_admin: false,
+                            is_manager: false,
+                            department_name: 'Waajjira Kantiibaa'
+                          })}
+                          style={{
+                            padding: '10px 8px', borderRadius: 10, cursor: 'pointer', textAlign: 'center',
+                            background: formData.is_mayor ? '#FFFBEB' : '#FFFFFF',
+                            border: formData.is_mayor ? '2px solid #F59E0B' : '1px solid #CBD5E1',
+                            color: formData.is_mayor ? '#B45309' : '#475569',
+                            fontWeight: 700, fontSize: 12,
+                          }}
+                        >
+                          <div>👑 Executive Mayor</div>
+                          <div style={{ fontSize: 10, fontWeight: 500, opacity: 0.8, marginTop: 2 }}>Office of Mayor</div>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </>
               )}

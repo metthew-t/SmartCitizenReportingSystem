@@ -16,6 +16,8 @@ export interface AuditRecord {
   actor_name: string
   actor_email: string
   actor_role: string
+  rule?: string
+  tamper_hash?: string
   action: string
   entity_type: string
   entity_id: string
@@ -461,6 +463,11 @@ export default function AuditLogs() {
                             )}
                           </div>
                         </div>
+                        {log.rule && (
+                          <div style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '1px 6px', borderRadius: 4, background: '#F1F5F9', color: '#475569', fontSize: 10, fontWeight: 600 }}>
+                            ⚖️ {log.rule}
+                          </div>
+                        )}
                       </td>
 
                       {/* Action */}
@@ -596,6 +603,23 @@ export default function AuditLogs() {
                     {inspectRecord.ip_address}
                   </div>
                 </div>
+
+                <div style={{ gridColumn: 'span 2' }}>
+                  <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Applied Rule / Authority Mandate</div>
+                  <div style={{ color: '#0F172A', fontSize: 13, marginTop: 2, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <ShieldCheck size={16} color="#1D70B8" />
+                    {inspectRecord.rule || inspectRecord.changes?.rule || 'Standard Municipal Civic Procedure'}
+                  </div>
+                </div>
+
+                {inspectRecord.tamper_hash && (
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>SHA-256 Tamper Verification Hash</div>
+                    <div style={{ color: '#10B981', fontSize: 11, marginTop: 2, fontFamily: 'monospace', wordBreak: 'break-all', background: '#ECFDF5', padding: '6px 10px', borderRadius: 6, border: '1px solid #A7F3D0' }}>
+                      🔒 {inspectRecord.tamper_hash}
+                    </div>
+                  </div>
+                )}
 
                 <div style={{ gridColumn: 'span 2' }}>
                   <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Timestamp</div>

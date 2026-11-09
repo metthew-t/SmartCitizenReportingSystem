@@ -1268,7 +1268,24 @@ class DepartmentMessageViewSet(viewsets.ModelViewSet):
     """Inter-department messaging channel"""
     permission_classes = [permissions.IsAuthenticated]
 
+    def _ensure_table(self):
+        from django.db import connection
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS core_departmentchatseen (
+                    id SERIAL PRIMARY KEY,
+                    department_id INTEGER NOT NULL REFERENCES core_department(id) ON DELETE CASCADE,
+                    user_id INTEGER NOT NULL REFERENCES accounts_user(id) ON DELETE CASCADE,
+                    last_seen_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    CONSTRAINT unique_dept_user_seen UNIQUE (department_id, user_id)
+                );
+                """)
+        except Exception:
+            pass
+
     def get_queryset(self):
+        self._ensure_table()
         dept_id = self.request.query_params.get('department', None)
         if dept_id:
             return DepartmentMessage.objects.filter(department_id=dept_id)
@@ -1278,7 +1295,71 @@ class DepartmentMessageViewSet(viewsets.ModelViewSet):
         return DepartmentMessageSerializer
 
     def perform_create(self, serializer):
-        serializer.save(sender=self.request.user)
+        msg = serializer.save(sender=self.request.user)
+        # Update sender's seen receipt
+        self._ensure_table()
+        try:
+            from core.models import DepartmentChatSeen
+            from django.utils import timezone
+            DepartmentChatSeen.objects.update_or_create(
+                department_id=msg.department_id,
+                user=self.request.user,
+                defaults={'last_seen_at': timezone.now()}
+            )
+        except Exception:
+            pass
+        # Audit log the message
+        try:
+            from api.analytics_views import log_audit_event
+            dept_name = msg.department.name if msg.department else 'Unknown'
+            log_audit_event(
+                self.request.user,
+                'CHAT_MESSAGE_SENT',
+                'DEPARTMENT_CHAT',
+                str(msg.department_id),
+                {
+                    'channel': dept_name,
+                    'message_id': msg.id,
+                    'content_preview': (msg.content[:60] + '...') if len(msg.content) > 60 else msg.content,
+                    'rule': 'Inter-Department Communication'
+                },
+                request=self.request
+            )
+        except Exception:
+            pass
+
+    @action(detail=False, methods=['post'], url_path='mark-seen')
+    def mark_seen(self, request):
+        self._ensure_table()
+        dept_id = request.data.get('department_id') or request.query_params.get('department_id')
+        if not dept_id:
+            return Response({'error': 'department_id required'}, status=400)
+        try:
+            from core.models import DepartmentChatSeen
+            from django.utils import timezone
+            obj, _ = DepartmentChatSeen.objects.update_or_create(
+                department_id=dept_id,
+                user=request.user,
+                defaults={'last_seen_at': timezone.now()}
+            )
+            return Response({'status': 'marked_seen', 'last_seen_at': obj.last_seen_at})
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+    @action(detail=False, methods=['get'], url_path='seen-list')
+    def seen_list(self, request):
+        self._ensure_table()
+        dept_id = request.query_params.get('department_id')
+        if not dept_id:
+            return Response([])
+        try:
+            from core.models import DepartmentChatSeen
+            from api.serializers import DepartmentChatSeenSerializer
+            seen_entries = DepartmentChatSeen.objects.filter(department_id=dept_id).select_related('user', 'user__officer_profile', 'user__officer_profile__department').order_by('-last_seen_at')[:20]
+            serializer = DepartmentChatSeenSerializer(seen_entries, many=True, context={'request': request})
+            return Response(serializer.data)
+        except Exception as e:
+            return Response([])
 
 
 class OfficialReportViewSet(viewsets.ModelViewSet):

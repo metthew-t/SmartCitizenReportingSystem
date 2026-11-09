@@ -210,6 +210,29 @@ class ResetPasswordView(APIView):
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            try:
+                from api.analytics_views import log_audit_event
+                from django.contrib.auth import get_user_model
+                identifier = request.data.get('phone_number') or request.data.get('email') or ''
+                User = get_user_model()
+                from django.db.models import Q
+                u = User.objects.filter(Q(phone_number=identifier) | Q(email=identifier)).first()
+                if u:
+                    log_audit_event(
+                        u,
+                        'USER_LOGIN',
+                        'AUTH',
+                        str(u.id),
+                        {'login_identifier': identifier, 'rule': 'Authentication Success'},
+                        request=request
+                    )
+            except Exception:
+                pass
+        return response
+
 
 class RegisterView(APIView):
     """
@@ -297,6 +320,26 @@ class OfficerRegisterView(APIView):
         serializer = OfficerRegisterSerializer(data=data)
         if serializer.is_valid():
             new_user = serializer.save()
+            try:
+                from api.analytics_views import log_audit_event
+                assigned_role = 'Mayor' if new_user.is_mayor else ('Super Admin' if new_user.is_super_admin else ('City Admin' if new_user.is_city_admin else ('Manager' if new_user.is_department_manager else 'Officer')))
+                log_audit_event(
+                    user,
+                    'USER_CREATED',
+                    'USER',
+                    str(new_user.id),
+                    {
+                        'created_user_id': new_user.id,
+                        'email': new_user.email,
+                        'full_name': getattr(new_user, 'full_name', ''),
+                        'role_assigned': assigned_role,
+                        'department': data.get('department_name', ''),
+                        'rule': f'Administrative Account Provisioning'
+                    },
+                    request=request
+                )
+            except Exception:
+                pass
             return Response({'status': 'User created successfully', 'email': new_user.email}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -370,18 +413,66 @@ class CurrentUserView(generics.RetrieveAPIView):
 
 
 class ProfilePhotoUploadView(APIView):
-    """Upload or update profile photo for the logged-in user."""
+    """Upload, update, or remove official profile photo for the logged-in user."""
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
         photo = request.FILES.get('photo')
         if not photo:
             return Response({'error': 'No photo file provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Enforce maximum 5MB size limit
+        if photo.size > 5 * 1024 * 1024:
+            return Response({'error': 'File size exceeds maximum allowed 5MB limit.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Enforce valid government/social image MIME types
+        allowed_types = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg']
+        if photo.content_type and photo.content_type.lower() not in allowed_types:
+            return Response({'error': 'Invalid image format. Allowed formats: JPG, PNG, WEBP.'}, status=status.HTTP_400_BAD_REQUEST)
+
         user = request.user
         user.profile_photo = photo
         user.save()
         photo_url = request.build_absolute_uri(user.profile_photo.url) if user.profile_photo else None
+
+        # Audit log photo update
+        try:
+            from api.analytics_views import log_audit_event
+            log_audit_event(
+                user,
+                'PROFILE_PHOTO_UPDATED',
+                'USER',
+                str(user.id),
+                {'file_name': photo.name, 'file_size_kb': round(photo.size / 1024, 1), 'rule': 'User Profile Image Upload'},
+                request=request
+            )
+        except Exception:
+            pass
+
         return Response({'message': 'Profile photo updated.', 'photo_url': photo_url}, status=status.HTTP_200_OK)
+
+    def delete(self, request):
+        user = request.user
+        if user.profile_photo:
+            try:
+                user.profile_photo.delete(save=False)
+            except Exception:
+                pass
+            user.profile_photo = None
+            user.save()
+        try:
+            from api.analytics_views import log_audit_event
+            log_audit_event(
+                user,
+                'PROFILE_PHOTO_REMOVED',
+                'USER',
+                str(user.id),
+                {'rule': 'User Removed Profile Photo'},
+                request=request
+            )
+        except Exception:
+            pass
+        return Response({'message': 'Profile photo removed.', 'photo_url': None}, status=status.HTTP_200_OK)
 
 
 class AdminResetPasswordView(APIView):
@@ -419,6 +510,23 @@ class AdminResetPasswordView(APIView):
             u.set_password(new_password)
             u.must_change_password = True
             u.save()
+            try:
+                from api.analytics_views import log_audit_event
+                log_audit_event(
+                    requester,
+                    'USER_PASSWORD_RESET',
+                    'USER',
+                    str(u.id),
+                    {
+                        'target_user_id': u.id,
+                        'target_email': u.email,
+                        'target_name': getattr(u, 'full_name', ''),
+                        'rule': 'Administrative Password Reset with Mandatory Change Enforced'
+                    },
+                    request=request
+                )
+            except Exception:
+                pass
             if u.phone_number:
                 try:
                     from core.sms_service import send_sms
@@ -575,6 +683,27 @@ class UserListView(APIView):
             target_user.is_active = bool(data.get('is_active'))
 
         target_user.save()
+        try:
+            from api.analytics_views import log_audit_event
+            action_desc = 'USER_UPDATED'
+            if 'is_active' in data:
+                action_desc = 'USER_ACTIVATED' if target_user.is_active else 'USER_DEACTIVATED'
+            log_audit_event(
+                caller,
+                action_desc,
+                'USER',
+                str(target_user.id),
+                {
+                    'target_user_id': target_user.id,
+                    'target_email': target_user.email,
+                    'target_name': getattr(target_user, 'full_name', ''),
+                    'is_active': target_user.is_active,
+                    'rule': 'Administrative User Record Maintenance'
+                },
+                request=request
+            )
+        except Exception:
+            pass
         return Response(UserSerializer(target_user).data)
 
 

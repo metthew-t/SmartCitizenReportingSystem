@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '../store/authStore'
 import { useLanguageStore, Language } from '../store/languageStore'
-import { Settings as SettingsIcon, User, Bell, Globe, Shield, Database, Camera, Edit2, Check, X, Lock, KeyRound, ShieldCheck } from 'lucide-react'
+import { Settings as SettingsIcon, User, Bell, Globe, Shield, Database, Camera, Edit2, Check, X, Lock, KeyRound, ShieldCheck, Trash2 } from 'lucide-react'
 import { validatePasswordRules, isStrongPassword } from '../utils/passwordPolicy'
 
 const API = 'https://smartcitizenreportingsystem.onrender.com/api/v1'
@@ -117,6 +117,12 @@ export default function Settings() {
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadMsg('File exceeds maximum 5MB size limit.')
+      return
+    }
+
     setUploading(true)
     setUploadMsg('')
     const formData = new FormData()
@@ -129,11 +135,38 @@ export default function Settings() {
       })
       const data = await res.json()
       if (res.ok) {
-        setPhotoUrl(data.photo_url || '')
-        setUploadMsg('Photo updated!')
-        setTimeout(() => setUploadMsg(''), 3000)
+        const newUrl = data.photo_url || ''
+        setPhotoUrl(newUrl)
+        updateUser({ profile_photo_url: newUrl })
+        setUploadMsg('Profile photo updated successfully!')
+        setTimeout(() => setUploadMsg(''), 4000)
       } else {
         setUploadMsg(data.error || 'Upload failed.')
+      }
+    } catch {
+      setUploadMsg('Network error.')
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  const handleRemovePhoto = async () => {
+    if (!confirm('Are you sure you want to remove your official profile photo?')) return
+    setUploading(true)
+    setUploadMsg('')
+    try {
+      const res = await fetch(`${API}/auth/upload-photo/`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      })
+      if (res.ok) {
+        setPhotoUrl('')
+        updateUser({ profile_photo_url: null })
+        setUploadMsg('Profile photo removed.')
+        setTimeout(() => setUploadMsg(''), 4000)
+      } else {
+        setUploadMsg('Failed to remove photo.')
       }
     } catch {
       setUploadMsg('Network error.')
@@ -226,18 +259,19 @@ export default function Settings() {
           ) : null
         }
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 24, flexWrap: 'wrap', padding: '16px 20px', background: '#F8FAFC', borderRadius: 16, border: '1px solid #E2E8F0' }}>
           <div style={{ position: 'relative' }}>
             <div style={{
-              width: 72, height: 72, borderRadius: '50%', overflow: 'hidden',
+              width: 88, height: 88, borderRadius: '50%', overflow: 'hidden',
               background: 'linear-gradient(135deg, #1D70B8, #0F2942)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: '3px solid rgba(99,102,241,0.3)',
+              border: '3px solid #FFFFFF',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
             }}>
               {photoUrl ? (
-                <img src={photoUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={photoUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={() => setPhotoUrl('')} />
               ) : (
-                <span style={{ fontSize: 28, fontWeight: 700, color: 'white' }}>
+                <span style={{ fontSize: 32, fontWeight: 800, color: '#FFFFFF' }}>
                   {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
                 </span>
               )}
@@ -245,22 +279,78 @@ export default function Settings() {
             <button
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
+              title="Upload New Photo"
               style={{
-                position: 'absolute', bottom: -2, right: -2,
-                width: 28, height: 28, borderRadius: '50%',
-                background: '#1D70B8', border: '2px solid #1e293b',
+                position: 'absolute', bottom: 0, right: 0,
+                width: 32, height: 32, borderRadius: '50%',
+                background: '#1D70B8', border: '2px solid #FFFFFF',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer',
+                cursor: uploading ? 'not-allowed' : 'pointer',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                color: 'white',
               }}
             >
-              <Camera size={14} color="white" />
+              <Camera size={16} />
             </button>
-            <input ref={fileRef} type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
+            <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={handlePhotoUpload} style={{ display: 'none' }} />
           </div>
-          <div>
-            <div style={{ color: '#0F172A', fontWeight: 600, fontSize: 16 }}>{user?.name || 'N/A'}</div>
-            <div style={{ color: '#475569', fontSize: 12, fontWeight: 600 }}>{role?.replace('_', ' ').toUpperCase() || 'OFFICER'}</div>
-            {uploadMsg && <div style={{ color: uploadMsg.includes('updated') ? '#10b981' : '#ef4444', fontSize: 12, marginTop: 4 }}>{uploadMsg}</div>}
+
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ color: '#0F172A', fontWeight: 800, fontSize: 18 }}>{user?.name || 'Government Official'}</span>
+              <span style={{
+                padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                background: '#EFF6FF', color: '#1D70B8', border: '1px solid #BFDBFE'
+              }}>
+                {role === 'mayor' ? '👑 Executive Mayor' : role === 'super_admin' ? '🛡️ Super Administrator' : role === 'city_admin' ? '🏛️ City Administrator' : role === 'department_manager' ? '👔 Department Manager' : '👮 Field Officer'}
+              </span>
+            </div>
+
+            <p style={{ color: '#64748B', fontSize: 12, margin: '6px 0 12px', lineHeight: 1.5 }}>
+              Official government identification picture. Supported formats: JPG, PNG, WEBP (Max 5MB).
+            </p>
+
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                style={{
+                  padding: '7px 16px', borderRadius: 8, border: 'none',
+                  background: 'linear-gradient(135deg, #1D70B8, #0D5C99)',
+                  color: 'white', fontSize: 12, fontWeight: 700, cursor: uploading ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  boxShadow: '0 2px 6px rgba(29,112,184,0.3)',
+                }}
+              >
+                <Camera size={14} /> {uploading ? 'Processing...' : 'Upload New Photo'}
+              </button>
+
+              {photoUrl && (
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  disabled={uploading}
+                  style={{
+                    padding: '7px 14px', borderRadius: 8, border: '1px solid #CBD5E1',
+                    background: '#FFFFFF', color: '#DC2626', fontSize: 12, fontWeight: 600,
+                    cursor: uploading ? 'not-allowed' : 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                  }}
+                >
+                  <Trash2 size={13} /> Remove
+                </button>
+              )}
+            </div>
+
+            {uploadMsg && (
+              <div style={{
+                color: uploadMsg.includes('success') || uploadMsg.includes('updated') || uploadMsg.includes('removed') ? '#059669' : '#DC2626',
+                fontSize: 12, fontWeight: 600, marginTop: 8, display: 'flex', alignItems: 'center', gap: 6
+              }}>
+                <Check size={14} /> {uploadMsg}
+              </div>
+            )}
           </div>
         </div>
 
