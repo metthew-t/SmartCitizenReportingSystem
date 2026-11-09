@@ -321,14 +321,25 @@ export default function DeptChat() {
               <div style={{ textAlign: 'center', color: '#64748B', fontSize: 14, margin: 'auto' }}>
                 No messages yet. Start the conversation!
               </div>
-            ) : messages.map((msg, idx) => {
+            ) : (() => {
               const currentUserId = user?.id ? String(user.id) : null
-              const isMe = Boolean(
-                (currentUserId && String(msg.sender) === currentUserId) ||
-                (user?.email && msg.sender_email && msg.sender_email.toLowerCase() === user.email.toLowerCase()) ||
-                (user?.name && msg.sender_name && msg.sender_name.toLowerCase() === user.name.toLowerCase())
-              )
-              const otherViewers = seenUsers.filter(su => {
+
+              // Find the index of the LAST message sent by the current user.
+              // "Seen by" only appears once — below the last message you sent,
+              // just like WhatsApp / Telegram / Instagram standard.
+              let lastMyMsgIdx = -1
+              messages.forEach((msg: any, i: number) => {
+                const mine = Boolean(
+                  (currentUserId && String(msg.sender) === currentUserId) ||
+                  (user?.email && msg.sender_email && msg.sender_email.toLowerCase() === user.email.toLowerCase()) ||
+                  (user?.name && msg.sender_name && msg.sender_name.toLowerCase() === user.name.toLowerCase())
+                )
+                if (mine) lastMyMsgIdx = i
+              })
+
+              // Other viewers = people (excluding me) whose last_seen_at > last-sent-message.created_at
+              // (already filtered server-side, but filter locally too in case of stale data)
+              const otherViewers = seenUsers.filter((su: any) => {
                 const isCurrentUser = Boolean(
                   (user?.id && String(su.user_id || su.id) === String(user.id)) ||
                   (user?.email && su.user_email && su.user_email.toLowerCase() === user.email.toLowerCase()) ||
@@ -337,106 +348,114 @@ export default function DeptChat() {
                 return !isCurrentUser
               })
 
-              return (
-                <div key={idx} style={{
-                  display: 'flex',
-                  justifyContent: isMe ? 'flex-end' : 'flex-start',
-                  gap: 10,
-                  alignItems: 'flex-end'
-                }}>
-                  {!isMe && (
-                    <div style={{
-                      width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                      background: `hsl(${((msg.sender || 0) * 73) % 360}, 50%, 35%)`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 13, fontWeight: 700, color: 'white', overflow: 'hidden'
-                    }}>
-                      {msg.sender_photo_url ? (
-                        <img src={msg.sender_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => ((e.currentTarget as HTMLElement).style.display = 'none')} />
-                      ) : (
-                        (msg.sender_name || 'U').charAt(0)
-                      )}
-                    </div>
-                  )}
-                  <div style={{ maxWidth: '68%' }}>
-                    {!isMe && (
-                      <div style={{ color: '#334155', fontSize: 11, fontWeight: 700, marginBottom: 4, marginLeft: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span>{msg.sender_name || 'Department Officer'}</span>
-                        {msg.sender_role && (
-                          <span style={{
-                            padding: '1px 6px', borderRadius: 8, fontSize: 9, fontWeight: 700,
-                            background: '#EFF6FF', color: '#1D70B8', border: '1px solid #BFDBFE'
-                          }}>
-                            {msg.sender_role}
-                          </span>
-                        )}
-                        {msg.sender_dept_name && <span style={{ color: '#64748B', fontWeight: 500 }}>· {msg.sender_dept_name}</span>}
-                      </div>
-                    )}
-                    <div style={{
-                      padding: '12px 16px',
-                      borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                      background: isMe ? 'linear-gradient(135deg, #1D70B8, #0D5C99)' : '#FFFFFF',
-                      border: isMe ? 'none' : '1px solid #CBD5E1',
-                      boxShadow: isMe ? '0 2px 8px rgba(29,112,184,0.25)' : '0 1px 3px rgba(0,0,0,0.04)',
-                    }}>
-                      <div style={{ color: isMe ? '#FFFFFF' : '#0F172A', fontSize: 14, lineHeight: 1.5, wordBreak: 'break-word' }}>{msg.content}</div>
-                      <div style={{
-                        fontSize: 10, marginTop: 6,
-                        color: isMe ? 'rgba(255,255,255,0.8)' : '#64748B',
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        gap: 8, flexWrap: 'wrap'
-                      }}>
-                        {/* Seen By clickable badge directly on the text bubble (excludes sender/me) */}
-                        {otherViewers.length > 0 ? (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedSeenMsg({ msg, viewers: otherViewers })
-                            }}
-                            title="Click to view colleagues who saw this message"
-                            style={{
-                              background: isMe ? 'rgba(255,255,255,0.18)' : '#EFF6FF',
-                              border: isMe ? '1px solid rgba(255,255,255,0.28)' : '1px solid #BFDBFE',
-                              color: isMe ? '#FFFFFF' : '#1D70B8',
-                              borderRadius: 10, padding: '2px 8px',
-                              fontSize: 10, fontWeight: 700,
-                              display: 'inline-flex', alignItems: 'center', gap: 4,
-                              cursor: 'pointer', transition: 'all 0.15s'
-                            }}
-                          >
-                            <Eye size={11} />
-                            <span>Seen by {otherViewers.length}</span>
-                          </button>
-                        ) : (
-                          <span />
-                        )}
+              return messages.map((msg: any, idx: number) => {
+                const isMe = Boolean(
+                  (currentUserId && String(msg.sender) === currentUserId) ||
+                  (user?.email && msg.sender_email && msg.sender_email.toLowerCase() === user.email.toLowerCase()) ||
+                  (user?.name && msg.sender_name && msg.sender_name.toLowerCase() === user.name.toLowerCase())
+                )
+                // Only show "Seen" indicator on the LAST message sent by me
+                const showSeenIndicator = isMe && idx === lastMyMsgIdx && otherViewers.length > 0
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <span>{msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                          {isMe && <CheckCheck size={12} color="#93C5FD" />}
+                return (
+                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start', gap: 2 }}>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: isMe ? 'flex-end' : 'flex-start',
+                      gap: 10,
+                      alignItems: 'flex-end',
+                      width: '100%'
+                    }}>
+                      {!isMe && (
+                        <div style={{
+                          width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                          background: `hsl(${((msg.sender || 0) * 73) % 360}, 50%, 35%)`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 13, fontWeight: 700, color: 'white', overflow: 'hidden'
+                        }}>
+                          {msg.sender_photo_url ? (
+                            <img src={msg.sender_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => ((e.currentTarget as HTMLElement).style.display = 'none')} />
+                          ) : (
+                            (msg.sender_name || 'U').charAt(0)
+                          )}
+                        </div>
+                      )}
+                      <div style={{ maxWidth: '68%' }}>
+                        {!isMe && (
+                          <div style={{ color: '#334155', fontSize: 11, fontWeight: 700, marginBottom: 4, marginLeft: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span>{msg.sender_name || 'Department Officer'}</span>
+                            {msg.sender_role && (
+                              <span style={{
+                                padding: '1px 6px', borderRadius: 8, fontSize: 9, fontWeight: 700,
+                                background: '#EFF6FF', color: '#1D70B8', border: '1px solid #BFDBFE'
+                              }}>
+                                {msg.sender_role}
+                              </span>
+                            )}
+                            {msg.sender_dept_name && <span style={{ color: '#64748B', fontWeight: 500 }}>· {msg.sender_dept_name}</span>}
+                          </div>
+                        )}
+                        <div style={{
+                          padding: '12px 16px',
+                          borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                          background: isMe ? 'linear-gradient(135deg, #1D70B8, #0D5C99)' : '#FFFFFF',
+                          border: isMe ? 'none' : '1px solid #CBD5E1',
+                          boxShadow: isMe ? '0 2px 8px rgba(29,112,184,0.25)' : '0 1px 3px rgba(0,0,0,0.04)',
+                        }}>
+                          <div style={{ color: isMe ? '#FFFFFF' : '#0F172A', fontSize: 14, lineHeight: 1.5, wordBreak: 'break-word' }}>{msg.content}</div>
+                          {/* Timestamp + double-check only — no seen badge inside bubble */}
+                          <div style={{
+                            fontSize: 10, marginTop: 6,
+                            color: isMe ? 'rgba(255,255,255,0.65)' : '#94A3B8',
+                            display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4
+                          }}>
+                            <span>{msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                            {isMe && <CheckCheck size={12} color={showSeenIndicator ? '#93C5FD' : 'rgba(255,255,255,0.5)'} />}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                  {isMe && (
-                    <div style={{
-                      width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                      background: 'linear-gradient(135deg, #1D70B8, #0F2942)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 13, fontWeight: 700, color: 'white', overflow: 'hidden'
-                    }}>
-                      {user?.profile_photo_url ? (
-                        <img src={user.profile_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => ((e.currentTarget as HTMLElement).style.display = 'none')} />
-                      ) : (
-                        (user?.name || 'You').charAt(0).toUpperCase()
+                      {isMe && (
+                        <div style={{
+                          width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                          background: 'linear-gradient(135deg, #1D70B8, #0F2942)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 13, fontWeight: 700, color: 'white', overflow: 'hidden'
+                        }}>
+                          {user?.profile_photo_url ? (
+                            <img src={user.profile_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => ((e.currentTarget as HTMLElement).style.display = 'none')} />
+                          ) : (
+                            (user?.name || 'You').charAt(0).toUpperCase()
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
-              )
-            })}
+
+                    {/* Seen indicator — only on the LAST message sent by me, shown BELOW the bubble */}
+                    {showSeenIndicator && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedSeenMsg({ msg, viewers: otherViewers })
+                        }}
+                        title="Click to see who read this message"
+                        style={{
+                          background: 'none', border: 'none', padding: '0 46px 0 0',
+                          color: '#64748B', fontSize: 10, fontWeight: 500,
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          cursor: 'pointer', marginTop: 1
+                        }}
+                      >
+                        <CheckCheck size={12} color="#1D70B8" />
+                        <span style={{ color: '#1D70B8' }}>
+                          Seen by {otherViewers.length}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                )
+              })
+            })()}
             <div ref={messagesEndRef} />
           </div>
 
