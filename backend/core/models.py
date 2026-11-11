@@ -218,6 +218,7 @@ class NotificationLog(models.Model):
     CHANNEL_CHOICES = [
         ('SMS', 'TextBee SMS Gateway'),
         ('TELEGRAM', 'Telegram Bot'),
+        ('WHATSAPP', 'WhatsApp Cloud Messaging'),
         ('PUSH', 'FCM Push Notification'),
         ('SYSTEM', 'System Alert'),
     ]

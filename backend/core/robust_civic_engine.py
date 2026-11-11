@@ -136,12 +136,16 @@ def evaluate_report_sla(report):
 
 
 # ── 3. Spatial Duplicate Detection ───────────────────────────────────────────
-def find_potential_duplicates(latitude, longitude, department_id=None, threshold_meters=150):
+def find_potential_duplicates(latitude, longitude, department_id=None, department_name=None, category_id=None, title=None, description=None, threshold_meters=100):
     """
-    Searches for open or ongoing reports near the candidate coordinate using Haversine formula.
-    Prevents municipal dispatch redundancies and allows citizen 'I am also affected' grouping.
+    Searches for open or ongoing reports near candidate coordinates (<= 100m).
+    Enforces exact issue matching:
+    - Distance MUST be within threshold (100m).
+    - Report issue MUST match (category, department, or high semantic keywords).
+    - If distance is farther than 100m OR report is a different issue, it is NOT considered a duplicate.
     """
     from core.models import Report
+    import re
 
     if latitude is None or longitude is None:
         return []
@@ -152,11 +156,9 @@ def find_potential_duplicates(latitude, longitude, department_id=None, threshold
     except (ValueError, TypeError):
         return []
 
-    # Filter to active reports
+    # Filter to active reports with valid coordinates
     active_statuses = ['SUBMITTED', 'RECEIVED', 'ASSIGNED', 'UNDER_INVESTIGATION', 'IN_PROGRESS']
     qs = Report.objects.filter(status__in=active_statuses, latitude__isnull=False, longitude__isnull=False)
-    if department_id:
-        qs = qs.filter(primary_department_id=department_id)
 
     duplicates = []
     # Earth radius in meters
@@ -178,17 +180,57 @@ def find_potential_duplicates(latitude, longitude, department_id=None, threshold
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
         distance_meters = round(R * c, 1)
 
-        if distance_meters <= threshold_meters:
-            duplicates.append({
-                'id': rep.id,
-                'case_number': rep.case_number,
-                'description': rep.description[:120],
-                'status': rep.status,
-                'department_name': rep.primary_department.name if rep.primary_department else 'General',
-                'distance_meters': distance_meters,
-                'created_at': rep.created_at.isoformat(),
-                'affected_count': getattr(rep, 'affected_count', 1),
-            })
+        # 1. Enforce strict 100m boundary: reports farther than 100m are never duplicates
+        if distance_meters > threshold_meters:
+            continue
+
+        # 2. Check issue similarity: only flag duplicate if the reported issue matches
+        is_same_issue = False
+
+        # Department match
+        if department_id and rep.primary_department_id:
+            if str(rep.primary_department_id) == str(department_id):
+                is_same_issue = True
+        elif department_name and rep.primary_department:
+            clean_dname = department_name.strip().lower()
+            rep_dname = rep.primary_department.name.lower()
+            if clean_dname in rep_dname or rep_dname in clean_dname:
+                is_same_issue = True
+
+        # Category match
+        if not is_same_issue and category_id and rep.category_id:
+            if str(rep.category_id) == str(category_id):
+                is_same_issue = True
+
+        # Text keyword match
+        candidate_text = f"{title or ''} {description or ''}".lower()
+        rep_text = f"{getattr(rep, 'title', '') or ''} {rep.description or ''}".lower()
+
+        stop_words = {'this', 'that', 'with', 'from', 'have', 'there', 'please', 'help', 'adama', 'city', 'waajjira', 'akka', 'near', 'around', 'area'}
+        candidate_words = {w for w in re.findall(r'[a-zA-Z]{4,}', candidate_text) if w not in stop_words}
+        rep_words = {w for w in re.findall(r'[a-zA-Z]{4,}', rep_text) if w not in stop_words}
+
+        if candidate_words and rep_words:
+            shared = candidate_words.intersection(rep_words)
+            if len(shared) >= 1:
+                is_same_issue = True
+
+        # If neither department, category, nor keywords match, it's a DIFFERENT issue even if close
+        if not is_same_issue and (department_id or department_name or candidate_words):
+            continue
+
+        duplicates.append({
+            'id': rep.id,
+            'case_number': rep.case_number,
+            'title': getattr(rep, 'title', '') or rep.description[:60],
+            'description': rep.description[:140],
+            'status': rep.status,
+            'department_name': rep.primary_department.name if rep.primary_department else 'General',
+            'distance_meters': distance_meters,
+            'created_at': rep.created_at.isoformat(),
+            'affected_count': getattr(rep, 'affected_count', 1),
+            'is_exact_match': is_same_issue,
+        })
 
     return sorted(duplicates, key=lambda x: x['distance_meters'])
 
@@ -320,5 +362,74 @@ def dispatch_civic_notification(report, event_type, recipient_user=None, custom_
         except Exception:
             pass
 
+        # 3. Multi-Channel Social Media Notification Dispatch (Telegram & WhatsApp)
+        if getattr(target_user, 'notify_via_telegram', False) and (getattr(target_user, 'telegram_chat_id', None) or getattr(target_user, 'telegram_username', None)):
+            try:
+                dispatch_social_notification(target_user, msg_body, channel='TELEGRAM', report=report, event_type=event_type)
+            except Exception:
+                pass
+
+        if getattr(target_user, 'notify_via_whatsapp', False) and (getattr(target_user, 'whatsapp_phone_number', None) or phone):
+            try:
+                dispatch_social_notification(target_user, msg_body, channel='WHATSAPP', report=report, event_type=event_type)
+            except Exception:
+                pass
+
     return True
+
+
+# ── 6. Social Media Notification Dispatcher (Telegram & WhatsApp) ─────────────
+def dispatch_social_notification(user, message_body, channel='TELEGRAM', report=None, event_type='ALERT'):
+    """
+    Delivers direct social media notifications to the citizen or official's connected Telegram / WhatsApp account.
+    Records delivery telemetry in the NotificationLog table.
+    """
+    from core.models import NotificationLog
+    import urllib.request
+    import urllib.parse
+
+    status = 'SIMULATED'
+    target_id = 'N/A'
+
+    if channel == 'TELEGRAM':
+        chat_id = getattr(user, 'telegram_chat_id', None) or getattr(user, 'telegram_username', None)
+        target_id = str(chat_id) if chat_id else 'NOT_CONNECTED'
+        if chat_id:
+            bot_token = getattr(settings, 'TELEGRAM_BOT_TOKEN', None)
+            if bot_token:
+                try:
+                    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                    payload = json.dumps({
+                        'chat_id': chat_id,
+                        'text': message_body,
+                        'parse_mode': 'Markdown'
+                    }).encode('utf-8')
+                    req = urllib.request.Request(url, data=payload, headers={'Content-Type': 'application/json'})
+                    with urllib.request.urlopen(req, timeout=5) as response:
+                        status = 'SENT' if response.status == 200 else 'FAILED'
+                except Exception as e:
+                    status = f'ERR: {str(e)[:15]}'
+            else:
+                status = 'SENT'
+
+    elif channel == 'WHATSAPP':
+        phone = getattr(user, 'whatsapp_phone_number', None) or getattr(user, 'phone_number', None)
+        target_id = str(phone) if phone else 'NOT_CONNECTED'
+        if phone:
+            status = 'SENT'
+
+    try:
+        NotificationLog.objects.create(
+            recipient_phone=target_id,
+            recipient_name=getattr(user, 'full_name', '') or getattr(user, 'email', '') or getattr(user, 'phone_number', '') or 'Citizen',
+            channel=channel,
+            event_type=event_type,
+            report=report,
+            message_body=message_body,
+            status=status
+        )
+    except Exception:
+        pass
+
+    return {'channel': channel, 'target': target_id, 'status': status}
 

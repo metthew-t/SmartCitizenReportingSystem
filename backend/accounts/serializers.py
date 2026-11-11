@@ -24,7 +24,9 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ('id', 'phone_number', 'email', 'full_name', 'department_name',
                   'is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin', 'is_super_admin', 'is_mayor',
-                  'is_active', 'must_change_password', 'date_joined', 'profile_photo_url', 'officer_profile_id')
+                  'is_active', 'must_change_password', 'date_joined', 'profile_photo_url', 'officer_profile_id',
+                  'telegram_chat_id', 'telegram_username', 'whatsapp_phone_number',
+                  'notify_via_telegram', 'notify_via_whatsapp', 'notify_via_in_app', 'notify_via_sms')
         read_only_fields = ('is_citizen', 'is_officer', 'is_department_manager', 'is_city_admin', 'is_super_admin', 'is_mayor', 'officer_profile_id')
 
     def get_officer_profile_id(self, obj):
@@ -103,11 +105,18 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
-        # Auto-heal must_change_password column if missing
+        # Auto-heal must_change_password & social notification columns if missing
         try:
             from django.db import connection
             with connection.cursor() as cursor:
                 cursor.execute('ALTER TABLE accounts_user ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT FALSE;')
+                cursor.execute('ALTER TABLE accounts_user ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(100) NULL;')
+                cursor.execute('ALTER TABLE accounts_user ADD COLUMN IF NOT EXISTS telegram_username VARCHAR(100) NULL;')
+                cursor.execute('ALTER TABLE accounts_user ADD COLUMN IF NOT EXISTS whatsapp_phone_number VARCHAR(30) NULL;')
+                cursor.execute('ALTER TABLE accounts_user ADD COLUMN IF NOT EXISTS notify_via_telegram BOOLEAN DEFAULT FALSE;')
+                cursor.execute('ALTER TABLE accounts_user ADD COLUMN IF NOT EXISTS notify_via_whatsapp BOOLEAN DEFAULT FALSE;')
+                cursor.execute('ALTER TABLE accounts_user ADD COLUMN IF NOT EXISTS notify_via_in_app BOOLEAN DEFAULT TRUE;')
+                cursor.execute('ALTER TABLE accounts_user ADD COLUMN IF NOT EXISTS notify_via_sms BOOLEAN DEFAULT TRUE;')
         except Exception:
             pass
 

@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import '../services/api_config.dart';
 import '../theme.dart';
 
-/// Rule-based AI assistant that knows everything about the Adama Smart Citizen
-/// Reporting System. Answers citizen questions in plain language.
-/// Replace the _getAiReply() method with a real LLM API call when ready.
+/// Intelligent AI assistant that knows everything about the Adama Smart Citizen
+/// Reporting System. Connects to backend AI engine and provides offline fallback.
 class CitizenAiScreen extends StatefulWidget {
   const CitizenAiScreen({super.key});
 
@@ -23,15 +25,16 @@ class _CitizenAiScreenState extends State<CitizenAiScreen> {
     super.initState();
     // Greeting on open
     _messages.add(_ChatMessage(
-      text: 'Akkam jirta! 👋 I am **Adama AI Assistant**, your guide to the Adama Smart Citizen Reporting System.\n\n'
+      text: 'Akkam jirta! 👋 I am **Adama AI Assistant**, your official guide to the Adama Smart Citizen Reporting System.\n\n'
           'I can help you with:\n'
-          '• 📋 How to submit a report\n'
-          '• 🔍 Track your case status\n'
-          '• 🤝 "Me Too" — add your support to an existing report\n'
-          '• ⚖️ How to file an appeal\n'
-          '• 🏢 Which department handles what\n'
-          '• 📱 How the app works\n\n'
-          'Ask me anything in English, Afaan Oromo, or Amharic!',
+          '• 📋 How to submit and track a report\n'
+          '• 👥 "I\'m Also Affected" (+1) system within 100 meters\n'
+          '• 📍 Adama city boundaries & geofence rules\n'
+          '• ⚖️ Filing & managing Administrative Appeals (Iyyannoo)\n'
+          '• 📱 Connecting Telegram & WhatsApp notifications\n'
+          '• 🔒 12-character password & 15-minute session security\n'
+          '• 🏢 Contacting any of Adama\'s 33 municipal departments\n\n'
+          'Ask me anything in English, Afaan Oromoo, or Amharic!',
       isUser: false,
       time: _now(),
     ));
@@ -46,7 +49,7 @@ class _CitizenAiScreenState extends State<CitizenAiScreen> {
 
   // ── Send ──────────────────────────────────────────────────────────────────
 
-  void _send() {
+  Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
     _controller.clear();
@@ -57,17 +60,35 @@ class _CitizenAiScreenState extends State<CitizenAiScreen> {
     });
     _scrollToBottom();
 
-    // Simulate typing delay then reply
-    Future.delayed(const Duration(milliseconds: 700), () {
-      final reply = _getAiReply(text);
-      if (mounted) {
-        setState(() {
-          _isTyping = false;
-          _messages.add(_ChatMessage(text: reply, isUser: false, time: _now()));
-        });
-        _scrollToBottom();
+    String reply = '';
+    try {
+      final res = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/ai-chat/'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'message': text}),
+      ).timeout(const Duration(seconds: 4));
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['reply'] != null && data['reply'].toString().isNotEmpty) {
+          reply = data['reply'];
+        }
       }
-    });
+    } catch (_) {
+      // Fallback to local civic knowledge base
+    }
+
+    if (reply.isEmpty) {
+      reply = _getAiReply(text);
+    }
+
+    if (mounted) {
+      setState(() {
+        _isTyping = false;
+        _messages.add(_ChatMessage(text: reply, isUser: false, time: _now()));
+      });
+      _scrollToBottom();
+    }
   }
 
   void _scrollToBottom() {
@@ -143,16 +164,39 @@ class _CitizenAiScreenState extends State<CitizenAiScreen> {
     }
 
     // ── Me Too / Upvote ───────────────────────────────────────────────────────
-    if (_matches(q, ['me too', 'upvote', 'same', 'also affected', 'affected', 'support', 'community', 'same issue', 'same problem', 'duplicate', 'already reported'])) {
-      return '🤝 **"I am Also Affected" (Me Too):**\n\n'
-          'If someone already reported the same issue near you, you don\'t need to create a new report. Instead:\n\n'
-          '**Option 1 — During Submission:**\n'
-          'When you submit a new report, if the app detects a similar report within **50 meters**, a dialog will appear showing the existing case. You can tap **"I\'m Also Affected"** to add your support instead.\n\n'
-          '**Option 2 — From the Map:**\n'
-          'Open the **Map tab** → tap a report marker → tap **"+1 Affected"** button in the popup.\n\n'
-          '**Option 3 — From Report Details:**\n'
-          'Open any report → in the Details tab, tap the **amber "+1 Affected Citizens"** button.\n\n'
-          '💡 More affected citizens = higher priority score = faster officer response!';
+    if (_matches(q, ['me too', 'upvote', 'same', 'also affected', 'affected', 'support', 'community', 'same issue', 'same problem', 'duplicate', 'already reported', '100m', '100 meters'])) {
+      return '🤝 **"I am Also Affected" (+1 Community Upvote):**\n\n'
+          'To prevent duplicate reports that clog municipal response teams, the system uses spatial incident matching:\n\n'
+          '• **Proximity Rule**: Reports within **100 meters** of an active incident are checked.\n'
+          '• **Exact Match Rule**: The system only flags duplicates if the **reported issue is the same** (matching category or keywords). If the incident is different (e.g., a pothole near a broken water pipe), it is allowed as an independent ticket.\n'
+          '• **Distance Rule**: If the issue is farther than **100 meters**, it is never blocked.\n\n'
+          '**How to add your voice:**\n'
+          '1. **During submission**: If a matching report exists within 100m, tap **"+1 I\'m Also Affected"**.\n'
+          '2. **From the Map**: Tap a report marker → tap **"+1 Affected"**.\n'
+          '3. **From Report Details**: Tap the amber **"+1 Affected Citizens"** button.\n\n'
+          '💡 More affected citizens = reinforced urgency score = faster municipal dispatch!';
+    }
+
+    // ── Social Media Notifications (Telegram & WhatsApp) ──────────────────────
+    if (_matches(q, ['telegram', 'whatsapp', 'social media', 'bot', 'chat id', 'connect telegram', 'connect whatsapp'])) {
+      return '📱 **Multi-Channel Social Media Notifications:**\n\n'
+          'You can connect your **Telegram** or **WhatsApp** account to receive instant civic alerts directly on your favorite app!\n\n'
+          '**How to Connect:**\n'
+          '1. Go to your **Profile / Settings** tab in the app\n'
+          '2. Scroll to **"Social Media Notifications"**\n'
+          '3. For Telegram: Start **@AdamaSmartCitizenBot**, copy your Chat ID, and paste it\n'
+          '4. For WhatsApp: Enter your phone number with country code (e.g. +251912345678)\n'
+          '5. Toggle Telegram or WhatsApp notifications ON\n'
+          '6. Tap **"Test Notification"** to verify delivery!\n\n'
+          '🔔 You will receive instant notifications whenever your report status updates, an officer is assigned, or an appeal decision is rendered.';
+    }
+
+    // ── Cybersecurity & Session Expiry ─────────────────────────────────────────
+    if (_matches(q, ['password standard', '12 char', 'strong password', 'session', 'expire', 'timeout', '15 min', 'security standard'])) {
+      return '🔒 **Government Cybersecurity Standards:**\n\n'
+          '• **12-Character Strong Password**: All passwords must be at least 12 characters long and include uppercase (A-Z), lowercase (a-z), numbers (0-9), and special symbols (!@#\$%^&*).\n'
+          '• **15-Minute Session Expiration**: To protect citizen and municipal data privacy, idle sessions automatically time out after **15 minutes of inactivity**.\n'
+          '• **Tamper-Proof Audit Trail**: Every status change, assignment, and decision is cryptographically sealed with SHA-256 hash chaining.';
     }
 
     // ── Appeal ────────────────────────────────────────────────────────────────

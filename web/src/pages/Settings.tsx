@@ -34,6 +34,95 @@ export default function Settings() {
   const [passwordMsg, setPasswordMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [savingPassword, setSavingPassword] = useState(false)
 
+  // Social Media Notification state (Telegram & WhatsApp)
+  const [socialForm, setSocialForm] = useState({
+    telegram_chat_id: '',
+    telegram_username: '',
+    whatsapp_phone_number: '',
+    notify_via_telegram: false,
+    notify_via_whatsapp: false,
+    notify_via_in_app: true,
+    notify_via_sms: true,
+  })
+  const [savingSocial, setSavingSocial] = useState(false)
+  const [socialMsg, setSocialMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [testingSocial, setTestingSocial] = useState(false)
+
+  useEffect(() => {
+    if (!token) return
+    fetch(`${API}/auth/social-notifications/`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data) {
+          setSocialForm({
+            telegram_chat_id: data.telegram_chat_id || '',
+            telegram_username: data.telegram_username || '',
+            whatsapp_phone_number: data.whatsapp_phone_number || '',
+            notify_via_telegram: Boolean(data.notify_via_telegram),
+            notify_via_whatsapp: Boolean(data.notify_via_whatsapp),
+            notify_via_in_app: data.notify_via_in_app !== false,
+            notify_via_sms: data.notify_via_sms !== false,
+          })
+        }
+      })
+      .catch(() => {})
+  }, [token])
+
+  const handleSaveSocial = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSavingSocial(true)
+    setSocialMsg(null)
+    try {
+      const res = await fetch(`${API}/auth/social-notifications/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(socialForm),
+      })
+      if (res.ok) {
+        setSocialMsg({ type: 'success', text: 'Social media notification channels connected & saved!' })
+      } else {
+        setSocialMsg({ type: 'error', text: 'Failed to save notification preferences.' })
+      }
+    } catch {
+      setSocialMsg({ type: 'error', text: 'Network error connecting social notifications.' })
+    } finally {
+      setSavingSocial(false)
+      setTimeout(() => setSocialMsg(null), 4000)
+    }
+  }
+
+  const handleTestNotification = async (channel: 'telegram' | 'whatsapp') => {
+    setTestingSocial(true)
+    try {
+      const res = await fetch(`${API}/auth/social-notifications/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ...socialForm,
+          test_channel: channel,
+        }),
+      })
+      if (res.ok) {
+        setSocialMsg({ type: 'success', text: `Test alert sent to your ${channel === 'telegram' ? 'Telegram' : 'WhatsApp'} account!` })
+      } else {
+        setSocialMsg({ type: 'error', text: `Could not send test message to ${channel}.` })
+      }
+    } catch {
+      setSocialMsg({ type: 'error', text: 'Network error sending test alert.' })
+    } finally {
+      setTestingSocial(false)
+      setTimeout(() => setSocialMsg(null), 4000)
+    }
+  }
+
   const passwordRules = validatePasswordRules(newPassword)
   const isPasswordValid = isStrongPassword(newPassword) && newPassword === confirmPassword && oldPassword.length > 0
 
@@ -523,6 +612,156 @@ export default function Settings() {
             )
           })}
         </div>
+      </SettingsCard>
+
+      {/* Social Media Notifications (Telegram & WhatsApp) */}
+      <SettingsCard title="Multi-Channel Social Media Notifications" icon={<Bell size={18} color="#0284c7" />}>
+        {socialMsg && (
+          <div style={{
+            padding: '10px 14px', borderRadius: 8, marginBottom: 16, fontSize: 13, fontWeight: 600,
+            background: socialMsg.type === 'success' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+            border: `1px solid ${socialMsg.type === 'success' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+            color: socialMsg.type === 'success' ? '#047857' : '#b91c1c',
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            {socialMsg.type === 'success' ? <Check size={16} /> : <X size={16} />}
+            {socialMsg.text}
+          </div>
+        )}
+
+        <form onSubmit={handleSaveSocial} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <p style={{ color: '#64748B', fontSize: 13, margin: '0 0 8px', lineHeight: 1.5 }}>
+            Connect your personal or administrative Telegram and WhatsApp accounts to receive instant alerts when reports are assigned, status updates occur, or internal department communications arrive.
+          </p>
+
+          {/* Telegram Channel Container */}
+          <div style={{
+            background: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: 12, padding: 16,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 18 }}>✈️</span>
+                <span style={{ fontWeight: 700, fontSize: 14, color: '#0369A1' }}>Telegram Bot Integration</span>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#0369A1' }}>
+                <input
+                  type="checkbox"
+                  checked={socialForm.notify_via_telegram}
+                  onChange={e => setSocialForm({ ...socialForm, notify_via_telegram: e.target.checked })}
+                />
+                Enable Telegram
+              </label>
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                value={socialForm.telegram_chat_id}
+                onChange={e => setSocialForm({ ...socialForm, telegram_chat_id: e.target.value })}
+                placeholder="Telegram Chat ID or Username (e.g. 123456789)"
+                style={{
+                  flex: 1, minWidth: 240, padding: '9px 12px', borderRadius: 8,
+                  border: '1px solid #7DD3FC', background: '#FFFFFF', color: '#0F172A', fontSize: 13, outline: 'none'
+                }}
+              />
+              <button
+                type="button"
+                disabled={testingSocial || !socialForm.telegram_chat_id}
+                onClick={() => handleTestNotification('telegram')}
+                style={{
+                  padding: '9px 16px', borderRadius: 8, border: 'none',
+                  background: socialForm.telegram_chat_id ? '#0284C7' : '#94A3B8',
+                  color: 'white', fontSize: 12, fontWeight: 600, cursor: socialForm.telegram_chat_id ? 'pointer' : 'not-allowed'
+                }}
+              >
+                {testingSocial ? 'Sending...' : 'Test Telegram Alert'}
+              </button>
+            </div>
+            <div style={{ marginTop: 6, fontSize: 11, color: '#0284C7' }}>
+              👉 Start <strong>@AdamaSmartCitizenBot</strong> on Telegram to retrieve your Chat ID.
+            </div>
+          </div>
+
+          {/* WhatsApp Channel Container */}
+          <div style={{
+            background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 12, padding: 16,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 18 }}>💬</span>
+                <span style={{ fontWeight: 700, fontSize: 14, color: '#15803D' }}>WhatsApp Messaging</span>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#15803D' }}>
+                <input
+                  type="checkbox"
+                  checked={socialForm.notify_via_whatsapp}
+                  onChange={e => setSocialForm({ ...socialForm, notify_via_whatsapp: e.target.checked })}
+                />
+                Enable WhatsApp
+              </label>
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                value={socialForm.whatsapp_phone_number}
+                onChange={e => setSocialForm({ ...socialForm, whatsapp_phone_number: e.target.value })}
+                placeholder="WhatsApp Phone Number with Country Code (e.g. +251912345678)"
+                style={{
+                  flex: 1, minWidth: 240, padding: '9px 12px', borderRadius: 8,
+                  border: '1px solid #86EFAC', background: '#FFFFFF', color: '#0F172A', fontSize: 13, outline: 'none'
+                }}
+              />
+              <button
+                type="button"
+                disabled={testingSocial || !socialForm.whatsapp_phone_number}
+                onClick={() => handleTestNotification('whatsapp')}
+                style={{
+                  padding: '9px 16px', borderRadius: 8, border: 'none',
+                  background: socialForm.whatsapp_phone_number ? '#16A34A' : '#94A3B8',
+                  color: 'white', fontSize: 12, fontWeight: 600, cursor: socialForm.whatsapp_phone_number ? 'pointer' : 'not-allowed'
+                }}
+              >
+                {testingSocial ? 'Sending...' : 'Test WhatsApp Alert'}
+              </button>
+            </div>
+          </div>
+
+          {/* Core System Channels */}
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', padding: '10px 0' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#334155', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={socialForm.notify_via_in_app}
+                onChange={e => setSocialForm({ ...socialForm, notify_via_in_app: e.target.checked })}
+              />
+              In-App Dashboard & Bell Notifications
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: '#334155', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={socialForm.notify_via_sms}
+                onChange={e => setSocialForm({ ...socialForm, notify_via_sms: e.target.checked })}
+              />
+              SMS Text Notifications
+            </label>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={savingSocial}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '10px 20px', borderRadius: 8, border: 'none',
+                background: 'linear-gradient(135deg, #1D70B8, #0D5C99)',
+                color: 'white', fontSize: 13, fontWeight: 600, cursor: savingSocial ? 'not-allowed' : 'pointer',
+                boxShadow: '0 2px 8px rgba(29,112,184,0.3)'
+              }}
+            >
+              <Check size={15} />
+              {savingSocial ? 'Saving Channels...' : 'Save Notification Preferences'}
+            </button>
+          </div>
+        </form>
       </SettingsCard>
 
       {/* Security & Password (Government 12-char Standard) */}

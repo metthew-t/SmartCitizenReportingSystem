@@ -13,6 +13,7 @@ import 'submit_report_screen.dart';
 import 'report_details_screen.dart';
 import 'profile_screen.dart';
 import 'citizen_ai_screen.dart';
+import 'appeals_screen.dart';
 
 /// Report data model (for both local and API reports)
 class ReportItem {
@@ -435,7 +436,29 @@ class DashboardContent extends StatelessWidget {
                         },
                       ),
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 12),
+
+                    // Feature 4: Administrative Appeals (Iyyannoo) Management Button
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.gavel_rounded, color: CivicColors.govBlue, size: 20),
+                      label: const Text(
+                        'ADMINISTRATIVE APPEALS (IYYANNOO)',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: CivicColors.govBlue, letterSpacing: 0.5),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: const BorderSide(color: CivicColors.govBlue, width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        backgroundColor: CivicColors.govBlue.withValues(alpha: 0.05),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const AppealsManagementScreen()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 24),
 
                     // Quick Stats
                     Text('Your Activity', style: CivicText.h3),

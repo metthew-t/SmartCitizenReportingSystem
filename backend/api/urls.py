@@ -4,7 +4,7 @@ from accounts.views import (
     CustomTokenObtainPairView, RegisterView, OfficerRegisterView,
     CurrentUserView, UserListView, StatsView, ChangePasswordView, DeleteAccountView,
     SendOTPView, VerifyOTPView, ResetPasswordView,
-    ProfilePhotoUploadView, AdminResetPasswordView,
+    ProfilePhotoUploadView, AdminResetPasswordView, SocialNotificationSettingsView,
 )
 from api.analytics_views import (
     AnalyticsSummaryView, AnalyticsByDepartmentView, AnalyticsByStatusView, ReportGeoJSONView,
@@ -15,7 +15,7 @@ from api.views import (
     ReportViewSet, DepartmentViewSet, ReportCategoryViewSet, MessageViewSet,
     DepartmentMessageViewSet, PingView, OfficialReportViewSet,
     MayorOverviewView, MayorDirectiveViewSet, FeedbackViewSet, AppealViewSet,
-    AuditLogViewSet, NotificationLogViewSet
+    AuditLogViewSet, NotificationLogViewSet, AIChatView,
 )
 from api.notification_views import NotificationViewSet, DeviceTokenViewSet
 
@@ -48,6 +48,8 @@ urlpatterns = [
     path('auth/delete-account/', DeleteAccountView.as_view(), name='delete_account'),
     path('auth/upload-photo/', ProfilePhotoUploadView.as_view(), name='upload_photo'),
     path('auth/admin-reset-password/', AdminResetPasswordView.as_view(), name='admin_reset_password'),
+    path('auth/social-notifications/', SocialNotificationSettingsView.as_view(), name='social_notifications'),
+    path('ai-chat/', AIChatView.as_view(), name='ai_chat'),
     # Admin
     path('users/', UserListView.as_view(), name='user_list'),
     path('users/<int:pk>/', UserListView.as_view(), name='user_detail'),

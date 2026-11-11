@@ -381,12 +381,19 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
       if (proceed != true) return;
     }
 
-    // ── Feature 3: Duplicate detection pre-check ──────────────────────────
+    // ── Feature 3: Duplicate detection pre-check (100m proximity & issue match) ──
     try {
       final dupRes = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/reports/check_duplicates/'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'latitude': lat, 'longitude': lng, 'threshold_meters': 50}),
+        body: jsonEncode({
+          'latitude': lat,
+          'longitude': lng,
+          'threshold_meters': 100,
+          'department_name': _selectedDepartment,
+          'title': _titleController.text.trim(),
+          'description': _descriptionController.text.trim(),
+        }),
       ).timeout(const Duration(seconds: 8));
 
       if (dupRes.statusCode == 200) {
@@ -402,7 +409,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
               title: Row(children: [
                 Icon(Icons.warning_amber_rounded, color: Colors.orange[700], size: 26),
                 const SizedBox(width: 8),
-                const Expanded(child: Text('Similar Report Nearby', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+                const Expanded(child: Text('Matching Report Within 100m', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
               ]),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -449,9 +456,9 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                     const SizedBox(height: 12),
                   ],
                   const Text(
-                    'A report for a similar issue already exists within 50 meters. '
-                    'Submitting a duplicate clogs the officer queue.\n\n'
-                    'Would you like to tap "+1 I\'m Also Affected" on the existing report instead?',
+                    'A matching report for this issue already exists within 100 meters. '
+                    'Submitting a duplicate clogs the officer dispatch queue.\n\n'
+                    'Tap "+1 I\'m Also Affected" to reinforce urgency on the existing report instead of creating a duplicate.',
                     style: TextStyle(fontSize: 13),
                   ),
                 ],
@@ -464,7 +471,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                 ElevatedButton(
                   onPressed: () => Navigator.pop(ctx, false),
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700], foregroundColor: Colors.white),
-                  child: const Text("I'm Also Affected"),
+                  child: const Text("+1 I'm Also Affected"),
                 ),
               ],
             ),
@@ -681,6 +688,42 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                             style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700], foregroundColor: Colors.white),
                             child: const Text('Enable Location'),
                           )
+                        ],
+                      ),
+                    ),
+
+                  // Geofence Pre-alert banner (Outside Adama City detection)
+                  if (!_isLoadingLocation && _currentPosition != null &&
+                      ((_currentPosition!.latitude < 8.45 || _currentPosition!.latitude > 8.63) ||
+                       (_currentPosition!.longitude < 39.17 || _currentPosition!.longitude > 39.37)))
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.amber[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.amber[400]!),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.warning_amber_rounded, color: Colors.amber[800], size: 24),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Location Notice: Outside Adama City Limits',
+                                    style: TextStyle(color: Colors.amber[900], fontWeight: FontWeight.bold, fontSize: 13)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Your detected coordinates (${_currentPosition!.latitude.toStringAsFixed(4)}, ${_currentPosition!.longitude.toStringAsFixed(4)}) appear to be outside the Adama Municipal zone. '
+                                  'This reporting system serves Adama City only.',
+                                  style: TextStyle(color: Colors.amber[900], fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),

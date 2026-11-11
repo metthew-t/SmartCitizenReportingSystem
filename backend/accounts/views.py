@@ -176,8 +176,16 @@ class ResetPasswordView(APIView):
         if not phone_number or not new_password:
             return Response({'error': 'phone_number and new_password are required.'}, status=status.HTTP_400_BAD_REQUEST)
             
-        if len(new_password) < 6:
-            return Response({'error': 'New password must be at least 6 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+        # Enforce government 12-character strong password standard
+        from .validators import validate_strong_password
+        from django.core.exceptions import ValidationError
+        try:
+            validate_strong_password(new_password)
+        except ValidationError as ve:
+            return Response(
+                {'error': ve.message if hasattr(ve, 'message') else str(ve)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         from core.sms_service import is_phone_verified, consume_phone_verified, get_phone_variants
         variants = get_phone_variants(phone_number)
@@ -473,6 +481,71 @@ class ProfilePhotoUploadView(APIView):
         except Exception:
             pass
         return Response({'message': 'Profile photo removed.', 'photo_url': None}, status=status.HTTP_200_OK)
+
+
+class SocialNotificationSettingsView(APIView):
+    """
+    Connect or update multi-channel social media notification preferences (Telegram, WhatsApp, In-App, SMS).
+    Allows citizens, officers, managers, and admins to link their Telegram or WhatsApp and test connectivity.
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        user = request.user
+        return Response({
+            'telegram_chat_id': getattr(user, 'telegram_chat_id', '') or '',
+            'telegram_username': getattr(user, 'telegram_username', '') or '',
+            'whatsapp_phone_number': getattr(user, 'whatsapp_phone_number', '') or '',
+            'notify_via_telegram': bool(getattr(user, 'notify_via_telegram', False)),
+            'notify_via_whatsapp': bool(getattr(user, 'notify_via_whatsapp', False)),
+            'notify_via_in_app': bool(getattr(user, 'notify_via_in_app', True)),
+            'notify_via_sms': bool(getattr(user, 'notify_via_sms', True)),
+            'bot_username': 'AdamaSmartCitizenBot',
+            'bot_link': 'https://t.me/AdamaSmartCitizenBot',
+        })
+
+    def post(self, request):
+        user = request.user
+        data = request.data
+
+        if 'telegram_chat_id' in data:
+            user.telegram_chat_id = str(data['telegram_chat_id']).strip()
+        if 'telegram_username' in data:
+            user.telegram_username = str(data['telegram_username']).strip().lstrip('@')
+        if 'whatsapp_phone_number' in data:
+            user.whatsapp_phone_number = str(data['whatsapp_phone_number']).strip()
+        if 'notify_via_telegram' in data:
+            user.notify_via_telegram = bool(data['notify_via_telegram'])
+        if 'notify_via_whatsapp' in data:
+            user.notify_via_whatsapp = bool(data['notify_via_whatsapp'])
+        if 'notify_via_in_app' in data:
+            user.notify_via_in_app = bool(data['notify_via_in_app'])
+        if 'notify_via_sms' in data:
+            user.notify_via_sms = bool(data['notify_via_sms'])
+
+        user.save()
+
+        # Send test notification if requested
+        test_channel = data.get('test_channel')
+        test_result = None
+        if test_channel in ['telegram', 'whatsapp']:
+            from core.robust_civic_engine import dispatch_social_notification
+            test_msg = "🔔 Adama Smart Citizen: Connected successfully! You will receive instant civic updates here."
+            test_result = dispatch_social_notification(user, test_msg, channel=test_channel.upper())
+
+        return Response({
+            'message': 'Notification preferences updated successfully.',
+            'settings': {
+                'telegram_chat_id': getattr(user, 'telegram_chat_id', ''),
+                'telegram_username': getattr(user, 'telegram_username', ''),
+                'whatsapp_phone_number': getattr(user, 'whatsapp_phone_number', ''),
+                'notify_via_telegram': bool(getattr(user, 'notify_via_telegram', False)),
+                'notify_via_whatsapp': bool(getattr(user, 'notify_via_whatsapp', False)),
+                'notify_via_in_app': bool(getattr(user, 'notify_via_in_app', True)),
+                'notify_via_sms': bool(getattr(user, 'notify_via_sms', True)),
+            },
+            'test_result': test_result
+        })
 
 
 class AdminResetPasswordView(APIView):

@@ -933,14 +933,23 @@ class ReportViewSet(viewsets.ModelViewSet):
     def check_duplicates(self, request):
         """
         AI / Spatial Duplicate Detection (Global 311 Standard):
-        Checks within threshold meters (default 150m) of candidate coordinates for open tickets.
+        Checks within threshold meters (default 100m) of candidate coordinates for matching tickets.
+        Only flags duplicate if within 100m AND issue matches.
         """
         lat = request.data.get('latitude')
         lon = request.data.get('longitude')
         dept_id = request.data.get('department_id')
-        threshold = int(request.data.get('threshold_meters', 150))
+        dept_name = request.data.get('department_name')
+        category_id = request.data.get('category_id')
+        title = request.data.get('title')
+        description = request.data.get('description')
+        threshold = int(request.data.get('threshold_meters', 100))
         from core.robust_civic_engine import find_potential_duplicates
-        duplicates = find_potential_duplicates(lat, lon, department_id=dept_id, threshold_meters=threshold)
+        duplicates = find_potential_duplicates(
+            lat, lon, department_id=dept_id, department_name=dept_name,
+            category_id=category_id, title=title, description=description,
+            threshold_meters=threshold
+        )
         return Response({
             'count': len(duplicates),
             'has_duplicates': len(duplicates) > 0,
@@ -2426,20 +2435,136 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         return AuditLog.objects.filter(user=user).order_by('-timestamp')
 
 
-class NotificationLogViewSet(viewsets.ReadOnlyModelViewSet):
-    """Multi-channel dispatch delivery logs (SMS, Telegram, Push)"""
-    from core.models import NotificationLog
-    from api.serializers import NotificationLogSerializer
-    queryset = NotificationLog.objects.all().order_by('-sent_at')
-    serializer_class = NotificationLogSerializer
-    permission_classes = [permissions.IsAuthenticated]
+class AIChatView(APIView):
+    """
+    Official AI Citizen Assistant for Adama Smart Citizen Reporting System.
+    Provides complete, authoritative answers to citizen inquiries regarding civic procedures,
+    departments, tracking, appeals, geofencing, multi-channel notifications, and security policies.
+    """
+    permission_classes = [permissions.AllowAny]
 
-    def get_queryset(self):
-        user = self.request.user
-        from core.models import NotificationLog
-        if user.is_city_admin or getattr(user, 'is_super_admin', False) or user.is_superuser or getattr(user, 'is_mayor', False):
-            return NotificationLog.objects.all().order_by('-sent_at')
-        return NotificationLog.objects.filter(report__citizen=user).order_by('-sent_at')
+    SYSTEM_KNOWLEDGE = {
+        "overview": (
+            "🏛️ **Adama Smart Citizen Reporting System (ASCRS)** is the official municipal GovTech platform "
+            "for the Adama City Administration (Bulchiinsa Magaalaa Adaamaa). It empowers residents to report "
+            "public infrastructure failures, environmental issues, utilities, and security concerns directly "
+            "to 33 municipal departments for swift, accountable resolution."
+        ),
+        "submit_report": (
+            "📋 **How to Submit a Report:**\n"
+            "1. Tap 'REPORT AN ISSUE' on the mobile dashboard or web portal.\n"
+            "2. Ensure your GPS location is enabled (required to dispatch field teams).\n"
+            "3. Enter a clear Title and Detailed Description of the problem.\n"
+            "4. Select the responsible department (or tap AI Recommendation ✨).\n"
+            "5. Choose Priority level: Critical (12h), High (24h), Medium (48h), or Low (72h).\n"
+            "6. Select your Sub-city (Kuta Magaalaa), District (Aanaa), and Kebele.\n"
+            "7. Attach supporting photos, videos, or voice recordings, then submit."
+        ),
+        "affected_system": (
+            "👥 **'I am Also Affected' (+1) Community System:**\n"
+            "• When reporting near an existing open incident (within 100 meters) with a matching issue, "
+            "the system detects potential duplication.\n"
+            "• Instead of creating a duplicate report that clogs officer dispatch queues, you can tap '+1 I'm Also Affected'.\n"
+            "• Every upvote increases the urgency score, automatically triggering faster field response and higher prioritization!\n"
+            "• If your incident is more than 100 meters away or a different issue, it proceeds as an independent ticket."
+        ),
+        "geofence": (
+            "📍 **Location Detection & Geofence Policy:**\n"
+            "• This system exclusively serves the municipal limits of Adama City Administration (8.45°N - 8.63°N, 39.17°E - 39.37°E).\n"
+            "• If you attempt to report from outside Adama City (e.g., Mojo, Wonji, Bishoftu, Addis Ababa), "
+            "the system immediately alerts you that the issue is outside municipal jurisdiction and must be reported to regional authorities."
+        ),
+        "appeals": (
+            "⚖️ **Administrative Appeal System (Iyyannoo):**\n"
+            "• If your report was marked Resolved but the repair was incomplete, or if you believe it was unfairly rejected or delayed, "
+            "you have the legal right to file an Administrative Appeal directly to City Administration and the Mayor's Executive Command.\n"
+            "• Citizens can view and manage their appeal status directly from the Mobile Dashboard and Report Details screen.\n"
+            "• Official determinations are issued with an official tracking docket (APL-XXXXXX)."
+        ),
+        "social_notifications": (
+            "📱 **Multi-Channel Social Media Notifications:**\n"
+            "• Citizens, officers, and administrators can connect their Telegram or WhatsApp accounts to the system.\n"
+            "• Receive real-time alerts whenever: your case is assigned, status updates, an appeal is decided, or a chat message arrives.\n"
+            "• To connect: Open Profile/Settings → Social Notifications → Enter your Telegram Chat ID / WhatsApp Number and enable."
+        ),
+        "password_security": (
+            "🔒 **Government Cybersecurity Standards:**\n"
+            "• Passwords must be at least 12 characters long according to Ethiopian and international GovTech standards (NIST SP 800-63B).\n"
+            "• Must include: uppercase letters (A-Z), lowercase letters (a-z), numbers (0-9), and special characters (!@#$%^&*).\n"
+            "• Sessions automatically expire after 15 minutes of inactivity for privacy and fraud prevention."
+        ),
+        "departments": (
+            "🏢 **Responsible Municipal Departments (33 Total):**\n"
+            "• Water & Sanitation (Waajjira Bishaan Dhugaatii fi Dhangala'aa)\n"
+            "• Roads & Transport Agency (Ejansii Geejjibaa)\n"
+            "• Environmental Protection & Sanitation (Abbaa Taayitaa Eegumsa Naannoo)\n"
+            "• Construction Authority (Abbaa Taayitaa Konistiraakshinii)\n"
+            "• Health Office (Waajjira Fayyaa)\n"
+            "• Police Department (Qajeelcha Poolisii)\n"
+            "• Security & Administration (Bulchiinsaa fi Nageenya)\n"
+            "• Mayor's Executive Office (Waajjira Kantiibaa)\n"
+            "... and all 33 municipal directorates."
+        ),
+    }
+
+    def post(self, request):
+        msg = request.data.get('message', '').strip().lower()
+        if not msg:
+            return Response({'reply': "Hello! I am the Adama Smart Citizen AI Assistant. How can I assist you with municipal services today?"})
+
+        # Smart keyword matching against complete civic knowledge base
+        reply = None
+
+        if any(w in msg for w in ['what is', 'maal', 'about', 'explain', 'system', 'adama smart', 'ascrs']):
+            reply = self.SYSTEM_KNOWLEDGE['overview']
+        elif any(w in msg for w in ['how to report', 'submit', 'report issue', 'gabaasa', 'create report', 'pothole', 'leak']):
+            reply = self.SYSTEM_KNOWLEDGE['submit_report']
+        elif any(w in msg for w in ['affected', 'duplicate', '100m', 'same report', 'clog', '+1', 'upvote']):
+            reply = self.SYSTEM_KNOWLEDGE['affected_system']
+        elif any(w in msg for w in ['location', 'geofence', 'adama city', 'outside', 'boundary', 'gps', 'limits']):
+            reply = self.SYSTEM_KNOWLEDGE['geofence']
+        elif any(w in msg for w in ['appeal', 'iyyannoo', 'iyyata', 'rejected', 'dispute', 'not satisfied', 'unfair']):
+            reply = self.SYSTEM_KNOWLEDGE['appeals']
+        elif any(w in msg for w in ['telegram', 'whatsapp', 'social media', 'notify', 'notification', 'channel', 'alert']):
+            reply = self.SYSTEM_KNOWLEDGE['social_notifications']
+        elif any(w in msg for w in ['password', '12 char', 'security', 'session', 'expire', 'timeout', '15 min']):
+            reply = self.SYSTEM_KNOWLEDGE['password_security']
+        elif any(w in msg for w in ['department', 'waajjira', 'office', 'water', 'road', 'police', 'health', 'mayor']):
+            reply = self.SYSTEM_KNOWLEDGE['departments']
+        elif any(w in msg for w in ['status', 'tracking', 'sla', 'deadline', 'hours', 'time', 'urgent']):
+            reply = (
+                "⏱️ **Report Statuses & SLA Turnaround Standards:**\n"
+                "• **Submitted**: Received in central dispatch.\n"
+                "• **Assigned**: Dispatched to responsible department & officer.\n"
+                "• **Under Investigation**: Officer inspecting site.\n"
+                "• **In Progress**: Work or repair actively underway.\n"
+                "• **Resolved**: Issue addressed (citizens can confirm or dispute).\n"
+                "• **Closed**: Formally concluded.\n\n"
+                "**SLA Timelines:**\n"
+                "🚨 Critical: 12 Hours\n"
+                "⚠️ High: 24 Hours\n"
+                "🟡 Medium: 48 Hours\n"
+                "🟢 Low: 72 Hours"
+            )
+        else:
+            reply = (
+                f"🏛️ **Adama Smart Citizen Assistant:**\n\n"
+                f"I can provide complete assistance on:\n"
+                f"• 📋 Submitting and tracking reports\n"
+                f"• 👥 'I am Also Affected' (+1) duplicate resolution (100m proximity)\n"
+                f"• 📍 Adama Municipal geofencing & location policies\n"
+                f"• ⚖️ Filing and managing Administrative Appeals (Iyyannoo)\n"
+                f"• 📱 Connecting Telegram & WhatsApp notifications\n"
+                f"• 🔒 12-character cybersecurity and 15-minute session security\n"
+                f"• 🏢 Contacting any of Adama's 33 municipal departments\n\n"
+                f"Please tell me what you would like to know!"
+            )
+
+        return Response({
+            'reply': reply,
+            'source': 'adama_civic_knowledge_base',
+            'status': 'success'
+        })
 
 
 

@@ -31,6 +31,15 @@ class User(AbstractUser):
     profile_photo = models.ImageField(upload_to='profiles/', null=True, blank=True)
     must_change_password = models.BooleanField(default=False)
 
+    # Social Media & Multi-Channel Notification Integration
+    telegram_chat_id = models.CharField(max_length=100, null=True, blank=True)
+    telegram_username = models.CharField(max_length=100, null=True, blank=True)
+    whatsapp_phone_number = models.CharField(max_length=30, null=True, blank=True)
+    notify_via_telegram = models.BooleanField(default=False)
+    notify_via_whatsapp = models.BooleanField(default=False)
+    notify_via_in_app = models.BooleanField(default=True)
+    notify_via_sms = models.BooleanField(default=True)
+
     USERNAME_FIELD = 'phone_number'
     REQUIRED_FIELDS = []
 

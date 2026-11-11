@@ -148,7 +148,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
             ElevatedButton(
               onPressed: isLoading ? null : () async {
-                if (newPwController.text != confirmPwController.text) {
+                final newPw = newPwController.text;
+                if (newPw.length < 12 ||
+                    !RegExp(r'[A-Z]').hasMatch(newPw) ||
+                    !RegExp(r'[a-z]').hasMatch(newPw) ||
+                    !RegExp(r'[0-9]').hasMatch(newPw) ||
+                    !RegExp(r'[^A-Za-z0-9]').hasMatch(newPw)) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Government Standard: Password must be 12+ characters with uppercase, lowercase, number, and symbol.'),
+                    backgroundColor: Colors.red,
+                    duration: Duration(seconds: 4),
+                  ));
+                  return;
+                }
+                if (newPw != confirmPwController.text) {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Passwords do not match'), backgroundColor: Colors.red));
                   return;
                 }
@@ -241,6 +254,209 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showSocialMediaNotificationsDialog(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+
+    final telegramController = TextEditingController();
+    final whatsappController = TextEditingController();
+    bool notifyTelegram = false;
+    bool notifyWhatsapp = false;
+    bool notifyInApp = true;
+    bool notifySms = true;
+    bool isFetching = true;
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          if (isFetching) {
+            http.get(
+              Uri.parse('${ApiConfig.baseUrl}/auth/social-notifications/'),
+              headers: {'Authorization': 'Bearer $token'},
+            ).then((res) {
+              if (res.statusCode == 200) {
+                final d = jsonDecode(res.body);
+                setDialogState(() {
+                  telegramController.text = d['telegram_chat_id'] ?? '';
+                  whatsappController.text = d['whatsapp_phone_number'] ?? '';
+                  notifyTelegram = d['notify_via_telegram'] == true;
+                  notifyWhatsapp = d['notify_via_whatsapp'] == true;
+                  notifyInApp = d['notify_via_in_app'] != false;
+                  notifySms = d['notify_via_sms'] != false;
+                  isFetching = false;
+                });
+              } else {
+                setDialogState(() => isFetching = false);
+              }
+            }).catchError((_) {
+              setDialogState(() => isFetching = false);
+            });
+          }
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                Icon(Icons.share_rounded, color: Colors.blue[700]),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text('Social Media Alerts', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+            content: isFetching
+                ? const SizedBox(height: 120, child: Center(child: CircularProgressIndicator()))
+                : SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Connect your Telegram or WhatsApp to receive instant civic updates on report status, assignments, and appeals.',
+                          style: TextStyle(fontSize: 12, color: Colors.black54),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Telegram Section
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.blue[200]!),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.send_rounded, size: 18, color: Colors.blue),
+                                  const SizedBox(width: 8),
+                                  const Text('Telegram Notifications', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.blue)),
+                                  const Spacer(),
+                                  Switch(
+                                    value: notifyTelegram,
+                                    onChanged: (v) => setDialogState(() => notifyTelegram = v),
+                                  ),
+                                ],
+                              ),
+                              TextField(
+                                controller: telegramController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Telegram Chat ID or Username',
+                                  hintText: 'e.g. 123456789 or your_username',
+                                  isDense: true,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Tip: Start @AdamaSmartCitizenBot on Telegram to get your Chat ID.',
+                                style: TextStyle(fontSize: 11, color: Colors.blue[900]),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // WhatsApp Section
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.green[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.green[200]!),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.chat_bubble_rounded, size: 18, color: Colors.green),
+                                  const SizedBox(width: 8),
+                                  const Text('WhatsApp Notifications', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.green)),
+                                  const Spacer(),
+                                  Switch(
+                                    value: notifyWhatsapp,
+                                    onChanged: (v) => setDialogState(() => notifyWhatsapp = v),
+                                  ),
+                                ],
+                              ),
+                              TextField(
+                                controller: whatsappController,
+                                keyboardType: TextInputType.phone,
+                                decoration: const InputDecoration(
+                                  labelText: 'WhatsApp Phone Number',
+                                  hintText: '+2519xxxxxxxx',
+                                  isDense: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // In-app & SMS
+                        CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('In-App & Bell Notifications', style: TextStyle(fontSize: 13)),
+                          value: notifyInApp,
+                          onChanged: (v) => setDialogState(() => notifyInApp = v ?? true),
+                        ),
+                        CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('SMS Text Notifications', style: TextStyle(fontSize: 13)),
+                          value: notifySms,
+                          onChanged: (v) => setDialogState(() => notifySms = v ?? true),
+                        ),
+                      ],
+                    ),
+                  ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: isSaving
+                    ? null
+                    : () async {
+                        setDialogState(() => isSaving = true);
+                        try {
+                          final res = await http.post(
+                            Uri.parse('${ApiConfig.baseUrl}/auth/social-notifications/'),
+                            headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
+                            body: jsonEncode({
+                              'telegram_chat_id': telegramController.text.trim(),
+                              'whatsapp_phone_number': whatsappController.text.trim(),
+                              'notify_via_telegram': notifyTelegram,
+                              'notify_via_whatsapp': notifyWhatsapp,
+                              'notify_via_in_app': notifyInApp,
+                              'notify_via_sms': notifySms,
+                              'test_channel': notifyTelegram ? 'telegram' : (notifyWhatsapp ? 'whatsapp' : null),
+                            }),
+                          );
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (res.statusCode == 200) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Social notification preferences saved & connected!'), backgroundColor: Colors.green),
+                            );
+                          }
+                        } catch (e) {
+                          if (ctx.mounted) Navigator.pop(ctx);
+                        }
+                      },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700]),
+                child: isSaving ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Save Settings'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -407,6 +623,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             _notificationsEnabled = !_notificationsEnabled;
                           });
                         },
+                      ),
+                      _SettingsTile(
+                        icon: Icons.share_rounded,
+                        title: 'Social Media Alerts',
+                        subtitle: 'Connect Telegram & WhatsApp notifications',
+                        iconColor: Colors.teal,
+                        onTap: () => _showSocialMediaNotificationsDialog(context),
                       ),
                       _SettingsTile(
                         icon: Icons.security,
