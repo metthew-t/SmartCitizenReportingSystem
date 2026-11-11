@@ -159,6 +159,51 @@ class DatabaseHelper {
     return db.query('cached_reports', orderBy: 'created_at DESC');
   }
 
+  /// Telegram-style combined list:
+  /// Returns pending offline reports FIRST (waiting for sync 🕒),
+  /// followed by all previously cached server reports.
+  Future<List<Map<String, dynamic>>> getAllReportsForDisplay() async {
+    final db = await database;
+    final List<Map<String, dynamic>> combined = [];
+
+    // 1. Pending offline reports (waiting for internet)
+    final pending = await db.query(
+      'offline_reports',
+      where: "status = 'PENDING'",
+      orderBy: 'created_at DESC',
+    );
+    for (final p in pending) {
+      combined.add({
+        'id': p['local_id'],
+        'case_number': '🕒 Sync Pending',
+        'description': p['description'] ?? '',
+        'status': 'PENDING_SYNC',
+        'priority': p['priority'] ?? 'MEDIUM',
+        'department': p['department_name'] ?? 'General',
+        'category': 'General',
+        'created_at': p['created_at'] ?? DateTime.now().toIso8601String(),
+        'latitude': (p['latitude'] as num? ?? 8.54).toDouble(),
+        'longitude': (p['longitude'] as num? ?? 39.27).toDouble(),
+        'sla_hours_remaining': null,
+        'is_sla_breached': 0,
+        'affected_count': 1,
+        'is_within_geofence': 1,
+        'is_offline_pending': true,
+        'image_path': p['image_path'] ?? '',
+      });
+    }
+
+    // 2. Cached server reports
+    final cached = await db.query('cached_reports', orderBy: 'created_at DESC');
+    for (final c in cached) {
+      final copy = Map<String, dynamic>.from(c);
+      copy['is_offline_pending'] = false;
+      combined.add(copy);
+    }
+
+    return combined;
+  }
+
   double? _extractSlaHours(Map<String, dynamic> r) {
     try {
       final sla = r['sla_metrics'];

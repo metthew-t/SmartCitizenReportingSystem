@@ -23,12 +23,17 @@ class SyncService {
       StreamController<int>.broadcast();
   Stream<int> get pendingCountStream => _pendingCountController.stream;
 
+  // Stream to notify UI whenever a pending report is successfully synced
+  final StreamController<Map<String, dynamic>> _syncedReportController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get syncedReportStream => _syncedReportController.stream;
+
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
-  /// Start periodic sync check every 30 seconds.
+  /// Start periodic sync check every 10 seconds (Telegram-style active retry).
   void startPeriodicSync() {
     _syncTimer?.cancel();
-    _syncTimer = Timer.periodic(const Duration(seconds: 30), (_) => syncNow());
+    _syncTimer = Timer.periodic(const Duration(seconds: 10), (_) => syncNow());
     // Also attempt immediately
     syncNow();
   }
@@ -57,8 +62,8 @@ class SyncService {
 
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
-      if (token == null) {
-        // No auth token — cannot sync yet
+      if (token == null || token.isEmpty) {
+        // No auth token — cannot sync to server yet
         return 0;
       }
 
@@ -86,20 +91,33 @@ class SyncService {
                 },
                 body: jsonEncode(payload),
               )
-              .timeout(const Duration(seconds: 20));
+              .timeout(const Duration(seconds: 15));
 
           if (response.statusCode == 201) {
+            final decoded = jsonDecode(response.body);
             // Upload image if queued
             final imagePath = report['image_path'] as String? ?? '';
             if (imagePath.isNotEmpty) {
-              final decoded = jsonDecode(response.body);
               final reportId = decoded['id']?.toString();
               if (reportId != null) {
                 await _uploadOfflineImage(reportId, imagePath, token);
               }
             }
             await db.markSynced(localId);
+            // Cache the newly created server report
+            try {
+              await db.cacheReports([decoded]);
+            } catch (_) {}
             synced++;
+
+            // Broadcast real-time sync notification event
+            if (!_syncedReportController.isClosed) {
+              _syncedReportController.add({
+                'local_id': localId,
+                'case_number': decoded['case_number'] ?? 'AD-NEW',
+                'description': report['description'] ?? '',
+              });
+            }
           } else if (response.statusCode == 400 || response.statusCode == 403) {
             // Permanent failure — mark as failed so it doesn't retry forever
             await db.markFailed(localId, 'Server error ${response.statusCode}: ${response.body}');
@@ -109,7 +127,16 @@ class SyncService {
           // No internet — stop trying this cycle
           break;
         } catch (e) {
-          await db.markFailed(localId, e.toString());
+          final err = e.toString();
+          if (err.contains('SocketException') ||
+              err.contains('TimeoutException') ||
+              err.contains('ClientException') ||
+              err.contains('Failed host lookup') ||
+              err.contains('HandshakeException')) {
+            // Transient connectivity loss — stop trying this cycle
+            break;
+          }
+          await db.markFailed(localId, err);
         }
       }
     } finally {

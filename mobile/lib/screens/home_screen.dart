@@ -74,11 +74,36 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    // 1. Immediately load cached & offline queued reports for instant zero-latency UI
+    _loadLocalReports();
+    // 2. Fetch fresh server data in background
     _fetchReports();
-    // Feature 8: Start offline sync service
+    // 3. Start offline auto-sync engine
     SyncService().startPeriodicSync();
     SyncService().pendingCountStream.listen((count) {
       if (mounted) setState(() => _pendingOfflineCount = count);
+    });
+    // 4. Real-time Telegram-style notification when pending report is synced
+    SyncService().syncedReportStream.listen((event) {
+      if (mounted) {
+        _loadLocalReports();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Report synced to Adama Municipal server! Case: ${event['case_number']}',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+              ),
+            ]),
+            backgroundColor: Colors.green[700],
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     });
     _loadPendingCount();
   }
@@ -88,22 +113,53 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() => _pendingOfflineCount = count);
   }
 
+  Future<void> _loadLocalReports() async {
+    try {
+      final combined = await DatabaseHelper().getAllReportsForDisplay();
+      if (combined.isNotEmpty && mounted) {
+        final parsed = combined.map((item) {
+          final isPending = item['status'] == 'PENDING_SYNC' || item['is_offline_pending'] == true;
+          return ReportItem(
+            id: item['id'].toString(),
+            caseNumber: isPending ? '🕒 Sync Pending' : (item['case_number'] ?? ''),
+            title: (item['description'] ?? '').toString().length > 40
+                ? '${item['description'].toString().substring(0, 40)}...'
+                : item['description'] ?? '',
+            description: item['description'] ?? '',
+            status: isPending ? 'PENDING_SYNC' : (item['status'] ?? 'SUBMITTED'),
+            priority: item['priority'] ?? 'MEDIUM',
+            department: item['department'] ?? 'General',
+            category: item['category'] ?? 'General',
+            createdAt: DateTime.tryParse(item['created_at'] ?? '') ?? DateTime.now(),
+            location: LatLng(
+              (item['latitude'] as num? ?? 8.54).toDouble(),
+              (item['longitude'] as num? ?? 39.27).toDouble(),
+            ),
+            slaHoursRemaining: item['sla_hours_remaining'] as double?,
+            isSlaBreached: (item['is_sla_breached'] as int? ?? 0) == 1,
+            affectedCount: (item['affected_count'] as int?) ?? 1,
+            isWithinGeofence: (item['is_within_geofence'] as int? ?? 1) == 1,
+          );
+        }).toList();
+        setState(() {
+          _reports = parsed;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {}
+  }
+
   Future<void> _fetchReports() async {
-    if (mounted) setState(() => _isLoading = true);
+    // Always make sure local data is visible first
+    await _loadLocalReports();
 
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
 
-    // Token missing — user is not logged in
-    if (token == null) {
+    // Token missing — user is browsing offline
+    if (token == null || token.isEmpty) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please log in to see your reports.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
       }
       return;
     }
@@ -112,122 +168,28 @@ class _HomeScreenState extends State<HomeScreen> {
       final response = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/reports/'),
         headers: {'Authorization': 'Bearer $token'},
-      ).timeout(const Duration(seconds: 30));
+      ).timeout(const Duration(seconds: 8));
+
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         final List data = decoded is List ? decoded : (decoded['results'] as List? ?? []);
-        if (mounted) {
-          // Parse full report data including SLA, affected count, geofence
-          final parsed = data.map((item) {
-            final sla = item['sla_metrics'] as Map<String, dynamic>?;
-            final slaHours = sla != null ? (sla['remaining_hours'] as num?)?.toDouble() : null;
-            final slaBreached = sla?['is_breached'] == true;
-            return ReportItem(
-              id: item['id'].toString(),
-              caseNumber: item['case_number'] ?? '',
-              title: (item['description'] ?? '').toString().length > 40
-                  ? '${item['description'].toString().substring(0, 40)}...'
-                  : item['description'] ?? '',
-              description: item['description'] ?? '',
-              status: item['status'] ?? 'SUBMITTED',
-              priority: item['priority'] ?? 'MEDIUM',
-              department: item['department_name'] ?? 'Unknown',
-              category: item['category_name'] ?? 'General',
-              createdAt: DateTime.tryParse(item['created_at'] ?? '') ?? DateTime.now(),
-              location: LatLng(
-                (item['latitude'] ?? 8.54).toDouble(),
-                (item['longitude'] ?? 39.27).toDouble(),
-              ),
-              slaHoursRemaining: slaHours,
-              isSlaBreached: slaBreached,
-              affectedCount: (item['affected_count'] as int?) ?? 1,
-              isWithinGeofence: item['is_within_geofence'] != false,
-            );
-          }).toList();
-          setState(() {
-            _reports = parsed;
-            _isLoading = false;
-          });
-          // Feature 8: cache to SQLite for offline access
-          try {
-            await DatabaseHelper().cacheReports(List<Map<String, dynamic>>.from(data));
-          } catch (_) {}
-        }
+        // Cache to SQLite for offline access
+        try {
+          await DatabaseHelper().cacheReports(List<Map<String, dynamic>>.from(data));
+        } catch (_) {}
+        // Refresh combined display (pending offline + new server reports)
+        await _loadLocalReports();
       } else if (response.statusCode == 401) {
-        // Token expired — clear it and prompt re-login
-        await prefs.remove('auth_token');
-        await prefs.remove('refresh_token');
+        // Token expired — switch to offline viewing
         if (mounted) {
           setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Session expired. Please log in again.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error ${response.statusCode}: ${response.body.length > 200 ? response.body.substring(0, 200) : response.body}'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 15),
-            ),
-          );
         }
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        // Feature 8: Load from SQLite cache when offline
-        try {
-          final cached = await DatabaseHelper().getCachedReports();
-          if (cached.isNotEmpty && mounted) {
-            final parsed = cached.map((item) => ReportItem(
-              id: item['id'].toString(),
-              caseNumber: item['case_number'] ?? '',
-              title: (item['description'] ?? '').toString().length > 40
-                  ? '${item['description'].toString().substring(0, 40)}...'
-                  : item['description'] ?? '',
-              description: item['description'] ?? '',
-              status: item['status'] ?? 'SUBMITTED',
-              priority: item['priority'] ?? 'MEDIUM',
-              department: item['department'] ?? 'Unknown',
-              category: item['category'] ?? 'General',
-              createdAt: DateTime.tryParse(item['created_at'] ?? '') ?? DateTime.now(),
-              location: LatLng(
-                (item['latitude'] as num? ?? 8.54).toDouble(),
-                (item['longitude'] as num? ?? 39.27).toDouble(),
-              ),
-              slaHoursRemaining: item['sla_hours_remaining'] as double?,
-              isSlaBreached: (item['is_sla_breached'] as int? ?? 0) == 1,
-              affectedCount: (item['affected_count'] as int?) ?? 1,
-              isWithinGeofence: (item['is_within_geofence'] as int? ?? 1) == 1,
-            )).toList();
-            setState(() => _reports = parsed);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Row(children: [
-                  Icon(Icons.wifi_off, color: Colors.white, size: 16),
-                  SizedBox(width: 8),
-                  Expanded(child: Text('Offline — showing cached reports. Pull to refresh when connected.')),
-                ]),
-                backgroundColor: Colors.orange,
-                duration: Duration(seconds: 4),
-              ),
-            );
-            return;
-          }
-        } catch (_) {}
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Network error. Check your connection and pull down to retry.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      // Offline fallback: keep cached & pending reports loaded
+      await _loadLocalReports();
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

@@ -63,25 +63,39 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
-  // ── Auto-login ──────────────────────────────────────────────────────────────
+  // ── Auto-login & Offline-first ─────────────────────────────────────────────
 
   Future<void> _checkExistingToken() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
-    if (token == null || !mounted) return;
+    final isOfflineGuest = prefs.getBool('is_offline_guest') ?? false;
+
+    // Offline-first: if token or offline session exists, enter immediately without waiting for network timeout
+    if (token != null || isOfflineGuest) {
+      if (!mounted) return;
+      _goHome();
+      // Silently verify or refresh profile in background if online
+      if (token != null) {
+        _verifyTokenSilently(token);
+      }
+    }
+  }
+
+  void _verifyTokenSilently(String token) async {
     try {
       final res = await http.get(
         Uri.parse('$_base/auth/me/'),
         headers: {'Authorization': 'Bearer $token'},
-      ).timeout(const Duration(seconds: 10));
-      if (res.statusCode == 200 && mounted) {
-        _goHome();
-      } else {
-        await prefs.remove('auth_token');
-        await prefs.remove('refresh_token');
+      ).timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final prefs = await SharedPreferences.getInstance();
+        final me = jsonDecode(res.body);
+        await prefs.setInt('user_id', me['id']);
+        if (me['name'] != null) await prefs.setString('user_name', me['name']);
+        if (me['phone_number'] != null) await prefs.setString('user_phone', me['phone_number']);
       }
     } catch (_) {
-      if (mounted) _goHome();
+      // Offline: keep cached token and session intact
     }
   }
 
@@ -92,6 +106,24 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  Future<void> _enterOfflineMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_offline_guest', true);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(children: [
+          Icon(Icons.wifi_off, color: Colors.white, size: 16),
+          SizedBox(width: 8),
+          Expanded(child: Text('Offline mode active. Reports will auto-sync when online.')),
+        ]),
+        backgroundColor: Color(0xFFD97706),
+        duration: Duration(seconds: 4),
+      ),
+    );
+    _goHome();
+  }
+
   // ── Login ───────────────────────────────────────────────────────────────────
 
   Future<void> _handleLogin() async {
@@ -100,24 +132,81 @@ class _LoginScreenState extends State<LoginScreen>
       return;
     }
     setState(() => _isLoading = true);
+    final phone = _phoneController.text.trim();
+    final password = _passwordController.text;
+
     try {
       final res = await http.post(
         Uri.parse('$_base/auth/login/'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'phone_number': _phoneController.text.trim(),
-          'password': _passwordController.text,
+          'phone_number': phone,
+          'password': password,
         }),
-      );
+      ).timeout(const Duration(seconds: 5));
+
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        await _saveTokens(data['access'], data['refresh']);
+        await _saveTokens(data['access'], data['refresh'], phone, password);
         if (mounted) _goHome();
       } else {
         _showError('Invalid phone number or password');
       }
-    } catch (_) {
-      _showError('Connection error. Check your internet.');
+    } catch (e) {
+      // Offline fallback: check if credentials match locally cached account
+      final prefs = await SharedPreferences.getInstance();
+      final cachedPhone = prefs.getString('cached_phone');
+      final cachedPassword = prefs.getString('cached_password');
+      final token = prefs.getString('auth_token');
+
+      if (cachedPhone == phone && cachedPassword == password && token != null) {
+        // Authenticated offline via cached credentials
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(children: [
+                Icon(Icons.wifi_off, color: Colors.white, size: 16),
+                SizedBox(width: 8),
+                Expanded(child: Text('Offline login successful using cached credentials.')),
+              ]),
+              backgroundColor: Color(0xFFD97706),
+              duration: Duration(seconds: 3),
+            ),
+          );
+          _goHome();
+        }
+      } else {
+        // Prompt user to enter in offline mode
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Row(children: [
+                Icon(Icons.wifi_off_rounded, color: Color(0xFFD97706)),
+                SizedBox(width: 8),
+                Text('No Internet Connection', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ]),
+              content: const Text(
+                'Unable to reach the server right now.\n\n'
+                'Would you like to continue in Offline Mode? You can browse municipal information, view cached reports, and submit new incident reports which will automatically sync once your connection returns (Telegram-style).',
+                style: TextStyle(fontSize: 13, height: 1.4),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _enterOfflineMode();
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1D70B8), foregroundColor: Colors.white),
+                  child: const Text('Continue Offline'),
+                ),
+              ],
+            ),
+          );
+        }
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -272,18 +361,27 @@ class _LoginScreenState extends State<LoginScreen>
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
-  Future<void> _saveTokens(String access, String refresh) async {
+  Future<void> _saveTokens(String access, String refresh, [String? phone, String? password]) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('auth_token', access);
     await prefs.setString('refresh_token', refresh);
+    await prefs.setBool('is_offline_guest', false);
+    if (phone != null && phone.isNotEmpty) {
+      await prefs.setString('cached_phone', phone);
+    }
+    if (password != null && password.isNotEmpty) {
+      await prefs.setString('cached_password', password);
+    }
     try {
       final meRes = await http.get(
         Uri.parse('$_base/auth/me/'),
         headers: {'Authorization': 'Bearer $access'},
-      );
+      ).timeout(const Duration(seconds: 8));
       if (meRes.statusCode == 200) {
         final me = jsonDecode(meRes.body);
         await prefs.setInt('user_id', me['id']);
+        if (me['name'] != null) await prefs.setString('user_name', me['name']);
+        if (me['phone_number'] != null) await prefs.setString('user_phone', me['phone_number']);
       }
     } catch (_) {}
   }
@@ -456,6 +554,17 @@ class _LoginScreenState extends State<LoginScreen>
         _buildPasswordField(),
         const SizedBox(height: 24),
         _buildPrimaryButton(label: 'Sign In', onPressed: _handleLogin),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: _enterOfflineMode,
+          icon: const Icon(Icons.wifi_off_rounded, size: 18, color: Color(0xFF1D70B8)),
+          label: const Text('Continue Offline (No Internet)', style: TextStyle(color: Color(0xFF1D70B8), fontWeight: FontWeight.w600, fontSize: 13)),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            side: const BorderSide(color: Color(0xFFBFDBFE)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
       ],
     );
   }

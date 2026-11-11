@@ -176,6 +176,9 @@ class CivicStatus {
 
   static Color foreground(String status) {
     switch (status.toUpperCase()) {
+      case 'PENDING':
+      case 'PENDING_SYNC':
+      case 'OFFLINE':    return const Color(0xFFB45309); // Amber-700
       case 'SUBMITTED':
       case 'RECEIVED':   return CivicColors.statusNewText;
       case 'ASSIGNED':
@@ -192,6 +195,9 @@ class CivicStatus {
 
   static Color background(String status) {
     switch (status.toUpperCase()) {
+      case 'PENDING':
+      case 'PENDING_SYNC':
+      case 'OFFLINE':    return const Color(0xFFFEF3C7); // Amber-100
       case 'SUBMITTED':
       case 'RECEIVED':   return CivicColors.statusNewBg;
       case 'ASSIGNED':
@@ -208,6 +214,9 @@ class CivicStatus {
 
   static Color accent(String status) {
     switch (status.toUpperCase()) {
+      case 'PENDING':
+      case 'PENDING_SYNC':
+      case 'OFFLINE':    return const Color(0xFFD97706); // Amber-600
       case 'SUBMITTED':
       case 'RECEIVED':   return CivicColors.statusNew;
       case 'ASSIGNED':
@@ -222,10 +231,17 @@ class CivicStatus {
     }
   }
 
-  static String label(String status) =>
-      status.replaceAll('_', ' ').split(' ')
-          .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}')
-          .join(' ');
+  static String label(String status) {
+    switch (status.toUpperCase()) {
+      case 'PENDING':
+      case 'PENDING_SYNC': return '🕒 Waiting for Internet';
+      case 'OFFLINE':      return 'Offline Draft';
+      default:
+        return status.replaceAll('_', ' ').split(' ')
+            .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}')
+            .join(' ');
+    }
+  }
 }
 
 class CivicPriority {

@@ -394,7 +394,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
           'title': _titleController.text.trim(),
           'description': _descriptionController.text.trim(),
         }),
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 3));
 
       if (dupRes.statusCode == 200) {
         final dupData = jsonDecode(dupRes.body);
@@ -487,27 +487,100 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
         }
       }
     } catch (_) {
-      // Duplicate check failure is non-fatal — proceed with submission
+      // Offline / network failure during duplicate check is non-fatal — proceed
     }
 
     setState(() => _isSubmitting = true);
+    final fullDescription = _titleController.text.trim().isNotEmpty
+        ? '${_titleController.text.trim()}\n\n${_descriptionController.text.trim()}'
+        : _descriptionController.text.trim();
+
+    // Helper to store in offline queue (Telegram style)
+    Future<void> saveAndDisplayOfflineReport() async {
+      try {
+        final localId = await SyncService().queueOfflineReport({
+          'description': fullDescription,
+          'latitude': lat,
+          'longitude': lng,
+          'department_name': _selectedDepartment ?? '',
+          'priority': _selectedPriority,
+          'aanaa': _selectedAanaa ?? '',
+          'kuta_magaalaa': _selectedKutaMagaalaa ?? '',
+          'kebele': _selectedKebele ?? '',
+          'iddoo_addaa': _iddooAddaaController.text.trim(),
+          'image_path': _selectedImage?.path ?? '',
+        });
+
+        final offlineReport = ReportItem(
+          id: localId,
+          caseNumber: '🕒 Sync Pending',
+          title: _titleController.text.isNotEmpty ? _titleController.text : _descriptionController.text,
+          description: fullDescription,
+          status: 'PENDING_SYNC',
+          priority: _selectedPriority,
+          department: _selectedDepartment ?? 'General',
+          category: 'General',
+          createdAt: DateTime.now(),
+          location: LatLng(lat, lng),
+        );
+
+        if (!mounted) return;
+        setState(() => _isSubmitting = false);
+
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 56, height: 56,
+                  decoration: BoxDecoration(color: Colors.amber[100], shape: BoxShape.circle),
+                  child: const Icon(Icons.access_time_rounded, size: 34, color: Color(0xFFD97706)),
+                ),
+                const SizedBox(height: 14),
+                const Text('Report Saved Offline', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                const Text(
+                  'Your incident has been securely saved locally (Telegram-style).\n\nAs soon as your internet connection is restored, the report and photos will automatically sync to Adama City Administration.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.black87, height: 1.4),
+                ),
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  Navigator.of(context).pop(offlineReport);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1D70B8), foregroundColor: Colors.white),
+                child: const Text('Understood'),
+              ),
+            ],
+          ),
+        );
+      } catch (err) {
+        if (mounted) {
+          setState(() => _isSubmitting = false);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save offline: $err')));
+        }
+      }
+    }
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
-      if (token == null) {
-        if (!mounted) return;
-        setState(() => _isSubmitting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please log in first to submit a report.'), backgroundColor: Colors.orange),
-        );
+
+      // If no token (offline guest), save directly to offline queue
+      if (token == null || token.isEmpty) {
+        await saveAndDisplayOfflineReport();
         return;
       }
 
       final headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'};
-
-      final fullDescription = _titleController.text.trim().isNotEmpty
-          ? '${_titleController.text.trim()}\n\n${_descriptionController.text.trim()}'
-          : _descriptionController.text.trim();
 
       final response = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/reports/'),
@@ -523,23 +596,16 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
           'department_name': _selectedDepartment,
           'priority': _selectedPriority,
         }),
-      );
+      ).timeout(const Duration(seconds: 5));
       
       if (response.statusCode != 201) {
-        if (!mounted) return;
-        setState(() => _isSubmitting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error ${response.statusCode}: ${response.body}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 10),
-          )
-        );
+        // If server returned error or token expired, fallback to offline queue
+        await saveAndDisplayOfflineReport();
         return;
       }
       
       final decoded = jsonDecode(response.body);
-      final caseNum = decoded['case_number'] ?? 'AD-ERROR';
+      final caseNum = decoded['case_number'] ?? 'AD-NEW';
       final realId = decoded['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString();
 
       // Upload image if selected
@@ -550,11 +616,16 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
           req.headers['Authorization'] = 'Bearer $token';
           req.files.add(await http.MultipartFile.fromPath('file', _selectedImage!.path));
           req.fields['media_type'] = 'IMAGE';
-          await req.send();
+          await req.send().timeout(const Duration(seconds: 15));
         } catch (e) {
           debugPrint('Image upload failed: $e');
         }
       }
+
+      // Cache server report locally
+      try {
+        await DatabaseHelper().cacheReports([decoded]);
+      } catch (_) {}
 
       if (!mounted) return;
       setState(() => _isSubmitting = false);
@@ -569,6 +640,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
         department: _selectedDepartment ?? 'Unassigned',
         category: 'General',
         createdAt: DateTime.now(),
+        location: LatLng(lat, lng),
       );
 
       showDialog(
@@ -598,49 +670,8 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
         ),
       );
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _isSubmitting = false);
-      // ── Feature 8: Offline queue fallback ───────────────────────────────
-      if (e.toString().contains('SocketException') ||
-          e.toString().contains('HandshakeException') ||
-          e.toString().contains('TimeoutException') ||
-          e.toString().contains('Failed host lookup')) {
-        try {
-          final fullDescription = _titleController.text.trim().isNotEmpty
-              ? '${_titleController.text.trim()}\n\n${_descriptionController.text.trim()}'
-              : _descriptionController.text.trim();
-          await SyncService().queueOfflineReport({
-            'description': fullDescription,
-            'latitude': _currentPosition?.latitude ?? 8.5415,
-            'longitude': _currentPosition?.longitude ?? 39.2689,
-            'department_name': _selectedDepartment ?? '',
-            'priority': _selectedPriority,
-            'aanaa': _selectedAanaa ?? '',
-            'kuta_magaalaa': _selectedKutaMagaalaa ?? '',
-            'kebele': _selectedKebele ?? '',
-            'iddoo_addaa': _iddooAddaaController.text.trim(),
-            'image_path': _selectedImage?.path ?? '',
-          });
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(children: const [
-                  Icon(Icons.wifi_off, color: Colors.white, size: 18),
-                  SizedBox(width: 8),
-                  Expanded(child: Text('No internet. Report saved offline — will auto-sync when connected.')),
-                ]),
-                backgroundColor: Colors.orange[700],
-                duration: const Duration(seconds: 5),
-              ),
-            );
-            Navigator.of(context).pop();
-          }
-        } catch (_) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save offline: $e')));
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to connect to backend: $e')));
-      }
+      // Any network exception or timeout -> save offline immediately
+      await saveAndDisplayOfflineReport();
     }
   }
 
