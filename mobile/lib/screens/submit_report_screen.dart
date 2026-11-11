@@ -396,7 +396,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
           'title': _titleController.text.trim(),
           'description': _descriptionController.text.trim(),
         }),
-      ).timeout(const Duration(seconds: 3));
+      ).timeout(const Duration(seconds: 8));
 
       if (dupRes.statusCode == 200) {
         final dupData = jsonDecode(dupRes.body);
@@ -546,7 +546,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                 const Text('Report Saved Offline', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 const Text(
-                  'Your incident has been securely saved locally (Telegram-style).\n\nAs soon as your internet connection is restored, the report and photos will automatically sync to Adama City Administration.',
+                  'Your incident has been securely saved locally.\n\nAs soon as an internet connection is established, the report and photos will automatically synchronize with the Adama City Administration.',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 13, color: Colors.black87, height: 1.4),
                 ),
@@ -598,7 +598,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
           'department_name': _selectedDepartment,
           'priority': _selectedPriority,
         }),
-      ).timeout(const Duration(seconds: 5));
+      ).timeout(const Duration(seconds: 25));
       
       if (response.statusCode != 201) {
         // If server returned error or token expired, fallback to offline queue

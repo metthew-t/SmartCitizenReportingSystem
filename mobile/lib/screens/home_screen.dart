@@ -168,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final response = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/reports/'),
         headers: {'Authorization': 'Bearer $token'},
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
@@ -714,7 +714,7 @@ class _MapReportPreviewState extends State<_MapReportPreview> {
       final res = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/reports/${widget.report.id}/upvote_affected/'),
         headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 15));
       if (res.statusCode == 200 && mounted) {
         final data = jsonDecode(res.body);
         setState(() {

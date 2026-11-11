@@ -66,7 +66,7 @@ class _CitizenAiScreenState extends State<CitizenAiScreen> {
         Uri.parse('${ApiConfig.baseUrl}/ai-chat/'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'message': text}),
-      ).timeout(const Duration(seconds: 4));
+      ).timeout(const Duration(seconds: 12));
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);

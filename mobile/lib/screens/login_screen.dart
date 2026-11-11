@@ -143,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen>
           'phone_number': phone,
           'password': password,
         }),
-      ).timeout(const Duration(seconds: 5));
+      ).timeout(const Duration(seconds: 30));
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
@@ -176,35 +176,20 @@ class _LoginScreenState extends State<LoginScreen>
           _goHome();
         }
       } else {
-        // Prompt user to enter in offline mode
+        // Transparent default offline fallback without intrusive dialogs
         if (mounted) {
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: const Row(children: [
-                Icon(Icons.wifi_off_rounded, color: Color(0xFFD97706)),
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(children: [
+                Icon(Icons.wifi_off, color: Colors.white, size: 16),
                 SizedBox(width: 8),
-                Text('No Internet Connection', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                Expanded(child: Text('Network unreachable. Continuing in offline mode.')),
               ]),
-              content: const Text(
-                'Unable to reach the server right now.\n\n'
-                'Would you like to continue in Offline Mode? You can browse municipal information, view cached reports, and submit new incident reports which will automatically sync once your connection returns (Telegram-style).',
-                style: TextStyle(fontSize: 13, height: 1.4),
-              ),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _enterOfflineMode();
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1D70B8), foregroundColor: Colors.white),
-                  child: const Text('Continue Offline'),
-                ),
-              ],
+              backgroundColor: Color(0xFFD97706),
+              duration: Duration(seconds: 3),
             ),
           );
+          await _enterOfflineMode();
         }
       }
     } finally {
@@ -554,17 +539,6 @@ class _LoginScreenState extends State<LoginScreen>
         _buildPasswordField(),
         const SizedBox(height: 24),
         _buildPrimaryButton(label: 'Sign In', onPressed: _handleLogin),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          onPressed: _enterOfflineMode,
-          icon: const Icon(Icons.wifi_off_rounded, size: 18, color: Color(0xFF1D70B8)),
-          label: const Text('Continue Offline (No Internet)', style: TextStyle(color: Color(0xFF1D70B8), fontWeight: FontWeight.w600, fontSize: 13)),
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            side: const BorderSide(color: Color(0xFFBFDBFE)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
       ],
     );
   }
