@@ -2435,6 +2435,23 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         return AuditLog.objects.filter(user=user).order_by('-timestamp')
 
 
+class NotificationLogViewSet(viewsets.ReadOnlyModelViewSet):
+    """Multi-channel Notification Delivery & Dispatch Log ViewSet (Admin / Mayor / Oversight)"""
+    from core.models import NotificationLog
+    from api.serializers import NotificationLogSerializer
+    queryset = NotificationLog.objects.all().order_by('-sent_at')
+    serializer_class = NotificationLogSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        from core.models import NotificationLog
+        if user.is_city_admin or getattr(user, 'is_super_admin', False) or user.is_superuser or getattr(user, 'is_mayor', False):
+            return NotificationLog.objects.all().order_by('-sent_at')
+        user_phone = getattr(user, 'phone_number', '') or ''
+        return NotificationLog.objects.filter(recipient_phone=user_phone).order_by('-sent_at')
+
+
 class AIChatView(APIView):
     """
     Official AI Citizen Assistant for Adama Smart Citizen Reporting System.
