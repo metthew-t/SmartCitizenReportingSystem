@@ -417,14 +417,43 @@ export default function DeptChat() {
                           boxShadow: isMe ? '0 2px 8px rgba(29,112,184,0.25)' : '0 1px 3px rgba(0,0,0,0.04)',
                         }}>
                           <div style={{ color: isMe ? '#FFFFFF' : '#0F172A', fontSize: 14, lineHeight: 1.5, wordBreak: 'break-word' }}>{msg.content}</div>
-                          {/* Timestamp + double-check only — no seen badge inside bubble */}
+                          {/* Inside bubble: Timestamp + Seen by button */}
                           <div style={{
                             fontSize: 10, marginTop: 6,
-                            color: isMe ? 'rgba(255,255,255,0.65)' : '#94A3B8',
-                            display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4
+                            color: isMe ? 'rgba(255,255,255,0.75)' : '#94A3B8',
+                            display: 'flex', alignItems: 'center', justifyContent: showSeenIndicator ? 'space-between' : 'flex-end', gap: 8
                           }}>
-                            <span>{msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                            {isMe && <CheckCheck size={12} color={showSeenIndicator ? '#93C5FD' : 'rgba(255,255,255,0.5)'} />}
+                            {showSeenIndicator && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedSeenMsg({ msg, viewers: otherViewers })
+                                }}
+                                title="Click to see who read this message"
+                                style={{
+                                  background: isMe ? 'rgba(255,255,255,0.22)' : '#EFF6FF',
+                                  border: isMe ? '1px solid rgba(255,255,255,0.35)' : '1px solid #BFDBFE',
+                                  borderRadius: 12,
+                                  padding: '2px 8px',
+                                  color: isMe ? '#FFFFFF' : '#1D70B8',
+                                  fontSize: 10,
+                                  fontWeight: 600,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  cursor: 'pointer',
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                }}
+                              >
+                                <Eye size={11} color={isMe ? '#FFFFFF' : '#1D70B8'} />
+                                <span>Seen by {otherViewers.length}</span>
+                              </button>
+                            )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <span>{msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                              {isMe && <CheckCheck size={12} color={showSeenIndicator ? '#93C5FD' : 'rgba(255,255,255,0.5)'} />}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -443,29 +472,6 @@ export default function DeptChat() {
                         </div>
                       )}
                     </div>
-
-                    {/* Seen indicator — only on the LAST message sent by me, shown BELOW the bubble */}
-                    {showSeenIndicator && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectedSeenMsg({ msg, viewers: otherViewers })
-                        }}
-                        title="Click to see who read this message"
-                        style={{
-                          background: 'none', border: 'none', padding: '0 46px 0 0',
-                          color: '#64748B', fontSize: 10, fontWeight: 500,
-                          display: 'inline-flex', alignItems: 'center', gap: 4,
-                          cursor: 'pointer', marginTop: 1
-                        }}
-                      >
-                        <CheckCheck size={12} color="#1D70B8" />
-                        <span style={{ color: '#1D70B8' }}>
-                          Seen by {otherViewers.length}
-                        </span>
-                      </button>
-                    )}
                   </div>
                 )
               })
