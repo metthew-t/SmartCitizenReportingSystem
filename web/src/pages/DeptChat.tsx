@@ -44,20 +44,27 @@ export default function DeptChat() {
     fetchDepts()
   }, [token])
 
-  const markAndFetchSeen = React.useCallback(async (lastMessageTime?: string) => {
-    if (!selectedDept) return
+  // Only mark-seen when the user ACTIVELY opens a channel (not on background polls).
+  // This prevents false "Seen by Super Admin" appearing just because super admin
+  // has the dept-chat page open — they must actually select and read the channel.
+  const markSeen = React.useCallback(async (deptId: number) => {
     try {
-      // Mark current user presence as seen
       await fetch(`${API}/dept-messages/mark-seen/`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ department_id: selectedDept.id })
+        body: JSON.stringify({ department_id: deptId })
       })
-      // Fetch users who have viewed this channel AFTER the last message was sent.
-      // The ?after= param filters out stale presence records that pre-date the message,
-      // preventing false "seen by" display before anyone actually reads it.
+    } catch {}
+  }, [token])
+
+  // fetchSeenUsers: only reads who has seen — does NOT update mark-seen.
+  // Called on every poll so the "Seen by N" count stays live.
+  const fetchSeenUsers = React.useCallback(async (deptId: number, lastMessageTime?: string) => {
+    try {
+      // ?after= filters out stale presence records that pre-date the message,
+      // ensuring only people who opened the channel AFTER the message was sent show up.
       const afterParam = lastMessageTime ? `&after=${encodeURIComponent(lastMessageTime)}` : ''
-      const res = await fetch(`${API}/dept-messages/seen-list/?department_id=${selectedDept.id}${afterParam}`, {
+      const res = await fetch(`${API}/dept-messages/seen-list/?department_id=${deptId}${afterParam}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {
@@ -65,7 +72,7 @@ export default function DeptChat() {
         setSeenUsers(Array.isArray(data) ? data : [])
       }
     } catch {}
-  }, [selectedDept, token])
+  }, [token])
 
   const fetchMessages = React.useCallback(async () => {
     if (!selectedDept) return
@@ -77,28 +84,27 @@ export default function DeptChat() {
         const data = await res.json()
         const list: any[] = Array.isArray(data) ? data : data.results || []
         setMessages(list)
-        // After loading messages, fetch seen-by filtered to AFTER the last message.
-        // This prevents stale "seen" records from before the message was sent
-        // from showing up as false positives (the core bug fix).
-        if (list.length > 0) {
-          const lastMsgTime = list[list.length - 1].created_at
-          markAndFetchSeen(lastMsgTime)
-        } else {
-          markAndFetchSeen()
-        }
+        // Fetch seen-by list filtered to AFTER the last message timestamp.
+        // We do NOT call mark-seen here — that only happens on explicit channel open.
+        const lastMsgTime = list.length > 0 ? list[list.length - 1].created_at : undefined
+        fetchSeenUsers(selectedDept.id, lastMsgTime)
       }
     } catch {}
-  }, [selectedDept, token, markAndFetchSeen])
+  }, [selectedDept, token, fetchSeenUsers])
 
+  // When user actively switches to a department channel → mark them as seen immediately,
+  // then start polling messages (which only reads seen-list, doesn't re-mark).
   React.useEffect(() => {
     if (selectedDept) {
+      // Immediately mark this user as having opened this channel
+      markSeen(selectedDept.id)
       fetchMessages()
       const interval = setInterval(() => {
         fetchMessages()
       }, 4000)
       return () => clearInterval(interval)
     }
-  }, [selectedDept, fetchMessages])
+  }, [selectedDept, fetchMessages, markSeen])
 
   React.useEffect(() => { scrollToBottom() }, [messages])
 
@@ -113,8 +119,16 @@ export default function DeptChat() {
       })
       if (res.ok) {
         const msg = await res.json()
-        setMessages(prev => [...prev, msg])
+        setMessages(prev => {
+          const updated = [...prev, msg]
+          // After sending, reset seen list — only the sender has seen the new message.
+          // Other users will appear in seen-list only after they open the channel.
+          setSeenUsers([])
+          return updated
+        })
         setNewMsg('')
+        // Mark sender as seen for this channel (they obviously read it — they wrote it)
+        markSeen(selectedDept.id)
       }
     } finally {
       setSending(false)

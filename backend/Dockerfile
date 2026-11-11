@@ -21,8 +21,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Generate migrations, apply them, collect static files, then start gunicorn
-CMD python manage.py makemigrations accounts core api && \
-    python manage.py migrate && \
+# Apply migrations (pre-generated), collect static, then start gunicorn
+# makemigrations is NOT run here — migrations are version-controlled in the repo
+CMD python manage.py migrate --run-syncdb && \
     python manage.py collectstatic --no-input && \
     gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --threads 2 --timeout 120 --keep-alive 5
