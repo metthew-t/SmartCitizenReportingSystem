@@ -5,6 +5,7 @@ from accounts.views import (
     CurrentUserView, UserListView, StatsView, ChangePasswordView, DeleteAccountView,
     SendOTPView, VerifyOTPView, ResetPasswordView,
     ProfilePhotoUploadView, AdminResetPasswordView, SocialNotificationSettingsView,
+    TelegramWebhookView,
 )
 from api.analytics_views import (
     AnalyticsSummaryView, AnalyticsByDepartmentView, AnalyticsByStatusView, ReportGeoJSONView,
@@ -49,6 +50,7 @@ urlpatterns = [
     path('auth/upload-photo/', ProfilePhotoUploadView.as_view(), name='upload_photo'),
     path('auth/admin-reset-password/', AdminResetPasswordView.as_view(), name='admin_reset_password'),
     path('auth/social-notifications/', SocialNotificationSettingsView.as_view(), name='social_notifications'),
+    path('auth/telegram-webhook/', TelegramWebhookView.as_view(), name='telegram_webhook'),
     path('ai-chat/', AIChatView.as_view(), name='ai_chat'),
     # Admin
     path('users/', UserListView.as_view(), name='user_list'),

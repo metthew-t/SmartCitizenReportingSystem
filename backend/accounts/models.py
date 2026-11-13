@@ -35,6 +35,7 @@ class User(AbstractUser):
     telegram_chat_id = models.CharField(max_length=100, null=True, blank=True)
     telegram_username = models.CharField(max_length=100, null=True, blank=True)
     whatsapp_phone_number = models.CharField(max_length=30, null=True, blank=True)
+    whatsapp_callmebot_apikey = models.CharField(max_length=100, null=True, blank=True)
     notify_via_telegram = models.BooleanField(default=False)
     notify_via_whatsapp = models.BooleanField(default=False)
     notify_via_in_app = models.BooleanField(default=True)

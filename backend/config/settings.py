@@ -162,6 +162,10 @@ OTP_EXPIRY_MINUTES = env.int('OTP_EXPIRY_MINUTES', default=10)
 # ── Firebase Cloud Messaging ───────────────────────────────────────────────
 FIREBASE_SERVER_KEY = env('FIREBASE_SERVER_KEY', default='')
 
+# ── Telegram Bot Integration ───────────────────────────────────────────────
+# Set TELEGRAM_BOT_TOKEN in Render environment variables (from @BotFather)
+TELEGRAM_BOT_TOKEN = env('TELEGRAM_BOT_TOKEN', default='')
+
 
 AUTHENTICATION_BACKENDS = [
     'accounts.backends.EmailOrPhoneModelBackend',

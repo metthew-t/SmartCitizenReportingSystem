@@ -8,6 +8,7 @@ Implements international civic tech and Open311 / GovTech best practices:
 5. Multi-Channel Notification Dispatch & Audit Logger (SMS, Push, Telegram)
 """
 
+import os
 import math
 import hashlib
 import json
@@ -390,13 +391,24 @@ def dispatch_social_notification(user, message_body, channel='TELEGRAM', report=
 
     status = 'SIMULATED'
     target_id = 'N/A'
+    error_detail = None
 
     if channel == 'TELEGRAM':
+        # Prefer numeric chat_id; also accept @username but warn
         chat_id = getattr(user, 'telegram_chat_id', None) or getattr(user, 'telegram_username', None)
-        target_id = str(chat_id) if chat_id else 'NOT_CONNECTED'
         if chat_id:
-            bot_token = getattr(settings, 'TELEGRAM_BOT_TOKEN', None)
-            if bot_token:
+            chat_id = str(chat_id).strip()
+        target_id = chat_id if chat_id else 'NOT_CONNECTED'
+
+        if not chat_id:
+            status = 'NO_CHAT_ID'
+            error_detail = 'No Telegram Chat ID configured. Message @userinfobot on Telegram to get your numeric ID.'
+        else:
+            bot_token = getattr(settings, 'TELEGRAM_BOT_TOKEN', os.environ.get('TELEGRAM_BOT_TOKEN', ''))
+            if not bot_token:
+                status = 'NO_BOT_TOKEN'
+                error_detail = 'TELEGRAM_BOT_TOKEN is not configured on the server.'
+            else:
                 try:
                     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
                     payload = json.dumps({
@@ -405,18 +417,63 @@ def dispatch_social_notification(user, message_body, channel='TELEGRAM', report=
                         'parse_mode': 'Markdown'
                     }).encode('utf-8')
                     req = urllib.request.Request(url, data=payload, headers={'Content-Type': 'application/json'})
-                    with urllib.request.urlopen(req, timeout=5) as response:
-                        status = 'SENT' if response.status == 200 else 'FAILED'
+                    with urllib.request.urlopen(req, timeout=10) as response:
+                        resp_data = json.loads(response.read().decode('utf-8'))
+                        status = 'SENT' if resp_data.get('ok') else 'FAILED'
+                        if not resp_data.get('ok'):
+                            error_detail = resp_data.get('description', 'Unknown Telegram error')
+                except urllib.error.HTTPError as e:
+                    try:
+                        err_body = json.loads(e.read().decode('utf-8'))
+                        error_detail = err_body.get('description', str(e))
+                    except Exception:
+                        error_detail = str(e)
+                    status = f'ERR:{e.code}'
                 except Exception as e:
-                    status = f'ERR: {str(e)[:15]}'
-            else:
-                status = 'SENT'
+                    status = f'ERR: {str(e)[:30]}'
+                    error_detail = str(e)
 
     elif channel == 'WHATSAPP':
+        # CallMeBot WhatsApp API – free, no Meta/Business account needed.
+        # User must activate once: send WhatsApp to +34 644 59 76 56 with text
+        # "I allow callmebot to send me messages" and get their apikey reply.
         phone = getattr(user, 'whatsapp_phone_number', None) or getattr(user, 'phone_number', None)
+        api_key = getattr(user, 'whatsapp_callmebot_apikey', None)
         target_id = str(phone) if phone else 'NOT_CONNECTED'
-        if phone:
-            status = 'SENT'
+
+        if not phone:
+            status = 'NO_PHONE'
+            error_detail = 'No WhatsApp phone number configured.'
+        elif not api_key:
+            status = 'NO_APIKEY'
+            error_detail = (
+                'CallMeBot API key not set. Send a WhatsApp message to +34 644 59 76 56 '
+                'with text "I allow callmebot to send me messages" to get your key, '
+                'then enter it in Settings.'
+            )
+        else:
+            try:
+                encoded_msg = urllib.parse.quote(message_body)
+                encoded_phone = urllib.parse.quote(str(phone).strip())
+                url = (
+                    f"https://api.callmebot.com/whatsapp.php"
+                    f"?phone={encoded_phone}&text={encoded_msg}&apikey={api_key}"
+                )
+                req = urllib.request.Request(url, headers={'User-Agent': 'AdamaGovBot/1.0'})
+                with urllib.request.urlopen(req, timeout=12) as response:
+                    body = response.read().decode('utf-8', errors='ignore')
+                    # CallMeBot returns "Message queued" or similar on success
+                    if response.status == 200 and ('queued' in body.lower() or 'message' in body.lower() or 'sent' in body.lower()):
+                        status = 'SENT'
+                    else:
+                        status = 'FAILED'
+                        error_detail = body[:100]
+            except urllib.error.HTTPError as e:
+                status = f'ERR:{e.code}'
+                error_detail = str(e)
+            except Exception as e:
+                status = f'ERR: {str(e)[:30]}'
+                error_detail = str(e)
 
     try:
         NotificationLog.objects.create(
@@ -431,5 +488,5 @@ def dispatch_social_notification(user, message_body, channel='TELEGRAM', report=
     except Exception:
         pass
 
-    return {'channel': channel, 'target': target_id, 'status': status}
+    return {'channel': channel, 'target': target_id, 'status': status, 'error': error_detail}
 

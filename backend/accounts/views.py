@@ -492,16 +492,22 @@ class SocialNotificationSettingsView(APIView):
 
     def get(self, request):
         user = request.user
+        phone_id = getattr(user, 'phone_number', '') or ''
+        bot_deep_link = f"https://t.me/AdamaSmartCitizenBot?start={phone_id}"
+        tg_linked = bool(getattr(user, 'telegram_chat_id', None))
         return Response({
             'telegram_chat_id': getattr(user, 'telegram_chat_id', '') or '',
             'telegram_username': getattr(user, 'telegram_username', '') or '',
+            'telegram_linked': tg_linked,
             'whatsapp_phone_number': getattr(user, 'whatsapp_phone_number', '') or '',
+            'whatsapp_callmebot_apikey': getattr(user, 'whatsapp_callmebot_apikey', '') or '',
             'notify_via_telegram': bool(getattr(user, 'notify_via_telegram', False)),
             'notify_via_whatsapp': bool(getattr(user, 'notify_via_whatsapp', False)),
             'notify_via_in_app': bool(getattr(user, 'notify_via_in_app', True)),
             'notify_via_sms': bool(getattr(user, 'notify_via_sms', True)),
             'bot_username': 'AdamaSmartCitizenBot',
             'bot_link': 'https://t.me/AdamaSmartCitizenBot',
+            'bot_deep_link': bot_deep_link,
         })
 
     def post(self, request):
@@ -514,6 +520,8 @@ class SocialNotificationSettingsView(APIView):
             user.telegram_username = str(data['telegram_username']).strip().lstrip('@')
         if 'whatsapp_phone_number' in data:
             user.whatsapp_phone_number = str(data['whatsapp_phone_number']).strip()
+        if 'whatsapp_callmebot_apikey' in data:
+            user.whatsapp_callmebot_apikey = str(data['whatsapp_callmebot_apikey']).strip()
         if 'notify_via_telegram' in data:
             user.notify_via_telegram = bool(data['notify_via_telegram'])
         if 'notify_via_whatsapp' in data:
@@ -528,24 +536,133 @@ class SocialNotificationSettingsView(APIView):
         # Send test notification if requested
         test_channel = data.get('test_channel')
         test_result = None
+        test_success = False
+        test_error = None
         if test_channel in ['telegram', 'whatsapp']:
             from core.robust_civic_engine import dispatch_social_notification
-            test_msg = "🔔 Adama Smart Citizen: Connected successfully! You will receive instant civic updates here."
+            test_msg = "🔔 Adama Smart Citizen: Test alert from Adama City Administration. Your notification channel is active."
             test_result = dispatch_social_notification(user, test_msg, channel=test_channel.upper())
+            test_success = test_result.get('status') == 'SENT' if test_result else False
+            test_error = test_result.get('error') if test_result else None
 
-        return Response({
+        response_data = {
             'message': 'Notification preferences updated successfully.',
             'settings': {
                 'telegram_chat_id': getattr(user, 'telegram_chat_id', ''),
                 'telegram_username': getattr(user, 'telegram_username', ''),
+                'telegram_linked': bool(getattr(user, 'telegram_chat_id', None)),
                 'whatsapp_phone_number': getattr(user, 'whatsapp_phone_number', ''),
+                'whatsapp_callmebot_apikey': getattr(user, 'whatsapp_callmebot_apikey', ''),
                 'notify_via_telegram': bool(getattr(user, 'notify_via_telegram', False)),
                 'notify_via_whatsapp': bool(getattr(user, 'notify_via_whatsapp', False)),
                 'notify_via_in_app': bool(getattr(user, 'notify_via_in_app', True)),
                 'notify_via_sms': bool(getattr(user, 'notify_via_sms', True)),
             },
             'test_result': test_result
-        })
+        }
+        if test_channel:
+            response_data['test_success'] = test_success
+            response_data['test_error'] = test_error
+        return Response(response_data)
+
+
+class TelegramWebhookView(APIView):
+    """
+    Receives Telegram Bot webhook updates.
+    When a user sends /start <userId> to the bot, their Telegram chat_id
+    is automatically registered — no manual Chat ID lookup needed.
+    POST /api/v1/auth/telegram-webhook/  (called by Telegram servers, no auth)
+    """
+    permission_classes = []
+    authentication_classes = []
+
+    def post(self, request):
+        import json as _json
+        from django.conf import settings as _settings
+        from accounts.models import User
+
+        data = request.data or {}
+        message = data.get('message', {}) or {}
+        text = (message.get('text') or '').strip()
+        chat = message.get('chat', {}) or {}
+        chat_id = str(chat.get('id', ''))
+        from_user = message.get('from', {}) or {}
+        tg_username = from_user.get('username', '') or ''
+
+        if not chat_id:
+            return Response({'ok': True})
+
+        # /start command – payload may be a system user_id or phone
+        if text.startswith('/start'):
+            parts = text.split(maxsplit=1)
+            payload = parts[1].strip() if len(parts) > 1 else ''
+
+            matched = False
+            # Try to find user by payload (could be phone_number or user pk)
+            if payload:
+                try:
+                    user = User.objects.filter(phone_number=payload).first() or \
+                           User.objects.filter(id=int(payload)).first() if payload.isdigit() else None
+                    if user:
+                        user.telegram_chat_id = chat_id
+                        if tg_username:
+                            user.telegram_username = tg_username
+                        user.notify_via_telegram = True
+                        user.save(update_fields=['telegram_chat_id', 'telegram_username', 'notify_via_telegram'])
+                        matched = True
+                        # Send confirmation message
+                        self._send_telegram_msg(
+                            chat_id,
+                            f"✅ *Adama Smart Citizen*\n\nYour account ({user.full_name or user.phone_number}) is now linked! "
+                            f"You will receive instant civic alerts here.\n\n"
+                            f"🏛 Powered by Adama City Administration."
+                        )
+                except Exception:
+                    pass
+
+            if not matched:
+                # Register by tg username if we know them
+                if tg_username:
+                    user = User.objects.filter(telegram_username__iexact=tg_username).first()
+                    if user:
+                        user.telegram_chat_id = chat_id
+                        user.notify_via_telegram = True
+                        user.save(update_fields=['telegram_chat_id', 'notify_via_telegram'])
+                        self._send_telegram_msg(
+                            chat_id,
+                            f"✅ *Adama Smart Citizen*\n\nLinked to @{tg_username}! You will receive civic alerts here."
+                        )
+                    else:
+                        self._send_telegram_msg(
+                            chat_id,
+                            "👋 Welcome to *Adama Smart Citizen Bot*!\n\n"
+                            "To link your account, go to *Settings → Telegram Integration* "
+                            "in the Adama Smart Citizen web portal and click *Link My Telegram*."
+                        )
+                else:
+                    self._send_telegram_msg(
+                        chat_id,
+                        "👋 Welcome to *Adama Smart Citizen Bot*!\n\n"
+                        "To link your account, go to *Settings → Telegram Integration* "
+                        "in the Adama Smart Citizen web portal and click *Link My Telegram*."
+                    )
+
+        return Response({'ok': True})
+
+    def _send_telegram_msg(self, chat_id, text):
+        import urllib.request as _req
+        import json as _json
+        from django.conf import settings as _settings
+        import os as _os
+        bot_token = getattr(_settings, 'TELEGRAM_BOT_TOKEN', _os.environ.get('TELEGRAM_BOT_TOKEN', ''))
+        if not bot_token:
+            return
+        try:
+            url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+            payload = _json.dumps({'chat_id': chat_id, 'text': text, 'parse_mode': 'Markdown'}).encode('utf-8')
+            _req.urlopen(_req.Request(url, data=payload, headers={'Content-Type': 'application/json'}), timeout=8)
+        except Exception:
+            pass
 
 
 class AdminResetPasswordView(APIView):

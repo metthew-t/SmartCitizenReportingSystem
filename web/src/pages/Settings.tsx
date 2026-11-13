@@ -38,7 +38,10 @@ export default function Settings() {
   const [socialForm, setSocialForm] = useState({
     telegram_chat_id: '',
     telegram_username: '',
+    telegram_linked: false,
+    bot_deep_link: 'https://t.me/AdamaSmartCitizenBot',
     whatsapp_phone_number: '',
+    whatsapp_callmebot_apikey: '',
     notify_via_telegram: false,
     notify_via_whatsapp: false,
     notify_via_in_app: true,
@@ -59,7 +62,10 @@ export default function Settings() {
           setSocialForm({
             telegram_chat_id: data.telegram_chat_id || '',
             telegram_username: data.telegram_username || '',
+            telegram_linked: Boolean(data.telegram_linked),
+            bot_deep_link: data.bot_deep_link || 'https://t.me/AdamaSmartCitizenBot',
             whatsapp_phone_number: data.whatsapp_phone_number || '',
+            whatsapp_callmebot_apikey: data.whatsapp_callmebot_apikey || '',
             notify_via_telegram: Boolean(data.notify_via_telegram),
             notify_via_whatsapp: Boolean(data.notify_via_whatsapp),
             notify_via_in_app: data.notify_via_in_app !== false,
@@ -81,7 +87,16 @@ export default function Settings() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(socialForm),
+        body: JSON.stringify({
+          telegram_chat_id: socialForm.telegram_chat_id,
+          telegram_username: socialForm.telegram_username,
+          whatsapp_phone_number: socialForm.whatsapp_phone_number,
+          whatsapp_callmebot_apikey: socialForm.whatsapp_callmebot_apikey,
+          notify_via_telegram: socialForm.notify_via_telegram,
+          notify_via_whatsapp: socialForm.notify_via_whatsapp,
+          notify_via_in_app: socialForm.notify_via_in_app,
+          notify_via_sms: socialForm.notify_via_sms,
+        }),
       })
       if (res.ok) {
         setSocialMsg({ type: 'success', text: 'Social media notification channels connected & saved!' })
@@ -110,8 +125,26 @@ export default function Settings() {
           test_channel: channel,
         }),
       })
+      const data = await res.json()
       if (res.ok) {
-        setSocialMsg({ type: 'success', text: `Test alert sent to your ${channel === 'telegram' ? 'Telegram' : 'WhatsApp'} account!` })
+        const channelLabel = channel === 'telegram' ? 'Telegram' : 'WhatsApp'
+        const st = data.test_result?.status || ''
+        if (data.test_success === true) {
+          setSocialMsg({ type: 'success', text: `✅ Test alert delivered to your ${channelLabel}!` })
+        } else if (st === 'NO_CHAT_ID') {
+          setSocialMsg({ type: 'error', text: `❌ Telegram not linked yet. Click "Open Telegram & Link Account" above and press Start.` })
+        } else if (st === 'NO_BOT_TOKEN') {
+          setSocialMsg({ type: 'error', text: `❌ Telegram bot is not configured on the server. Contact the administrator.` })
+        } else if (st === 'NO_PHONE') {
+          setSocialMsg({ type: 'error', text: `❌ Enter your WhatsApp phone number first.` })
+        } else if (st === 'NO_APIKEY') {
+          setSocialMsg({ type: 'error', text: `❌ Enter the CallMeBot API key. Send WhatsApp to +34 644 59 76 56 with "I allow callmebot to send me messages" to get it.` })
+        } else if (st.startsWith('ERR')) {
+          const detail = data.test_error || st || ''
+          setSocialMsg({ type: 'error', text: `❌ Delivery failed: ${detail}` })
+        } else {
+          setSocialMsg({ type: 'success', text: `Test alert queued for your ${channelLabel} account.` })
+        }
       } else {
         setSocialMsg({ type: 'error', text: `Could not send test message to ${channel}.` })
       }
@@ -119,7 +152,7 @@ export default function Settings() {
       setSocialMsg({ type: 'error', text: 'Network error sending test alert.' })
     } finally {
       setTestingSocial(false)
-      setTimeout(() => setSocialMsg(null), 4000)
+      setTimeout(() => setSocialMsg(null), 8000)
     }
   }
 
@@ -641,7 +674,12 @@ export default function Settings() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 18 }}>✈️</span>
-                <span style={{ fontWeight: 700, fontSize: 14, color: '#0369A1' }}>Telegram Bot Integration</span>
+                <span style={{ fontWeight: 700, fontSize: 14, color: '#0369A1' }}>Telegram Notifications</span>
+                {socialForm.telegram_linked && (
+                  <span style={{ fontSize: 11, background: '#DCFCE7', color: '#16A34A', borderRadius: 6, padding: '2px 8px', fontWeight: 700 }}>
+                    ✓ Linked
+                  </span>
+                )}
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#0369A1' }}>
                 <input
@@ -649,35 +687,49 @@ export default function Settings() {
                   checked={socialForm.notify_via_telegram}
                   onChange={e => setSocialForm({ ...socialForm, notify_via_telegram: e.target.checked })}
                 />
-                Enable Telegram
+                Enable
               </label>
             </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <input
-                type="text"
-                value={socialForm.telegram_chat_id}
-                onChange={e => setSocialForm({ ...socialForm, telegram_chat_id: e.target.value })}
-                placeholder="Telegram Chat ID or Username (e.g. 123456789)"
+
+            {/* Step 1 – Link via bot deep link (auto-registers chat_id) */}
+            <div style={{ background: '#E0F2FE', borderRadius: 8, padding: '10px 12px', marginBottom: 10, fontSize: 12, lineHeight: 1.6 }}>
+              <strong>Step 1 — Link your Telegram account (one-click):</strong><br/>
+              <a
+                href={socialForm.bot_deep_link}
+                target="_blank"
+                rel="noreferrer"
                 style={{
-                  flex: 1, minWidth: 240, padding: '9px 12px', borderRadius: 8,
-                  border: '1px solid #7DD3FC', background: '#FFFFFF', color: '#0F172A', fontSize: 13, outline: 'none'
-                }}
-              />
-              <button
-                type="button"
-                disabled={testingSocial || !socialForm.telegram_chat_id}
-                onClick={() => handleTestNotification('telegram')}
-                style={{
-                  padding: '9px 16px', borderRadius: 8, border: 'none',
-                  background: socialForm.telegram_chat_id ? '#0284C7' : '#94A3B8',
-                  color: 'white', fontSize: 12, fontWeight: 600, cursor: socialForm.telegram_chat_id ? 'pointer' : 'not-allowed'
+                  display: 'inline-block', marginTop: 6, padding: '7px 14px',
+                  background: '#0088CC', color: '#fff', borderRadius: 8,
+                  fontWeight: 700, fontSize: 12, textDecoration: 'none'
                 }}
               >
-                {testingSocial ? 'Sending...' : 'Test Telegram Alert'}
-              </button>
+                📲 Open Telegram &amp; Link Account
+              </a>
+              <span style={{ color: '#374151', marginLeft: 8, fontSize: 11 }}>
+                Opens Telegram and auto-links your account. No ID needed.
+              </span>
             </div>
-            <div style={{ marginTop: 6, fontSize: 11, color: '#0284C7' }}>
-              👉 Start <strong>@AdamaSmartCitizenBot</strong> on Telegram to retrieve your Chat ID.
+
+            {/* Step 2 – Test button once linked */}
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12, color: '#475569', flex: 1 }}>
+                <strong>Step 2</strong> — After clicking the link above, press <em>Start</em> in Telegram, then test below:
+              </span>
+              <button
+                type="button"
+                disabled={testingSocial || !socialForm.telegram_linked}
+                onClick={() => handleTestNotification('telegram')}
+                style={{
+                  padding: '8px 14px', borderRadius: 8, border: 'none',
+                  background: socialForm.telegram_linked ? '#0284C7' : '#94A3B8',
+                  color: 'white', fontSize: 12, fontWeight: 600,
+                  cursor: socialForm.telegram_linked ? 'pointer' : 'not-allowed',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {testingSocial ? 'Sending...' : 'Send Test Message'}
+              </button>
             </div>
           </div>
 
@@ -688,7 +740,12 @@ export default function Settings() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 18 }}>💬</span>
-                <span style={{ fontWeight: 700, fontSize: 14, color: '#15803D' }}>WhatsApp Messaging</span>
+                <span style={{ fontWeight: 700, fontSize: 14, color: '#15803D' }}>WhatsApp Notifications</span>
+                {socialForm.whatsapp_callmebot_apikey && (
+                  <span style={{ fontSize: 11, background: '#DCFCE7', color: '#16A34A', borderRadius: 6, padding: '2px 8px', fontWeight: 700 }}>
+                    ✓ Activated
+                  </span>
+                )}
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#15803D' }}>
                 <input
@@ -696,28 +753,54 @@ export default function Settings() {
                   checked={socialForm.notify_via_whatsapp}
                   onChange={e => setSocialForm({ ...socialForm, notify_via_whatsapp: e.target.checked })}
                 />
-                Enable WhatsApp
+                Enable
               </label>
             </div>
+
+            {/* How it works */}
+            <div style={{ background: '#DCFCE7', borderRadius: 8, padding: '10px 12px', marginBottom: 10, fontSize: 12, lineHeight: 1.7 }}>
+              <strong>How to activate WhatsApp alerts (free, one-time setup):</strong>
+              <ol style={{ margin: '6px 0 0 16px', padding: 0 }}>
+                <li>Enter your WhatsApp phone number below (with country code, e.g. <code>+251912345678</code>)</li>
+                <li>Send a WhatsApp message to <strong>+34 644 59 76 56</strong> with exactly:<br/>
+                  <code style={{ background: '#fff', padding: '2px 6px', borderRadius: 4 }}>I allow callmebot to send me messages</code>
+                </li>
+                <li>You'll receive your personal <strong>API key</strong> — paste it in the field below</li>
+                <li>Click <strong>Save</strong> and then <strong>Test WhatsApp Alert</strong></li>
+              </ol>
+            </div>
+
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <input
                 type="text"
                 value={socialForm.whatsapp_phone_number}
                 onChange={e => setSocialForm({ ...socialForm, whatsapp_phone_number: e.target.value })}
-                placeholder="WhatsApp Phone Number with Country Code (e.g. +251912345678)"
+                placeholder="WhatsApp number with country code (e.g. +251912345678)"
                 style={{
-                  flex: 1, minWidth: 240, padding: '9px 12px', borderRadius: 8,
+                  flex: 2, minWidth: 200, padding: '9px 12px', borderRadius: 8,
+                  border: '1px solid #86EFAC', background: '#FFFFFF', color: '#0F172A', fontSize: 13, outline: 'none'
+                }}
+              />
+              <input
+                type="text"
+                value={socialForm.whatsapp_callmebot_apikey}
+                onChange={e => setSocialForm({ ...socialForm, whatsapp_callmebot_apikey: e.target.value })}
+                placeholder="CallMeBot API key (from WhatsApp reply)"
+                style={{
+                  flex: 1, minWidth: 160, padding: '9px 12px', borderRadius: 8,
                   border: '1px solid #86EFAC', background: '#FFFFFF', color: '#0F172A', fontSize: 13, outline: 'none'
                 }}
               />
               <button
                 type="button"
-                disabled={testingSocial || !socialForm.whatsapp_phone_number}
+                disabled={testingSocial || !socialForm.whatsapp_phone_number || !socialForm.whatsapp_callmebot_apikey}
                 onClick={() => handleTestNotification('whatsapp')}
                 style={{
-                  padding: '9px 16px', borderRadius: 8, border: 'none',
-                  background: socialForm.whatsapp_phone_number ? '#16A34A' : '#94A3B8',
-                  color: 'white', fontSize: 12, fontWeight: 600, cursor: socialForm.whatsapp_phone_number ? 'pointer' : 'not-allowed'
+                  padding: '9px 14px', borderRadius: 8, border: 'none',
+                  background: (socialForm.whatsapp_phone_number && socialForm.whatsapp_callmebot_apikey) ? '#16A34A' : '#94A3B8',
+                  color: 'white', fontSize: 12, fontWeight: 600,
+                  cursor: (socialForm.whatsapp_phone_number && socialForm.whatsapp_callmebot_apikey) ? 'pointer' : 'not-allowed',
+                  whiteSpace: 'nowrap'
                 }}
               >
                 {testingSocial ? 'Sending...' : 'Test WhatsApp Alert'}
